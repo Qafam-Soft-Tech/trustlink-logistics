@@ -47,7 +47,16 @@ TrustLink Logistics ("Secure. Swift. Strategic.") — a last-mile delivery platf
 
 ## Commands
 
-(Fill in exact commands here once Phase 1 scaffolding is complete — e.g. `npm run start:dev`, `npm run test`, `npm run test:e2e`, `npm run lint`. Keep this section current; it's the first thing every session needs.)
+All backend commands run from `backend/`. Apps run from `apps/<app>/` (Expo: `npx expo start`; admin: `npm run dev`).
+
+- Backend dev server (watch mode): `npm run start:dev`
+- Backend production build: `npm run build` then `npm run start:prod` (or `node dist/main`)
+- Backend unit tests: `npm test`
+- Backend e2e tests: `npm run test:e2e`
+- Backend lint: `npm run lint`
+- Local infra (Postgres + Redis): `docker compose up -d` (from repo root)
+
+Keep this section current; it's the first thing every session needs.
 
 ## Conventions
 
