@@ -52,6 +52,9 @@ export class DeliveryService {
     if (customer.role !== UserRole.CUSTOMER) {
       throw new ForbiddenException('Only customers can create deliveries');
     }
+    if (!customer.isActive) {
+      throw new NotFoundException('Customer not found');
+    }
 
     // Validate recipient is distinct from sender (FR-C07)
     if (data.senderPhone === data.recipientPhone) {
@@ -363,6 +366,11 @@ export class DeliveryService {
       throw new BadRequestException('Delivery must be IN_TRANSIT to complete');
     }
 
+    // Photo proof required per FR-R09
+    if (!proofData.photoUrl || proofData.photoUrl.trim().length === 0) {
+      throw new BadRequestException('Photo proof is required');
+    }
+
     // Verify OTP (in real implementation, this would check against sent OTP)
     if (!proofData.recipientOtp || proofData.recipientOtp.length !== 6) {
       throw new BadRequestException('Valid 6-digit recipient OTP required');
@@ -425,7 +433,7 @@ export class DeliveryService {
     delivery.failureReason = reason;
     delivery.redeliveryAttempts += 1;
 
-    if (delivery.redeliveryAttempts >= 1) {
+    if (delivery.redeliveryAttempts >= 2) {
       // Second failure - mark as RETURNED
       delivery.status = DeliveryStatus.RETURNED;
       await this.deliveryRepository.save(delivery);
@@ -467,7 +475,7 @@ export class DeliveryService {
       throw new BadRequestException('Can only schedule redelivery for FAILED deliveries');
     }
 
-    if (delivery.redeliveryAttempts >= 1) {
+    if (delivery.redeliveryAttempts >= 2) {
       throw new BadRequestException('Maximum redelivery attempts reached');
     }
 
@@ -489,6 +497,10 @@ export class DeliveryService {
   }
 
   async getProofOfDelivery(deliveryId: string): Promise<ProofOfDelivery | null> {
+    const delivery = await this.deliveryRepository.findOne({ where: { id: deliveryId } });
+    if (!delivery || delivery.status !== DeliveryStatus.DELIVERED) {
+      return null;
+    }
     return this.proofOfDeliveryRepository.findOne({ where: { deliveryId } });
   }
 }

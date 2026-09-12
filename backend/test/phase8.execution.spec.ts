@@ -1,58 +1,45 @@
-import { DataSource, Repository } from 'typeorm';
-import { User, UserRole, KycStatus } from '../src/modules/auth/entities/user.entity';
-import { Delivery, DeliveryStatus, PackageType, Address, DeliveryEvent, ProofOfDelivery } from '../src/modules/deliveries/entities/delivery.entity';
-import { RiderProfile, VehicleType, RiderStatus } from '../src/modules/deliveries/entities/rider-profile.entity';
-import { KycSubmission, KycDocumentType } from '../src/modules/users/entities/kyc-submission.entity';
-import { PricingConfig, PricingConfigKey, DEFAULT_PRICING_CONFIG } from '../src/modules/payments/entities/pricing-config.entity';
-import { Payment, PaymentProvider, PaymentStatus, PaymentChannel } from '../src/modules/payments/entities/payment.entity';
-import { Notification, NotificationChannel, NotificationStatus } from '../src/modules/notifications/entities/notification.entity';
-import { Issue, IssueStatus, IssueType, IssuePriority } from '../src/modules/deliveries/entities/issue.entity';
+import { Test, TestingModule } from '@nestjs/testing';
+import { Delivery, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
+import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-delivery.entity';
+import { User } from '../src/modules/auth/entities/user.entity';
 import { DeliveryService } from '../src/modules/deliveries/services/delivery.service';
-import { DispatchService } from '../src/modules/deliveries/services/dispatch.service';
-import { FareCalculationService } from '../src/modules/payments/services/fare-calculation.service';
-import { PaymentService } from '../src/modules/payments/services/payment.service';
-import { NotificationService } from '../src/modules/notifications/services/notification.service';
-import { IssueService } from '../src/modules/deliveries/services/issue.service';
-import { KycService } from '../src/modules/users/services/kyc.service';
-import { TestFactory, setupTestModule, teardownTestModule, seedTestData } from './setup';
-import * as crypto from 'crypto';
+import { MockDb, TestFactory, seedBaseData, notificationServiceMock } from './mock-db';
 
 describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
-  let dataSource: any;
+  let module: TestingModule;
+  let db: MockDb;
   let deliveryService: DeliveryService;
-  let deliveryRepository: Repository<any>;
-  let proofOfDeliveryRepository: Repository<any>;
+  let deliveryRepository: any;
+  let proofOfDeliveryRepository: any;
   let testData: any;
 
   beforeAll(async () => {
-    dataSource = await TestFactory.setupTestModule();
-    testData = await TestFactory.seedTestData(dataSource);
+    db = new MockDb();
+    testData = seedBaseData(db);
 
-    deliveryRepository = dataSource.getRepository(Delivery);
-    proofOfDeliveryRepository = dataSource.getRepository(ProofOfDelivery);
+    deliveryRepository = db.repo('Delivery');
+    proofOfDeliveryRepository = db.repo('ProofOfDelivery');
 
-    // Instantiate service directly with repositories
-    deliveryService = new DeliveryService(
-      dataSource.getRepository(Delivery),
-      dataSource.getRepository(Address),
-      dataSource.getRepository(ProofOfDelivery),
-      dataSource.getRepository(User),
-      // Mock notification service
-      {
-        notifyDeliveryStatusChange: jest.fn().mockResolvedValue(undefined),
-      }
-    );
+    module = await Test.createTestingModule({
+      providers: [
+        DeliveryService,
+        ...db.providers([Delivery, Address, ProofOfDelivery, User]),
+        notificationServiceMock,
+      ],
+    }).compile();
+
+    deliveryService = module.get<DeliveryService>(DeliveryService);
   });
 
   afterAll(async () => {
-    await teardownTestModule(dataSource);
+    await module.close();
   });
 
   describe('Happy Path State Walk', () => {
     it('should walk delivery from REQUESTED to DELIVERED', async () => {
       // Create delivery in REQUESTED
       const delivery = await deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           status: DeliveryStatus.REQUESTED,
           packageType: PackageType.DOCUMENT,
@@ -62,16 +49,19 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
 
       // Transition to SEARCHING (after payment)
       let updated = await deliveryService.updateDeliveryStatus(
-        delivery.id, DeliveryStatus.SEARCHING, 'system', 'system'
+        delivery.id, DeliveryStatus.SEARCHING, 'system', 'system',
       );
       expect(updated.status).toBe(DeliveryStatus.SEARCHING);
 
       // Assign rider
       updated = await deliveryService.updateDeliveryStatus(
-        delivery.id, DeliveryStatus.ASSIGNED, testData.admin.id, 'admin'
+        delivery.id, DeliveryStatus.ASSIGNED, testData.admin.id, 'admin',
       );
       expect(updated.status).toBe(DeliveryStatus.ASSIGNED);
       expect(updated.assignedAt).toBeDefined();
+
+      // Record the assigned rider so completion can be validated
+      await deliveryRepository.update(delivery.id, { riderId: testData.rider.id });
 
       // Rider picks up
       updated = await deliveryService.markPickedUp(delivery.id, testData.rider.id, 9.0579, 7.4891);
@@ -106,7 +96,7 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
   describe('Proof of Delivery Validation', () => {
     it('should require photo and OTP for completion', async () => {
       const delivery = await deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           status: DeliveryStatus.IN_TRANSIT,
           riderId: testData.rider.id,
@@ -119,7 +109,7 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
         recipientOtp: '123456',
         recipientName: 'Jane',
         recipientPhone: '08087654321',
-      })).rejects.toThrow('Valid 6-digit recipient OTP required');
+      })).rejects.toThrow('Photo proof is required');
 
       // Missing OTP
       await expect(deliveryService.completeDelivery(delivery.id, testData.rider.id, {
@@ -140,7 +130,7 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
 
     it('should only allow completion from IN_TRANSIT status', async () => {
       const delivery = await deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           status: DeliveryStatus.PICKED_UP,
           riderId: testData.rider.id,
@@ -156,10 +146,10 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
     });
 
     it('should only allow assigned rider to complete', async () => {
-      const otherRider = await dataSource.getRepository(User).save(TestFactory.createRider({ phone: '08099999999', id: 'rider-other' }));
+      const otherRider = await (db.repo('User')).save(TestFactory.createRider({ phone: '08099999999', id: 'rider-other' }));
 
       const delivery = await deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           status: DeliveryStatus.IN_TRANSIT,
           riderId: testData.rider.id,
@@ -178,7 +168,7 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
   describe('Failure Handling', () => {
     it('should require reason for failure', async () => {
       const delivery = await deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           status: DeliveryStatus.IN_TRANSIT,
           riderId: testData.rider.id,
@@ -191,7 +181,7 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
 
     it('should transition from IN_TRANSIT to FAILED on first failure', async () => {
       const delivery = await deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           status: DeliveryStatus.IN_TRANSIT,
           riderId: testData.rider.id,
@@ -206,11 +196,12 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
       expect(updated.redeliveryAttempts).toBe(1);
     });
 
-    it('should transition from FAILED to RETURNED on second failure', async () => {
+    it('should transition to RETURNED on second failure', async () => {
+      // Second failure happens during the redelivery attempt, while on the road again
       const delivery = await deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
-          status: DeliveryStatus.FAILED,
+          status: DeliveryStatus.IN_TRANSIT,
           riderId: testData.rider.id,
           redeliveryAttempts: 1,
         }),
@@ -225,9 +216,10 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
 
     it('should not allow failure from non-active status', async () => {
       const delivery = await deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           status: DeliveryStatus.DELIVERED,
+          riderId: testData.rider.id,
         }),
       });
 
@@ -239,7 +231,7 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
   describe('Redelivery Cap Enforcement', () => {
     it('should allow one redelivery for FAILED delivery', async () => {
       const delivery = await deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           status: DeliveryStatus.FAILED,
           riderId: testData.rider.id,
@@ -255,23 +247,15 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
 
     it('should reject redelivery after maximum attempts', async () => {
       const delivery = await deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           status: DeliveryStatus.FAILED,
           riderId: testData.rider.id,
-          redeliveryAttempts: 1,
+          redeliveryAttempts: 2,
         }),
       });
 
-      // First redelivery
-      await deliveryService.scheduleRedelivery(delivery.id, testData.admin.id);
-
-      // Try second redelivery
-      const updated = await deliveryRepository.findOne({ where: { id: delivery.id } });
-      updated.status = DeliveryStatus.FAILED;
-      updated.redeliveryAttempts = 1;
-      await deliveryRepository.save(updated);
-
+      // Only one redelivery is allowed (attempt 1 -> redelivery; attempt 2 -> RETURNED)
       await expect(deliveryService.scheduleRedelivery(delivery.id, testData.admin.id))
         .rejects.toThrow('Maximum redelivery attempts reached');
     });
@@ -280,14 +264,14 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
   describe('Proof of Delivery Retrieval', () => {
     it('should retrieve proof of delivery', async () => {
       const delivery = await deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           status: DeliveryStatus.DELIVERED,
           riderId: testData.rider.id,
         }),
       });
 
-      const proof = await dataSource.getRepository(ProofOfDelivery).save({
+      const proof = await proofOfDeliveryRepository.save({
         deliveryId: delivery.id,
         photoUrl: 'https://example.com/proof.jpg',
         recipientOtp: '123456',
@@ -304,7 +288,7 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
 
     it('should return null for non-delivered deliveries', async () => {
       const delivery = await deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           status: DeliveryStatus.IN_TRANSIT,
         }),

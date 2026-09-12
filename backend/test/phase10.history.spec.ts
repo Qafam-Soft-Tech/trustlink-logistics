@@ -1,59 +1,38 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DataSource, Repository } from 'typeorm';
-import { User, UserRole, KycStatus } from '../src/modules/auth/entities/user.entity';
-import { Delivery, DeliveryStatus, PackageType, Address, DeliveryEvent, ProofOfDelivery } from '../src/modules/deliveries/entities/delivery.entity';
-import { RiderProfile, VehicleType, RiderStatus } from '../src/modules/deliveries/entities/rider-profile.entity';
-import { KycSubmission, KycDocumentType } from '../src/modules/users/entities/kyc-submission.entity';
-import { PricingConfig, PricingConfigKey, DEFAULT_PRICING_CONFIG } from '../src/modules/payments/entities/pricing-config.entity';
-import { Payment, PaymentProvider, PaymentStatus, PaymentChannel } from '../src/modules/payments/entities/payment.entity';
-import { Notification, NotificationChannel, NotificationStatus } from '../src/modules/notifications/entities/notification.entity';
-import { Issue, IssueStatus, IssueType, IssuePriority } from '../src/modules/deliveries/entities/issue.entity';
+import { Delivery, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
+import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-delivery.entity';
+import { User } from '../src/modules/auth/entities/user.entity';
+import { Issue, IssueType, IssuePriority } from '../src/modules/deliveries/entities/issue.entity';
 import { DeliveryService } from '../src/modules/deliveries/services/delivery.service';
-import { DispatchService } from '../src/modules/deliveries/services/dispatch.service';
-import { FareCalculationService } from '../src/modules/payments/services/fare-calculation.service';
-import { PaymentService } from '../src/modules/payments/services/payment.service';
-import { NotificationService } from '../src/modules/notifications/services/notification.service';
 import { IssueService } from '../src/modules/deliveries/services/issue.service';
-import { KycService } from '../src/modules/users/services/kyc.service';
-import { TestFactory, setupTestModule, teardownTestModule, seedTestData } from './setup';
-import * as crypto from 'crypto';
+import { MockDb, TestFactory, seedBaseData, notificationServiceMock } from './mock-db';
 
 describe('Phase 10: History, Receipts & Support Flag', () => {
   let module: TestingModule;
-  let dataSource: any;
+  let db: MockDb;
   let issueService: IssueService;
   let deliveryService: DeliveryService;
-  let issueRepository: Repository<any>;
-  let deliveryRepository: Repository<any>;
+  let issueRepository: any;
+  let deliveryRepository: any;
+  let userRepository: any;
+  let proofOfDeliveryRepository: any;
   let testData: any;
 
   beforeAll(async () => {
-    dataSource = await TestFactory.setupTestModule();
-    testData = await TestFactory.seedTestData(dataSource);
+    db = new MockDb();
+    testData = seedBaseData(db);
 
-    issueRepository = dataSource.getRepository('Issue');
-    deliveryRepository = dataSource.getRepository('Delivery');
+    issueRepository = db.repo('Issue');
+    deliveryRepository = db.repo('Delivery');
+    userRepository = db.repo('User');
+    proofOfDeliveryRepository = db.repo('ProofOfDelivery');
 
     module = await Test.createTestingModule({
       providers: [
         IssueService,
         DeliveryService,
-        {
-          provide: 'IssueRepository',
-          useValue: issueRepository,
-        },
-        {
-          provide: 'DeliveryRepository',
-          useValue: deliveryRepository,
-        },
-        {
-          provide: 'UserRepository',
-          useValue: dataSource.getRepository('User'),
-        },
-        {
-          provide: 'ProofOfDeliveryRepository',
-          useValue: dataSource.getRepository('ProofOfDelivery'),
-        },
+        ...db.providers([Issue, Delivery, ProofOfDelivery, Address, User]),
+        notificationServiceMock,
       ],
     }).compile();
 
@@ -62,13 +41,11 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
   });
 
   afterAll(async () => {
-    await teardownTestModule(dataSource);
     await module.close();
   });
 
   describe('Delivery History Scoping', () => {
     it('should return only customer\'s own deliveries', async () => {
-      // Create deliveries for customer
       const delivery1 = await deliveryService.createDelivery(testData.customer.id, {
         pickupStreet: '123 Street',
         dropoffStreet: '456 Avenue',
@@ -92,8 +69,8 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
       });
 
       // Create delivery for different customer
-      const otherCustomer = testData.userRepository.create(TestFactory.createCustomer({ phone: '08099999999', id: 'other-customer' }));
-      await testData.userRepository.save(otherCustomer);
+      const otherCustomer = userRepository.create(TestFactory.createCustomer({ phone: '08099999999', id: 'other-customer' }));
+      await userRepository.save(otherCustomer);
       await deliveryService.createDelivery(otherCustomer.id, {
         pickupStreet: 'Other Street',
         dropoffStreet: 'Other Avenue',
@@ -107,7 +84,9 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
 
       const customerDeliveries = await deliveryService.getCustomerDeliveries(testData.customer.id);
       expect(customerDeliveries.length).toBe(2);
-      expect(customerDeliveries.every(d => d.customerId === testData.customer.id)).toBe(true);
+      expect(customerDeliveries.every((d: any) => d.customerId === testData.customer.id)).toBe(true);
+      expect(delivery1.id).toBeDefined();
+      expect(delivery2.id).toBeDefined();
     });
 
     it('should return only rider\'s assigned deliveries', async () => {
@@ -122,9 +101,8 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
         recipientPhone: '08087654321',
       });
 
-      // Assign to rider
-      await testData.deliveryRepository.update(delivery.id, { 
-        status: 'assigned',
+      await deliveryRepository.update(delivery.id, {
+        status: DeliveryStatus.ASSIGNED,
         riderId: testData.rider.id,
       });
 
@@ -134,12 +112,10 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
     });
 
     it('should not leak cross-user delivery data', async () => {
-      // Create another rider
-      const otherRider = testData.userRepository.create(TestFactory.createRider({ phone: '08099999999', id: 'rider-other' }));
-      otherRider.kycStatus = KycStatus.APPROVED;
-      await testData.userRepository.save(otherRider);
+      const otherRider = userRepository.create(TestFactory.createRider({ phone: '08099999999', id: 'rider-other' }));
+      otherRider.kycStatus = 'approved';
+      await userRepository.save(otherRider);
 
-      // Create delivery assigned to testData.rider
       const delivery = await deliveryService.createDelivery(testData.customer.id, {
         pickupStreet: '123 Street',
         dropoffStreet: '456 Avenue',
@@ -150,8 +126,8 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
         recipientName: 'Jane',
         recipientPhone: '08087654321',
       });
-      await testData.deliveryRepository.update(delivery.id, { 
-        status: 'assigned',
+      await deliveryRepository.update(delivery.id, {
+        status: DeliveryStatus.ASSIGNED,
         riderId: testData.rider.id,
       });
 
@@ -163,15 +139,15 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
 
   describe('Proof of Delivery Visibility', () => {
     it('should only be visible for DELIVERED orders', async () => {
-      const delivery = await testData.deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+      const delivery = await deliveryRepository.save({
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           status: DeliveryStatus.IN_TRANSIT,
           riderId: testData.rider.id,
         }),
       });
 
-      const proof = await testData.proofOfDeliveryRepository.save({
+      const proof = await proofOfDeliveryRepository.save({
         deliveryId: delivery.id,
         photoUrl: 'https://example.com/proof.jpg',
         recipientOtp: '123456',
@@ -180,12 +156,12 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
       });
 
       // Should not be visible for non-DELIVERED
-      const retrieved = await testData.deliveryService.getProofOfDelivery(delivery.id);
+      const retrieved = await deliveryService.getProofOfDelivery(delivery.id);
       expect(retrieved).toBeNull();
 
       // Update to DELIVERED
-      await testData.deliveryRepository.update(delivery.id, { status: DeliveryStatus.DELIVERED });
-      const visible = await testData.deliveryService.getProofOfDelivery(delivery.id);
+      await deliveryRepository.update(delivery.id, { status: DeliveryStatus.DELIVERED });
+      const visible = await deliveryService.getProofOfDelivery(delivery.id);
       expect(visible).toBeDefined();
       expect(visible.id).toBe(proof.id);
     });
@@ -193,11 +169,11 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
 
   describe('Issue Reporting', () => {
     it('should allow customer to report issue for their delivery', async () => {
-      const delivery = await testData.deliveryRepository.save({
+      const delivery = await deliveryRepository.save({
         ...TestFactory.createDelivery({ customerId: testData.customer.id }),
       });
 
-      const issue = await testData.issueService.createIssue(testData.customer.id, {
+      const issue = await issueService.createIssue(testData.customer.id, {
         deliveryId: delivery.id,
         type: IssueType.DELIVERY_ISSUE,
         priority: IssuePriority.HIGH,
@@ -213,14 +189,14 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
     });
 
     it('should allow rider to report issue for their delivery', async () => {
-      const delivery = await testData.deliveryRepository.save({
-        ...TestFactory.createDelivery({ 
+      const delivery = await deliveryRepository.save({
+        ...TestFactory.createDelivery({
           customerId: testData.customer.id,
           riderId: testData.rider.id,
         }),
       });
 
-      const issue = await testData.issueService.createIssue(testData.rider.id, {
+      const issue = await issueService.createIssue(testData.rider.id, {
         deliveryId: delivery.id,
         type: IssueType.RIDER_ISSUE,
         priority: IssuePriority.MEDIUM,
@@ -232,14 +208,14 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
     });
 
     it('should reject issue for delivery not belonging to user', async () => {
-      const otherCustomer = testData.userRepository.create(TestFactory.createCustomer({ phone: '08099999999', id: 'other-customer' }));
-      await testData.userRepository.save(otherCustomer);
+      const otherCustomer = userRepository.create(TestFactory.createCustomer({ phone: '08099999999', id: 'other-customer' }));
+      await userRepository.save(otherCustomer);
 
-      const delivery = await testData.deliveryRepository.save({
+      const delivery = await deliveryRepository.save({
         ...TestFactory.createDelivery({ customerId: otherCustomer.id }),
       });
 
-      await expect(testData.issueService.createIssue(testData.customer.id, {
+      await expect(issueService.createIssue(testData.customer.id, {
         deliveryId: delivery.id,
         type: IssueType.DELIVERY_ISSUE,
         priority: IssuePriority.LOW,
@@ -249,14 +225,16 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
     });
 
     it('should return only user\'s own issues', async () => {
-      const delivery1 = await testData.deliveryRepository.save({
+      db.clear('Issue');
+
+      const delivery1 = await deliveryRepository.save({
         ...TestFactory.createDelivery({ customerId: testData.customer.id }),
       });
-      const delivery2 = await testData.deliveryRepository.save({
+      const delivery2 = await deliveryRepository.save({
         ...TestFactory.createDelivery({ customerId: testData.customer.id }),
       });
 
-      await testData.issueService.createIssue(testData.customer.id, {
+      await issueService.createIssue(testData.customer.id, {
         deliveryId: delivery1.id,
         type: IssueType.DELIVERY_ISSUE,
         priority: IssuePriority.LOW,
@@ -264,7 +242,7 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
         description: 'Desc 1',
       });
 
-      await testData.issueService.createIssue(testData.customer.id, {
+      await issueService.createIssue(testData.customer.id, {
         deliveryId: delivery2.id,
         type: IssueType.PAYMENT_ISSUE,
         priority: IssuePriority.HIGH,
@@ -272,20 +250,20 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
         description: 'Desc 2',
       });
 
-      const issues = await testData.issueService.getUserIssues(testData.customer.id);
+      const issues = await issueService.getUserIssues(testData.customer.id);
       expect(issues.length).toBe(2);
-      expect(issues.every(i => i.reporterId === testData.customer.id)).toBe(true);
+      expect(issues.every((i: any) => i.reporterId === testData.customer.id)).toBe(true);
     });
 
     it('should allow admin to see all issues', async () => {
-      const otherCustomer = testData.userRepository.create(TestFactory.createCustomer({ phone: '08099999999', id: 'other-customer' }));
-      await testData.userRepository.save(otherCustomer);
+      const otherCustomer = userRepository.create(TestFactory.createCustomer({ phone: '08099999999', id: 'other-customer' }));
+      await userRepository.save(otherCustomer);
 
-      const delivery = await testData.deliveryRepository.save({
+      const delivery = await deliveryRepository.save({
         ...TestFactory.createDelivery({ customerId: otherCustomer.id }),
       });
 
-      await testData.issueService.createIssue(otherCustomer.id, {
+      await issueService.createIssue(otherCustomer.id, {
         deliveryId: delivery.id,
         type: IssueType.DELIVERY_ISSUE,
         priority: IssuePriority.LOW,
@@ -293,18 +271,18 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
         description: 'Desc',
       });
 
-      const allIssues = await testData.issueService.getAllIssues();
+      const allIssues = await issueService.getAllIssues();
       expect(allIssues.length).toBeGreaterThanOrEqual(1);
     });
   });
 
   describe('Issue Status Transitions', () => {
     it('should allow admin to assign issue', async () => {
-      const delivery = await testData.deliveryRepository.save({
+      const delivery = await deliveryRepository.save({
         ...TestFactory.createDelivery({ customerId: testData.customer.id }),
       });
 
-      const issue = await testData.issueService.createIssue(testData.customer.id, {
+      const issue = await issueService.createIssue(testData.customer.id, {
         deliveryId: delivery.id,
         type: IssueType.DELIVERY_ISSUE,
         priority: IssuePriority.HIGH,
@@ -312,17 +290,17 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
         description: 'Test',
       });
 
-      const updated = await testData.issueService.assignIssue(issue.id, testData.admin.id, testData.admin.id);
+      const updated = await issueService.assignIssue(issue.id, testData.admin.id, testData.admin.id);
       expect(updated.assignedToId).toBe(testData.admin.id);
       expect(updated.status).toBe('in_progress');
     });
 
     it('should allow reporter to resolve their issue', async () => {
-      const delivery = await testData.deliveryRepository.save({
+      const delivery = await deliveryRepository.save({
         ...TestFactory.createDelivery({ customerId: testData.customer.id }),
       });
 
-      const issue = await testData.issueService.createIssue(testData.customer.id, {
+      const issue = await issueService.createIssue(testData.customer.id, {
         deliveryId: delivery.id,
         type: IssueType.DELIVERY_ISSUE,
         priority: IssuePriority.LOW,
@@ -330,18 +308,18 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
         description: 'Test',
       });
 
-      const updated = await testData.issueService.updateIssueStatus(issue.id, testData.customer.id, 'resolved', 'Resolved by customer');
+      const updated = await issueService.updateIssueStatus(issue.id, testData.customer.id, 'resolved', 'Resolved by customer');
       expect(updated.status).toBe('resolved');
       expect(updated.resolution).toBe('Resolved by customer');
       expect(updated.resolvedAt).toBeDefined();
     });
 
     it('should allow assignee to resolve issue', async () => {
-      const delivery = await testData.deliveryRepository.save({
+      const delivery = await deliveryRepository.save({
         ...TestFactory.createDelivery({ customerId: testData.customer.id }),
       });
 
-      const issue = await testData.issueService.createIssue(testData.customer.id, {
+      const issue = await issueService.createIssue(testData.customer.id, {
         deliveryId: delivery.id,
         type: IssueType.DELIVERY_ISSUE,
         priority: IssuePriority.HIGH,
@@ -349,20 +327,20 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
         description: 'Test',
       });
 
-      await testData.issueService.assignIssue(issue.id, testData.admin.id, testData.admin.id);
-      const updated = await testData.issueService.updateIssueStatus(issue.id, testData.admin.id, 'resolved', 'Fixed');
+      await issueService.assignIssue(issue.id, testData.admin.id, testData.admin.id);
+      const updated = await issueService.updateIssueStatus(issue.id, testData.admin.id, 'resolved', 'Fixed');
       expect(updated.status).toBe('resolved');
     });
 
     it('should prevent unauthorized status updates', async () => {
-      const otherCustomer = testData.userRepository.create(TestFactory.createCustomer({ phone: '08099999999', id: 'other-customer' }));
-      await testData.userRepository.save(otherCustomer);
+      const otherCustomer = userRepository.create(TestFactory.createCustomer({ phone: '08099999999', id: 'other-customer' }));
+      await userRepository.save(otherCustomer);
 
-      const delivery = await testData.deliveryRepository.save({
+      const delivery = await deliveryRepository.save({
         ...TestFactory.createDelivery({ customerId: testData.customer.id }),
       });
 
-      const issue = await testData.issueService.createIssue(testData.customer.id, {
+      const issue = await issueService.createIssue(testData.customer.id, {
         deliveryId: delivery.id,
         type: IssueType.DELIVERY_ISSUE,
         priority: IssuePriority.LOW,
@@ -370,7 +348,7 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
         description: 'Test',
       });
 
-      await expect(testData.issueService.updateIssueStatus(issue.id, otherCustomer.id, 'resolved'))
+      await expect(issueService.updateIssueStatus(issue.id, otherCustomer.id, 'resolved'))
         .rejects.toThrow('You can only update your own issues');
     });
   });

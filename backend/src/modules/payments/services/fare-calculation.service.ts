@@ -95,7 +95,8 @@ export class FareCalculationService {
     // Convert to plain numbers
     const finalConfig = {} as Record<PricingConfigKey, number>;
     for (const key of Object.keys(result) as PricingConfigKey[]) {
-      finalConfig[key] = result[key].value;
+      const entry = result[key];
+      finalConfig[key] = typeof entry === 'number' ? entry : Number(entry?.value);
     }
 
     return finalConfig;

@@ -1,71 +1,49 @@
-import { DataSource, Repository } from 'typeorm';
-import { User, UserRole, KycStatus } from '../src/modules/auth/entities/user.entity';
-import { Delivery, DeliveryStatus, PackageType, Address, DeliveryEvent, ProofOfDelivery } from '../src/modules/deliveries/entities/delivery.entity';
-import { RiderProfile, VehicleType, RiderStatus } from '../src/modules/deliveries/entities/rider-profile.entity';
-import { KycSubmission, KycDocumentType } from '../src/modules/users/entities/kyc-submission.entity';
-import { PricingConfig, PricingConfigKey, DEFAULT_PRICING_CONFIG } from '../src/modules/payments/entities/pricing-config.entity';
-import { Payment, PaymentProvider, PaymentStatus, PaymentChannel } from '../src/modules/payments/entities/payment.entity';
-import { Notification, NotificationChannel, NotificationStatus } from '../src/modules/notifications/entities/notification.entity';
-import { Issue, IssueStatus, IssueType, IssuePriority } from '../src/modules/deliveries/entities/issue.entity';
-import { TestFactory, setupTestModule, teardownTestModule, seedTestData } from './setup';
-import { createTestRepositories, createTestDeliveryService, createTestDispatchService, createTestFareCalculationService } from './service-factory';
-import * as crypto from 'crypto';
+import { Test, TestingModule } from '@nestjs/testing';
+import { Delivery, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
+import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-delivery.entity';
+import { User } from '../src/modules/auth/entities/user.entity';
+import { RiderProfile } from '../src/modules/deliveries/entities/rider-profile.entity';
+import { PricingConfig } from '../src/modules/payments/entities/pricing-config.entity';
+import { DeliveryService } from '../src/modules/deliveries/services/delivery.service';
+import { DispatchService } from '../src/modules/deliveries/services/dispatch.service';
+import { FareCalculationService } from '../src/modules/payments/services/fare-calculation.service';
+import { MockDb, TestFactory, seedBaseData, notificationServiceMock } from './mock-db';
 
 describe('Phase 4: Address & Delivery Request Creation', () => {
-  let dataSource: any;
-  let deliveryService: any;
-  let dispatchService: any;
-  let fareCalculationService: any;
-  let userRepository: Repository<any>;
-  let deliveryRepository: Repository<any>;
-  let addressRepository: Repository<any>;
+  let module: TestingModule;
+  let db: MockDb;
+  let deliveryService: DeliveryService;
+  let userRepository: any;
+  let addressRepository: any;
   let testData: any;
 
   beforeAll(async () => {
-    dataSource = await TestFactory.setupTestModule();
-    await TestFactory.seedTestData(dataSource);
+    db = new MockDb();
+    testData = seedBaseData(db);
 
-    const repos = {
-      userRepository: dataSource.getRepository(User),
-      deliveryRepository: dataSource.getRepository(Delivery),
-      addressRepository: dataSource.getRepository(Address),
-      proofOfDeliveryRepository: dataSource.getRepository(ProofOfDelivery),
-      pricingConfigRepository: dataSource.getRepository(PricingConfig),
-      riderProfileRepository: dataSource.getRepository('RiderProfile'),
-      userRepository: dataSource.getRepository(User),
-      deliveryRepository: dataSource.getRepository(Delivery),
-    };
+    userRepository = db.repo('User');
+    addressRepository = db.repo('Address');
 
-    // Instantiate services directly with repositories
-    const { createTestDeliveryService, createTestDispatchService, createTestFareCalculationService } = await import('./service-factory');
-    
-    deliveryService = await createTestDeliveryService({
-      deliveryRepository: dataSource.getRepository(Delivery),
-      addressRepository: dataSource.getRepository(Address),
-      proofOfDeliveryRepository: dataSource.getRepository(ProofOfDelivery),
-      userRepository: dataSource.getRepository(User),
-    });
+    module = await Test.createTestingModule({
+      providers: [
+        DeliveryService,
+        DispatchService,
+        FareCalculationService,
+        ...db.providers([Delivery, Address, ProofOfDelivery, User, RiderProfile, PricingConfig]),
+        notificationServiceMock,
+      ],
+    }).compile();
 
-    dispatchService = await createTestDispatchService({
-      deliveryRepository: dataSource.getRepository(Delivery),
-      riderProfileRepository: dataSource.getRepository('RiderProfile'),
-      userRepository: dataSource.getRepository(User),
-    });
-
-    fareCalculationService = await createTestFareCalculationService({
-      pricingConfigRepository: dataSource.getRepository(PricingConfig),
-    });
-
-    testData = await TestFactory.seedTestData(dataSource);
+    deliveryService = module.get<DeliveryService>(DeliveryService);
   });
 
   afterAll(async () => {
-    await teardownTestModule(dataSource);
+    await module.close();
   });
 
   describe('Address Entity', () => {
     it('should create and save an address', async () => {
-      const address = dataSource.getRepository(Address).create({
+      const address = addressRepository.create({
         userId: testData.customer.id,
         label: 'Home',
         street: '123 Ahmadu Bello Way',
@@ -79,32 +57,35 @@ describe('Phase 4: Address & Delivery Request Creation', () => {
         isDefault: true,
       });
 
-      const saved = await dataSource.getRepository(Address).save(address);
+      const saved = await addressRepository.save(address);
       expect(saved.id).toBeDefined();
       expect(saved.landmark).toBe('Near Shoprite');
       expect(saved.isDefault).toBe(true);
     });
 
     it('should enforce unique default address per user', async () => {
-      const addr1 = dataSource.getRepository(Address).create({
-        userId: testData.customer.id,
+      const user = userRepository.create(TestFactory.createCustomer({ phone: '08045454545', id: 'default-addr-user' }));
+      await userRepository.save(user);
+
+      const addr1 = addressRepository.create({
+        userId: user.id,
         label: 'Home',
         street: '123 Street',
         isDefault: true,
       });
-      await dataSource.getRepository(Address).save(addr1);
+      await addressRepository.save(addr1);
 
-      const addr2 = dataSource.getRepository(Address).create({
-        userId: testData.customer.id,
+      const addr2 = addressRepository.create({
+        userId: user.id,
         label: 'Work',
         street: '456 Avenue',
         isDefault: true,
       });
-      await dataSource.getRepository(Address).save(addr2);
+      await addressRepository.save(addr2);
 
       // Both exist, but we can query for default
-      const defaults = await dataSource.getRepository(Address).find({ 
-        where: { userId: testData.customer.id, isDefault: true } 
+      const defaults = await addressRepository.find({
+        where: { userId: user.id, isDefault: true },
       });
       expect(defaults.length).toBe(2); // Both saved, application logic handles uniqueness
     });
@@ -123,7 +104,7 @@ describe('Phase 4: Address & Delivery Request Creation', () => {
         dropoffArea: 'Maitama',
         dropoffLatitude: 9.0723,
         dropoffLongitude: 7.4912,
-        packageType: 'document',
+        packageType: PackageType.DOCUMENT,
         packageWeight: 0.5,
         packageDescription: 'Legal documents',
         senderName: 'John Doe',
@@ -134,18 +115,18 @@ describe('Phase 4: Address & Delivery Request Creation', () => {
 
       expect(delivery.id).toBeDefined();
       expect(delivery.trackingNumber).toMatch(/^TLK-\d{4}-\d{4}$/);
-      expect(delivery.status).toBe('requested');
+      expect(delivery.status).toBe(DeliveryStatus.REQUESTED);
       expect(delivery.customerId).toBe(testData.customer.id);
       expect(delivery.recipientPhone).not.toBe(delivery.senderPhone);
       expect(delivery.events.length).toBe(1);
-      expect(delivery.events[0].status).toBe('requested');
+      expect(delivery.events[0].status).toBe(DeliveryStatus.REQUESTED);
     });
 
     it('should reject delivery with same sender and recipient phone', async () => {
       await expect(deliveryService.createDelivery(testData.customer.id, {
         pickupStreet: '123 Street',
         dropoffStreet: '456 Avenue',
-        packageType: 'document',
+        packageType: PackageType.DOCUMENT,
         packageWeight: 0.5,
         senderName: 'John',
         senderPhone: '08012345678',
@@ -158,7 +139,7 @@ describe('Phase 4: Address & Delivery Request Creation', () => {
       await expect(deliveryService.createDelivery('non-existent-id', {
         pickupStreet: '123 Street',
         dropoffStreet: '456 Avenue',
-        packageType: 'document',
+        packageType: PackageType.DOCUMENT,
         packageWeight: 0.5,
         senderName: 'John',
         senderPhone: '08012345678',
@@ -171,7 +152,7 @@ describe('Phase 4: Address & Delivery Request Creation', () => {
       await expect(deliveryService.createDelivery(testData.rider.id, {
         pickupStreet: '123 Street',
         dropoffStreet: '456 Avenue',
-        packageType: 'document',
+        packageType: PackageType.DOCUMENT,
         packageWeight: 0.5,
         senderName: 'John',
         senderPhone: '08012345678',
@@ -183,9 +164,8 @@ describe('Phase 4: Address & Delivery Request Creation', () => {
 
   describe('Address CRUD', () => {
     it('should create, read, update, and delete addresses', async () => {
-      const addrRepo = dataSource.getRepository(Address);
       // Create
-      const address = await dataSource.getRepository(Address).save({
+      const address = await addressRepository.save({
         userId: testData.customer.id,
         label: 'Office',
         street: '789 Corporate Drive',
@@ -194,30 +174,29 @@ describe('Phase 4: Address & Delivery Request Creation', () => {
       });
 
       // Read
-      const found = await dataSource.getRepository(Address).findOne({ where: { id: address.id } });
+      const found = await addressRepository.findOne({ where: { id: address.id } });
       expect(found.label).toBe('Office');
 
       // Update
-      found.label = 'Headquarters';
-      await dataSource.getRepository(Address).save(found);
-      const updated = await dataSource.getRepository(Address).findOne({ where: { id: address.id } });
+      await addressRepository.update(address.id, { label: 'Headquarters' });
+      const updated = await addressRepository.findOne({ where: { id: address.id } });
       expect(updated.label).toBe('Headquarters');
 
       // Delete
-      await dataSource.getRepository(Address).remove(updated);
-      const deleted = await dataSource.getRepository(Address).findOne({ where: { id: address.id } });
+      await addressRepository.remove(updated);
+      const deleted = await addressRepository.findOne({ where: { id: address.id } });
       expect(deleted).toBeNull();
     });
 
     it('should get user addresses ordered by default first', async () => {
-      await dataSource.getRepository(Address).save([
+      await addressRepository.save([
         { userId: testData.customer.id, label: 'Home', street: '1', isDefault: true },
         { userId: testData.customer.id, label: 'Work', street: '2', isDefault: false },
       ]);
 
-      const addresses = await dataSource.getRepository(Address).find({ 
+      const addresses = await addressRepository.find({
         where: { userId: testData.customer.id },
-        order: { isDefault: 'DESC', createdAt: 'DESC' }
+        order: { isDefault: 'DESC', createdAt: 'DESC' },
       });
 
       expect(addresses[0].isDefault).toBe(true);

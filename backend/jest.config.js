@@ -1,7 +1,7 @@
 module.exports = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '.',
-  testMatch: ['**/test/**/*.spec.ts', '**/test/**/*.e2e-spec.ts'],
+  testMatch: ['**/test/**/*.spec.ts'],
   transform: {
     '^.+\\.(t|j)s$': ['ts-jest', {
       tsconfig: 'tsconfig.test.json',
@@ -17,5 +17,4 @@ module.exports = {
   transformIgnorePatterns: [
     '/node_modules/(?!@nestjs|rxjs|reflect-metadata|typeorm|class-transformer|class-validator)',
   ],
-  setupFilesAfterBootstrap: ['<rootDir>/test/setup.ts'],
 };

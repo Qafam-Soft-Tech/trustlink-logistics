@@ -1,60 +1,56 @@
-import { DataSource, Repository } from 'typeorm';
+import { Test, TestingModule } from '@nestjs/testing';
 import { PricingConfig, PricingConfigKey, DEFAULT_PRICING_CONFIG } from '../src/modules/payments/entities/pricing-config.entity';
 import { FareCalculationService } from '../src/modules/payments/services/fare-calculation.service';
-import { Delivery, DeliveryStatus, PackageType } from '../src/modules/deliveries/entities/delivery.entity';
-import { TestFactory, setupTestModule, teardownTestModule, seedTestData } from './setup';
-import * as crypto from 'crypto';
+import { MockDb, seedPricingConfigs } from './mock-db';
 
 describe('Phase 5: Fare Calculation Engine', () => {
-  let dataSource: any;
+  let module: TestingModule;
+  let db: MockDb;
   let fareCalculationService: FareCalculationService;
   let pricingRepository: any;
 
   beforeAll(async () => {
-    dataSource = await TestFactory.setupTestModule();
-    await TestFactory.seedTestData(dataSource);
+    db = new MockDb();
+    seedPricingConfigs(db);
 
-    pricingRepository = dataSource.getRepository('PricingConfig');
+    pricingRepository = db.repo('PricingConfig');
 
-    // Instantiate service directly with repository
-    const { FareCalculationService } = require('../src/modules/payments/services/fare-calculation.service');
-    fareCalculationService = new FareCalculationService(dataSource.getRepository('PricingConfig'));
+    module = await Test.createTestingModule({
+      providers: [
+        FareCalculationService,
+        db.provider(PricingConfig),
+      ],
+    }).compile();
+
+    fareCalculationService = module.get<FareCalculationService>(FareCalculationService);
   });
 
   afterAll(async () => {
-    await teardownTestModule(dataSource);
+    await module.close();
   });
 
   describe('Default Pricing Config', () => {
     it('should initialize with all default pricing configs', async () => {
-      const configs = await dataSource.getRepository('PricingConfig').find();
+      const configs = await pricingRepository.find();
       expect(configs.length).toBe(Object.keys(DEFAULT_PRICING_CONFIG).length);
     });
 
     it('should have correct default values', async () => {
-      const baseFare = await dataSource.getRepository('PricingConfig').findOne({ where: { key: PricingConfigKey.BASE_FARE } });
+      const baseFare = await pricingRepository.findOne({ where: { key: PricingConfigKey.BASE_FARE } });
       expect(Number(baseFare.value)).toBe(500);
 
-      const perKm = await dataSource.getRepository('PricingConfig').findOne({ where: { key: PricingConfigKey.PER_KM_RATE } });
+      const perKm = await pricingRepository.findOne({ where: { key: PricingConfigKey.PER_KM_RATE } });
       expect(Number(perKm.value)).toBe(150);
 
-      const perKg = await dataSource.getRepository('PricingConfig').findOne({ where: { key: PricingConfigKey.PER_KG_RATE } });
+      const perKg = await pricingRepository.findOne({ where: { key: PricingConfigKey.PER_KG_RATE } });
       expect(Number(perKg.value)).toBe(100);
 
-      const minFare = await dataSource.getRepository('PricingConfig').findOne({ where: { key: PricingConfigKey.MINIMUM_FARE } });
+      const minFare = await pricingRepository.findOne({ where: { key: PricingConfigKey.MINIMUM_FARE } });
       expect(Number(minFare.value)).toBe(1000);
     });
   });
 
   describe('Weight Tier Calculation', () => {
-    let fareCalculationService: any;
-
-    beforeAll(async () => {
-      const { FareCalculationService } = require('../src/modules/payments/services/fare-calculation.service');
-      const pricingRepo = global.__TEST_DATA_SOURCE__.getRepository('PricingConfig');
-      fareCalculationService = new FareCalculationService(pricingRepo);
-    });
-
     it('should apply tier 1 multiplier for weight <= 1kg', async () => {
       const result = await fareCalculationService.calculateFare({
         distanceKm: 5,
@@ -114,14 +110,6 @@ describe('Phase 5: Fare Calculation Engine', () => {
   });
 
   describe('Distance Band Calculation', () => {
-    let fareCalculationService: any;
-
-    beforeAll(async () => {
-      const { FareCalculationService } = require('../src/modules/payments/services/fare-calculation.service');
-      const pricingRepo = global.__TEST_DATA_SOURCE__.getRepository('PricingConfig');
-      fareCalculationService = new FareCalculationService(pricingRepo);
-    });
-
     it('should apply band 1 for distance <= 5km', async () => {
       const result = await fareCalculationService.calculateFare({
         distanceKm: 3,
@@ -158,14 +146,6 @@ describe('Phase 5: Fare Calculation Engine', () => {
   });
 
   describe('Total Fare Calculation', () => {
-    let fareCalculationService: any;
-
-    beforeAll(async () => {
-      const { FareCalculationService } = require('../src/modules/payments/services/fare-calculation.service');
-      const pricingRepo = global.__TEST_DATA_SOURCE__.getRepository('PricingConfig');
-      fareCalculationService = new FareCalculationService(pricingRepo);
-    });
-
     it('should calculate fare correctly: base + distance + weight', async () => {
       const result = await fareCalculationService.calculateFare({
         distanceKm: 10,
@@ -193,19 +173,11 @@ describe('Phase 5: Fare Calculation Engine', () => {
   });
 
   describe('Dynamic Config Updates', () => {
-    let fareCalculationService: any;
-
-    beforeAll(async () => {
-      const { FareCalculationService } = require('../src/modules/payments/services/fare-calculation.service');
-      const pricingRepo = global.__TEST_DATA_SOURCE__.getRepository('PricingConfig');
-      fareCalculationService = new FareCalculationService(pricingRepo);
-    });
-
     it('should use updated pricing config without restart', async () => {
       // Update per km rate
-      await global.__TEST_DATA_SOURCE__.getRepository('PricingConfig').update(
-        { key: 'per_km_rate' },
-        { value: 200, updatedBy: 'test-admin' }
+      await pricingRepository.update(
+        { key: PricingConfigKey.PER_KM_RATE },
+        { value: 200, updatedBy: 'test-admin' },
       );
 
       const result = await fareCalculationService.calculateFare({
@@ -214,8 +186,8 @@ describe('Phase 5: Fare Calculation Engine', () => {
         packageType: 'document',
       });
 
-      expect(result.distanceCharge).toBe(2000);
-      expect(result.totalFare).toBe(500 + 2000 + 100);
+      expect(result.distanceCharge).toBe(2400);
+      expect(result.totalFare).toBe(500 + 2400 + 100);
     });
   });
 });

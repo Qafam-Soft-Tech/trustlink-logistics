@@ -4,7 +4,7 @@ import { Repository, LessThan, MoreThan } from 'typeorm';
 
 import { Delivery, DeliveryStatus } from '../entities/delivery.entity';
 import { RiderProfile, VehicleType, RiderStatus } from '../entities/rider-profile.entity';
-import { User, UserRole } from '../../auth/entities/user.entity';
+import { User, UserRole, KycStatus } from '../../auth/entities/user.entity';
 
 export interface EligibleRider {
   rider: RiderProfile;
@@ -141,6 +141,11 @@ export class DispatchService {
       }
     }
 
+    // Put delivery back into SEARCHING so it can be assigned to a new rider
+    delivery.status = DeliveryStatus.SEARCHING;
+    delivery.riderId = null;
+    await this.deliveryRepository.save(delivery);
+
     // Assign new rider
     return this.assignRider(deliveryId, newRiderId, adminId);
   }
@@ -209,6 +214,14 @@ export class DispatchService {
     }
 
     // Validate status transitions
+    if (status === RiderStatus.ONLINE) {
+      // Only KYC-approved riders can go online per FR-R04
+      const rider = await this.userRepository.findOne({ where: { id: riderId } });
+      if (!rider || rider.kycStatus !== KycStatus.APPROVED) {
+        throw new BadRequestException('Rider KYC not approved');
+      }
+    }
+
     if (status === RiderStatus.ON_TRIP && riderProfile.status !== RiderStatus.ONLINE) {
       throw new BadRequestException('Rider must be ONLINE to go ON_TRIP');
     }
