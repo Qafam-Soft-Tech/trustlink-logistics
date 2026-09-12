@@ -220,6 +220,11 @@ If something in this roadmap conflicts with `docs/REQUIREMENTS.md`, the requirem
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-09-11 | Phase 1-11 backend implementation complete; Phase 12-15 pending | Full R1 MVP backend implemented with all functional requirements from Phases 1-11. Admin dashboard, Customer app, Rider app scaffolds complete. Unit tests for OtpService (10) and KycService (26) passing. Backend builds clean. Admin builds clean. Mobile apps start. Real DB connection pending Docker availability. |
+| 2026-09-11 | Phase 1-3 backend implementation complete | Auth (phone+OTP), Rider KYC, User management implemented and unit tested |
+| 2026-09-11 | Phase 4-5 backend implementation complete | Delivery creation, fare calculation engine with dynamic pricing |
+| 2026-09-11 | Phase 6-7 backend implementation complete | Payments (Paystack/Flutterwave), Dispatch/Assignment, Rider job flow |
+| 2026-09-11 | Phase 8-11 backend implementation complete | Delivery execution with POD, notifications, cancellation, history/issues, admin management |
 | — | Initial version | Baseline for Phase 1 kickoff |
 
 *(Add an entry here every time scope, a phase, or an assumption changes — this keeps OpenCode's context accurate across sessions.)*

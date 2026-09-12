@@ -1,0 +1,26 @@
+import React from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { AppRegistry } from 'react-native';
+
+import { AppNavigator } from './src/navigation/AppNavigator';
+import { theme } from '@trustlink/shared';
+
+export default function App() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <NavigationContainer theme={{ ...theme.colors, background: theme.colors.background }}>
+          <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
+          <AppNavigator />
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+if (__DEV__) {
+  AppRegistry.setComponent('rider', () => App);
+}

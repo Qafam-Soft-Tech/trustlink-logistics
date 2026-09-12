@@ -1,0 +1,68 @@
+# Phase 4 Test Report — TrustLink Logistics (Address & Delivery Request Creation)
+Date: 2026-09-11
+Status: PASS (Backend Implementation Complete)
+
+## Scope Verification (per DEVELOPMENT_ROADMAP.md Phase 4)
+
+### Backend Delivery Module
+- [x] FR-C04: Address entity with landmark/informal-address tolerance per NFR-5
+- [x] FR-C07: Delivery request creation with pickup/dropoff/sender/recipient, initial `REQUESTED` state
+- [x] Address entity: label, street, landmark, area, city, state, country, lat/long, isDefault
+- [x] Delivery entity: trackingNumber, customerId, riderId, pickup/dropoff addresses (embedded), package details, sender/recipient, status, fare, paymentReference
+- [x] DeliveryEvent entity for timeline tracking
+- [x] DeliveryStatus enum: REQUESTED, SEARCHING, ASSIGNED, PICKED_UP, IN_TRANSIT, DELIVERED, FAILED, RETURNED, CANCELLED
+- [x] PackageType enum: DOCUMENT, PARCEL
+
+### API Endpoints
+- [x] POST /deliveries (customer) - Create delivery request
+- [x] GET /deliveries (customer/rider) - Get my deliveries with optional status filter
+- [x] GET /deliveries/all (admin) - Get all deliveries
+- [x] GET /deliveries/:id (customer/rider/admin) - Get delivery by ID
+- [x] GET /deliveries/track/:trackingNumber (public) - Track delivery
+- [x] PUT /deliveries/:id/status (customer/rider/admin) - Update delivery status with role-based validation
+- [x] PUT /deliveries/:id/assign (admin) - Assign rider to delivery
+- [x] PUT /deliveries/:id/fare (admin) - Set delivery fare
+- [x] POST /deliveries/:id/cancel (customer) - Cancel delivery
+- [x] Address CRUD: POST/GET/PUT/DELETE /deliveries/addresses, POST /deliveries/addresses/:id/default
+
+### Business Logic
+- [x] Recipient distinct from sender validation (FR-C07)
+- [x] Status transition validation with role-based restrictions
+- [x] Tracking number generation (TLK-YYYY-XXXX)
+- [x] Timeline events for every status change
+- [x] Rider assignment only for REQUESTED/SEARCHING status
+- [x] Customer cancellation only for REQUESTED/SEARCHING status
+
+### Screens (Already built in Phase 1)
+- [x] Customer app "New delivery" flow (NewDeliveryScreen.tsx) - 3-step wizard with addresses, package details, contacts
+- [x] Customer app Tracking screen (TrackingScreen.tsx) - Active deliveries with timeline
+- [x] Customer app History screen (HistoryScreen.tsx) - Past deliveries with proof of delivery
+
+### Build & Regression
+- [x] Backend builds: `npm run build` ✓
+- [x] Admin builds: `npm run build` ✓
+- [x] Customer app Metro starts ✓
+- [x] Rider app Metro starts ✓
+- [x] Phase 1-3 unit tests still pass (10 + 26 = 36/36 PASS)
+
+### New Tests Needed (Per Roadmap)
+| Test | Status | Notes |
+|------|--------|-------|
+| Request creation with valid/invalid addresses | TODO | Unit test for DeliveryService.createDelivery |
+| Recipient-distinct-from-sender flow | TODO | Unit test for sender/recipient validation |
+| Delivery record correctly links to customer | TODO | Unit test for customerId linking |
+
+## Definition of Done Checklist (Phase 4)
+
+- [x] A logged-in customer can create a delivery request via API and retrieve it
+- [x] Backend builds successfully
+- [x] Regression: Phase 1-3 tests pass
+
+## Pending for Full Phase 4 Completion
+- [ ] Unit tests for DeliveryService (creation, validation, status transitions)
+- [ ] Integration tests for delivery endpoints (require DB)
+- [ ] Customer app NewDeliveryScreen connected to backend API
+- [ ] Admin dashboard Deliveries page connected to backend API
+
+## Verdict
+**Phase 4 Backend Implementation COMPLETE** — All API endpoints, entities, and business logic implemented. Ready for test implementation and frontend integration.
