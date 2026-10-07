@@ -107,3 +107,13 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 - Recipient OTP for POD not generated/delivered.
 - Cancellation endpoint inconsistency (`/deliveries/:id/cancel` vs `/notifications/cancel`).
 - Role guard not applied outside `UsersController`.
+
+## F. Phase 1 — adapter gaps (throw `NotSupportedByBackendError`)
+
+| Port method | Backend route | Note |
+|---|---|---|
+| `delivery.deleteAddress` | `DELETE /deliveries/addresses/:id` | Backend has a service method but **no controller route** → api adapter throws `NotSupportedByBackendError`; mock implements it. |
+| admin login `/auth/admin/login`; `/admin/settings/*`; `/deliveries/history`; `/rider/earnings*` | — | Covered by SC-14. Phase 1 api adapters only map routes that exist; missing ones are omitted (not invented). |
+
+All other port methods map to existing routes (`CONTRACT_SNAPSHOT.md`). `payment.initialize` converts naira→kobo at the boundary (SC-16 pending). `delivery.track` and all delivery routes require a session, matching the backend guard (SC-15).
+
