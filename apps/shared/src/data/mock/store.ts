@@ -615,6 +615,64 @@ export class MockStore {
     return d;
   }
 
+  /* ---------------- demo controls ---------------- */
+  /** Advance a delivery one step along the happy path (for the demo menu). */
+  advanceDelivery(deliveryId: string): Delivery {
+    const d = this.getDelivery(deliveryId);
+    switch (d.status) {
+      case 'requested':
+        d.status = 'searching';
+        this.pushEvent(d, 'searching', null, 'admin', 'Payment confirmed (demo)');
+        break;
+      case 'searching': {
+        const eligible = this.eligibleRiders(d.id)[0];
+        if (eligible) this.assignRider(d.id, eligible.rider.userId);
+        break;
+      }
+      case 'assigned':
+        this.transition(d, 'picked_up', d.riderId, 'rider', 'Picked up (demo)');
+        break;
+      case 'picked_up':
+        this.transition(d, 'in_transit', d.riderId, 'rider', 'In transit (demo)');
+        break;
+      case 'in_transit': {
+        this.state.podByDelivery[d.id] = {
+          id: nextId('pod'),
+          deliveryId: d.id,
+          photoUrl: 'file://demo-proof.jpg',
+          recipientOtp: d.recipientCode ?? '482913',
+          recipientName: d.recipientName,
+          recipientPhone: d.recipientPhone,
+          latitude: null,
+          longitude: null,
+          notes: 'Demo delivery',
+          createdAt: nowIso(),
+        };
+        d.status = 'delivered';
+        d.deliveredAt = nowIso();
+        this.pushEvent(d, 'delivered', d.riderId, 'rider', 'Delivered (demo)');
+        this.notify(d, 'Delivered', 'Demo delivery completed.', 'push');
+        break;
+      }
+      case 'failed':
+        d.status = 'searching';
+        d.riderId = null;
+        d.rider = null;
+        this.pushEvent(d, 'searching', null, 'admin', 'Redelivery scheduled (demo)');
+        break;
+      default:
+        break;
+    }
+    return d;
+  }
+
+  /** Recipient codes for the deliveries a presenter can complete POD on. */
+  activeRecipientCodes(): Array<{ id: string; trackingNumber: string; status: DeliveryStatus; code: string }> {
+    return this.state.deliveries
+      .filter((d) => d.status === 'assigned' || d.status === 'picked_up' || d.status === 'in_transit')
+      .map((d) => ({ id: d.id, trackingNumber: d.trackingNumber, status: d.status, code: d.recipientCode ?? '482913' }));
+  }
+
   /* ---------------- admin ---------------- */
   listUsers(filter?: { role?: UserRole; isActive?: boolean }): User[] {
     const users: User[] = [this.state.customer, ...this.state.riders.map((r) => r.user)];

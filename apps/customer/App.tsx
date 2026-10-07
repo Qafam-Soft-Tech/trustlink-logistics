@@ -8,8 +8,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
 import { ThemeProvider, useTheme } from '@trustlink/shared';
 
-import { AppNavigator } from './src/navigation/AppNavigator';
+import { AppNavigator, linking } from './src/navigation/AppNavigator';
 import { DataProvider } from './src/data/DataContext';
+import { SessionProvider } from './src/session/SessionContext';
+import { DemoMenuProvider } from './src/demo/DemoMenuContext';
 
 const queryClient = new QueryClient();
 
@@ -39,7 +41,7 @@ function Root() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <NavigationContainer theme={navigationTheme}>
+        <NavigationContainer theme={navigationTheme} linking={linking as never}>
           <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
           <AppNavigator />
         </NavigationContainer>
@@ -53,7 +55,11 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <DataProvider>
         <ThemeProvider storage={AsyncStorage}>
-          <Root />
+          <SessionProvider>
+            <DemoMenuProvider>
+              <Root />
+            </DemoMenuProvider>
+          </SessionProvider>
         </ThemeProvider>
       </DataProvider>
     </QueryClientProvider>

@@ -42,3 +42,22 @@ export function useCreateDelivery() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['deliveries'] }),
   });
 }
+
+export function useTrackDelivery() {
+  const data = useData();
+  return useMutation({ mutationFn: (trackingNumber: string) => data.delivery.track(trackingNumber) });
+}
+
+export function useNotifications(limit = 20) {
+  const data = useData();
+  return useQuery({ queryKey: ['notifications', limit], queryFn: () => data.notification.list(limit) });
+}
+
+export function useCancelDelivery() {
+  const data = useData();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => data.delivery.cancel(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['deliveries'] }),
+  });
+}

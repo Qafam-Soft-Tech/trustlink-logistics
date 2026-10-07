@@ -41,7 +41,7 @@ export function HomeScreen({ navigation }: any) {
                 icon="time"
                 label="History"
                 color={theme.colors.info}
-                onPress={() => navigation.navigate('History')}
+                onPress={() => navigation.navigate('Deliveries')}
               />
             </Row>
           </Column>

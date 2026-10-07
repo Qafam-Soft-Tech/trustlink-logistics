@@ -1,0 +1,45 @@
+import React, { useState } from 'react';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useTheme, Screen, TopBar, Text, Button, Input, Column, Card, StatusBadge, Banner, ErrorState } from '@trustlink/shared';
+import { useTrackDelivery } from '../hooks';
+import type { TrackingStackParamList } from '../navigation/types';
+
+type Props = NativeStackScreenProps<TrackingStackParamList, 'TrackByNumber'>;
+
+export function TrackByNumberScreen({ navigation, route }: Props) {
+  const { theme } = useTheme();
+  const [value, setValue] = useState(route.params?.trackingNumber ?? '');
+  const track = useTrackDelivery();
+
+  const submit = () => {
+    if (!value.trim()) return;
+    track.mutate(value.trim());
+  };
+
+  return (
+    <Screen>
+      <TopBar title="Track a package" showBack onBack={() => navigation.goBack()} />
+      <Column style={{ flex: 1, padding: 16 }} gap="md">
+        <Text variant="body" color="inherit" style={{ color: theme.roles.textSecondary }}>
+          Enter a tracking number (e.g. TLK-2026-001).
+        </Text>
+        <Input label="Tracking number" value={value} onChangeText={setValue} autoCapitalize="characters" placeholder="TLK-2026-001" />
+        <Button variant="primary" size="lg" loading={track.isPending} onPress={submit}>Track</Button>
+
+        {track.isError ? (
+          <Banner variant="error" title="Not found" message="We couldn't find a delivery with that number." />
+        ) : track.isSuccess && track.data ? (
+          <Card onPress={() => navigation.navigate('TrackingHome', { deliveryId: track.data!.id })}>
+            <Column gap="sm">
+              <Text variant="body" color="inherit" style={{ color: theme.roles.text }}>{track.data.trackingNumber}</Text>
+              <StatusBadge status={track.data.status} />
+              <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted }}>{track.data.pickupArea} → {track.data.dropoffArea}</Text>
+            </Column>
+          </Card>
+        ) : (
+          <ErrorState title="Track by number" message="Results appear here after a successful lookup." actionLabel="Back" onAction={() => navigation.goBack()} />
+        )}
+      </Column>
+    </Screen>
+  );
+}
