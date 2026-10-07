@@ -10,6 +10,7 @@ export type AuthStackParamList = {
   PhoneEntry: undefined;
   OtpVerification: { phone: string; role?: UserRole; purpose: 'signup' | 'login' };
   ProfileSetup: { phone: string; role: UserRole };
+  AccountReady: undefined;
 };
 
 export type MainTabParamList = {
@@ -42,6 +43,7 @@ export type TrackingStackParamList = {
 };
 
 export type RootStackParamList = {
+  Splash: undefined;
   Onboarding: NavigatorScreenParams<OnboardingStackParamList> | undefined;
   Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
   Main: NavigatorScreenParams<MainTabParamList> | undefined;

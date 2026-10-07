@@ -14,8 +14,8 @@ export function WelcomeScreen() {
   const demoMenu = useDemoMenu();
 
   const start = () => {
-    completeOnboarding();
-    navigation.navigate('Main');
+    void completeOnboarding();
+    navigation.navigate('Auth');
   };
 
   return (

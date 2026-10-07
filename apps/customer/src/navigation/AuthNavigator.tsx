@@ -6,8 +6,10 @@ import { theme } from '@trustlink/shared';
 import { PhoneEntryScreen } from '../screens/auth/PhoneEntryScreen';
 import { OtpVerificationScreen } from '../screens/auth/OtpVerificationScreen';
 import { ProfileSetupScreen } from '../screens/auth/ProfileSetupScreen';
+import { AccountReadyScreen } from '../screens/auth/AccountReadyScreen';
+import type { AuthStackParamList } from './types';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 export function AuthNavigator() {
   return (
@@ -15,6 +17,7 @@ export function AuthNavigator() {
       <Stack.Screen name="PhoneEntry" component={PhoneEntryScreen} />
       <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
       <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+      <Stack.Screen name="AccountReady" component={AccountReadyScreen} />
     </Stack.Navigator>
   );
 }

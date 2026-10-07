@@ -1,164 +1,117 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Keyboard, Alert } from 'react-native';
-import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Center, Row } from '@trustlink/shared';
-import { theme } from '@trustlink/shared';
-import { Ionicons } from '@expo/vector-icons';
-import { api } from '../../utils/api';
+import React, { useState } from 'react';
+import { StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useTheme, Screen, Text, Button, OtpInput, Card, Column, Center, Row, Chip, Banner, OTP_LENGTH, OTP_EXPIRY_SECONDS, MAX_OTP_ATTEMPTS, DEMO_OTP, formatPhone } from '@trustlink/shared';
+import { useVerifyOtp, useResendOtp } from '../../hooks/useAuth';
+import { useCountdown } from '../../hooks/useCountdown';
+import { useData } from '../../data/DataContext';
+import { useSession } from '../../session/SessionContext';
+import type { AuthStackParamList, RootStackParamList } from '../../navigation/types';
 
-interface OtpVerificationScreenProps {
-  navigation: any;
-  route: any;
+type Props = NativeStackScreenProps<AuthStackParamList, 'OtpVerification'>;
+
+function mmss(total: number): string {
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export function OtpVerificationScreen({ navigation, route }: OtpVerificationScreenProps) {
-  const { phone, role, purpose } = route.params;
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [isLoading, setIsLoading] = useState(false);
-  const [resendTimer, setResendTimer] = useState(60);
-  const [canResend, setCanResend] = useState(false);
-  const inputRefs = useRef<Array<any>>([]);
+export function OtpVerificationScreen({ navigation, route }: Props) {
+  const { phone, purpose } = route.params;
+  const { theme } = useTheme();
+  const data = useData();
+  const { signIn } = useSession();
+  const rootNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const verify = useVerifyOtp();
+  const resend = useResendOtp();
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setResendTimer(prev => {
-        if (prev <= 1) {
-          setCanResend(true);
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const [code, setCode] = useState('');
+  const [attempts, setAttempts] = useState(0);
+  const [error, setError] = useState<string | undefined>();
+  const [round, setRound] = useState(0);
+  const remaining = useCountdown(OTP_EXPIRY_SECONDS, true, round);
+  const expired = remaining === 0;
+  const locked = attempts >= MAX_OTP_ATTEMPTS;
 
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value) || value.length > 1) return;
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    } else if (!value && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+  const submit = () => {
+    if (locked) return;
+    if (expired) {
+      setError('This code has expired. Resend a new one.');
+      return;
     }
-
-    if (newOtp.every(d => d)) {
-      handleVerify();
+    if (code.length !== OTP_LENGTH) {
+      setError('Enter the 6-digit code');
+      return;
     }
+    setError(undefined);
+    verify.mutate(
+      { phone, code, purpose },
+      {
+        onSuccess: async (r) => {
+          if (purpose === 'signup') {
+            navigation.navigate('ProfileSetup', { phone, role: 'customer' });
+          } else {
+            await signIn({ user: r.user, token: r.token });
+            rootNav.replace('Main');
+          }
+        },
+        onError: () => {
+          const left = MAX_OTP_ATTEMPTS - (attempts + 1);
+          setAttempts((a) => a + 1);
+          setCode('');
+          setError(left > 0 ? `Incorrect code. ${left} attempt${left > 1 ? 's' : ''} left.` : 'Too many incorrect attempts. Resend a new code.');
+        },
+      },
+    );
   };
 
-  const handleVerify = async () => {
-    const code = otp.join('');
-    if (code.length !== 6) return;
-
-    setIsLoading(true);
-    try {
-      const response = await api.post('/auth/verify-otp', { phone, code, purpose });
-      console.log('OTP verified:', response.data);
-      
-      if (purpose === 'signup') {
-        navigation.navigate('ProfileSetup', { phone, role });
-      } else {
-        navigation.replace('Main');
-      }
-    } catch (error: any) {
-      Alert.alert('Invalid OTP', error.response?.data?.message || 'The code you entered is incorrect or expired.');
-      setOtp(['', '', '', '', '', '']);
-      inputRefs.current[0]?.focus();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (!canResend) return;
-    setIsLoading(true);
-    try {
-      await api.post('/auth/resend-otp', { phone, purpose });
-      console.log('OTP resent');
-      setResendTimer(60);
-      setCanResend(false);
-    } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to resend OTP. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const formatPhone = (phone: string) => {
-    return phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+  const handleResend = () => {
+    resend.mutate(
+      { phone, purpose },
+      {
+        onSuccess: () => {
+          setAttempts(0);
+          setError(undefined);
+          setCode('');
+          setRound((r) => r + 1);
+        },
+      },
+    );
   };
 
   return (
-    <Screen style={{ flex: 1, padding: theme.spacing.lg }}>
-      <Column style={{ flex: 1, justifyContent: 'center' }} gap="xl">
+    <Screen>
+      <Column style={styles.container} gap="lg" justify="center">
         <Center>
-          <Box style={{ 
-            width: 100, 
-            height: 100, 
-            borderRadius: theme.borderRadius.full, 
-            backgroundColor: theme.colors.navy,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}>
-            <Ionicons name="lock-closed" size={50} color={theme.colors.gold} />
-          </Box>
+          <Column gap="xs" align="center">
+            <Text variant="h3" color="inherit" style={{ color: theme.roles.text }}>Verify your phone</Text>
+            <Text variant="bodySmall" color="inherit" style={{ color: theme.roles.textMuted }}>We sent a 6-digit code to</Text>
+            <Text variant="body" color="inherit" style={{ color: theme.roles.text }}>{formatPhone(phone)}</Text>
+          </Column>
         </Center>
-        
-        <Column gap="sm" style={{ alignItems: 'center' }}>
-          <TextComponent variant="h2" color="textPrimary" style={{ textAlign: 'center' }}>
-            Verify your phone
-          </TextComponent>
-          <TextComponent variant="body" color="textSecondary" style={{ textAlign: 'center' }}>
-            We sent a 6-digit code to
-          </TextComponent>
-          <TextComponent variant="body" color="navy" style={{ textAlign: 'center', fontWeight: '600' }}>
-            {formatPhone(phone)}
-          </TextComponent>
-        </Column>
 
-        <Card style={{ padding: theme.spacing.xl }}>
+        <Card>
           <Column gap="lg">
-            <Row gap="md" style={{ justifyContent: 'center' }}>
-              {otp.map((digit, index) => (
-                <Input
-                  key={index}
-                  ref={(ref) => { inputRefs.current[index] = ref; }}
-                  style={{ width: 50, height: 60, textAlign: 'center', fontSize: 24 }}
-                  value={digit}
-                  onChangeText={(value) => handleOtpChange(index, value)}
-                  maxLength={1}
-                  keyboardType="number-pad"
-                  autoFocus={index === 0}
-                />
-              ))}
+            <OtpInput length={OTP_LENGTH} value={code} onChange={setCode} autoFocus />
+
+            <Row justify="center" align="center" gap="sm">
+              {expired || locked ? (
+                <Text variant="bodySmall" color="inherit" style={{ color: theme.roles.textMuted }}>
+                  {locked ? 'Too many attempts.' : 'Code expired.'}
+                </Text>
+              ) : (
+                <Text variant="bodySmall" color="inherit" style={{ color: theme.roles.textMuted }}>Expires in {mmss(remaining)}</Text>
+              )}
+              <Button variant="ghost" size="sm" loading={resend.isPending} onPress={handleResend}>Resend code</Button>
             </Row>
 
-            <Row gap="md" style={{ justifyContent: 'center', alignItems: 'center' }}>
-              <TextComponent variant="bodySmall" color={canResend ? 'navy' : 'textTertiary'}>
-                Didn't receive the code?
-              </TextComponent>
-              <Button
-                variant="ghost"
-                size="sm"
-                onPress={handleResend}
-                disabled={!canResend || isLoading}
-              >
-                {canResend ? 'Resend' : `Resend in ${resendTimer}s`}
-              </Button>
-            </Row>
+            {data.source === 'mock' ? <Row justify="center"><Chip label={`Demo OTP: ${DEMO_OTP}`} /></Row> : null}
 
-            <Button
-              variant="primary"
-              size="lg"
-              loading={isLoading}
-              onPress={handleVerify}
-              disabled={otp.some(d => !d) || isLoading}
-              style={{ marginTop: theme.spacing.md }}
-            >
-              Verify & Continue
+            {error ? <Banner variant="error" message={error} /> : null}
+
+            <Button variant="primary" size="lg" loading={verify.isPending} disabled={locked || expired} onPress={submit}>
+              Verify & continue
             </Button>
           </Column>
         </Card>
@@ -166,3 +119,7 @@ export function OtpVerificationScreen({ navigation, route }: OtpVerificationScre
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 24 },
+});

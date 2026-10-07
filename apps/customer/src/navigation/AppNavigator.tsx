@@ -14,8 +14,9 @@ import { TrackByNumberScreen } from '../screens/TrackByNumberScreen';
 import { OnboardingSlidesScreen } from '../screens/onboarding/OnboardingSlidesScreen';
 import { WelcomeScreen } from '../screens/onboarding/WelcomeScreen';
 import { DesignGalleryScreen } from '../screens/DesignGalleryScreen';
+import { SplashScreen } from '../screens/splash/SplashScreen';
+import { SessionExpiredSheet } from '../screens/auth/SessionExpiredSheet';
 import { makePlaceholder } from '../components/PlaceholderScreen';
-import { useSession } from '../session/SessionContext';
 import type { RootStackParamList, MainTabParamList, NewDeliveryStackParamList, TrackingStackParamList, OnboardingStackParamList } from './types';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -177,29 +178,19 @@ function TrackingNavigator() {
 }
 
 function RootNavigator() {
-  const { theme } = useTheme();
-  const { ready, session, onboardingSeen } = useSession();
-  const initial = React.useRef<keyof RootStackParamList>(!onboardingSeen ? 'Onboarding' : session ? 'Main' : 'Auth').current;
-
-  if (!ready) {
-    return (
-      <Screen>
-        <Center style={{ flex: 1 }}>
-          <ActivityIndicator size="large" color={theme.roles.primaryAction} />
-        </Center>
-      </Screen>
-    );
-  }
-
   return (
-    <RootStack.Navigator initialRouteName={initial} screenOptions={{ headerShown: false }}>
-      <RootStack.Screen name="Onboarding" component={OnboardingNavigator} />
-      <RootStack.Screen name="Auth" component={AuthNavigator} />
-      <RootStack.Screen name="Main" component={MainTabs} />
-      <RootStack.Screen name="NewDelivery" component={NewDeliveryNavigator} options={{ presentation: 'modal' }} />
-      <RootStack.Screen name="Tracking" component={TrackingNavigator} />
-      {__DEV__ ? <RootStack.Screen name="DesignGallery" component={DesignGalleryScreen} /> : null}
-    </RootStack.Navigator>
+    <>
+      <RootStack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
+        <RootStack.Screen name="Splash" component={SplashScreen} />
+        <RootStack.Screen name="Onboarding" component={OnboardingNavigator} />
+        <RootStack.Screen name="Auth" component={AuthNavigator} />
+        <RootStack.Screen name="Main" component={MainTabs} />
+        <RootStack.Screen name="NewDelivery" component={NewDeliveryNavigator} options={{ presentation: 'modal' }} />
+        <RootStack.Screen name="Tracking" component={TrackingNavigator} />
+        {__DEV__ ? <RootStack.Screen name="DesignGallery" component={DesignGalleryScreen} /> : null}
+      </RootStack.Navigator>
+      <SessionExpiredSheet />
+    </>
   );
 }
 

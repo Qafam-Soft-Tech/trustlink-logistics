@@ -1,178 +1,84 @@
 import React, { useState } from 'react';
-import { Keyboard, Alert } from 'react-native';
-import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Center, Row } from '@trustlink/shared';
-import { theme } from '@trustlink/shared';
-import { Ionicons } from '@expo/vector-icons';
-import { api } from '../../utils/api';
+import { Linking, StyleSheet } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useTheme, Screen, Text, Button, PhoneInput, Card, Column, Center, Row, Chip, Banner, toCanonicalPhone, isValidNigerianPhone, DEMO_OTP } from '@trustlink/shared';
+import { useRequestOtp } from '../../hooks/useAuth';
+import { useData } from '../../data/DataContext';
+import type { AuthStackParamList } from '../../navigation/types';
 
-export function PhoneEntryScreen({ navigation }: any) {
+type Props = NativeStackScreenProps<AuthStackParamList, 'PhoneEntry'>;
+
+export function PhoneEntryScreen({ navigation }: Props) {
+  const { theme } = useTheme();
+  const data = useData();
+  const requestOtp = useRequestOtp();
   const [phone, setPhone] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'customer' | 'rider'>('customer');
-  const [isLogin, setIsLogin] = useState(false);
+  const [mode, setMode] = useState<'signup' | 'login'>('signup');
+  const [error, setError] = useState<string | undefined>();
 
-  const formatPhone = (text: string) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 6) return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-  };
-
-  const handlePhoneChange = (text: string) => {
-    const formatted = formatPhone(text);
-    setPhone(formatted);
-  };
-
-  const handleContinue = async () => {
-    const cleanedPhone = phone.replace(/\s/g, '');
-    if (!cleanedPhone || cleanedPhone.length !== 11) {
-      Alert.alert('Invalid Phone', 'Please enter a valid 11-digit Nigerian phone number');
+  const submit = () => {
+    setError(undefined);
+    const canonical = toCanonicalPhone(phone);
+    if (!isValidNigerianPhone(canonical)) {
+      setError('Enter a valid 11-digit Nigerian phone number');
       return;
     }
-
-    setIsLoading(true);
-    try {
-      if (isLogin) {
-        const response = await api.post('/auth/login', { phone: cleanedPhone });
-        console.log('Login response:', response.data);
-        navigation.navigate('OtpVerification', { 
-          phone: cleanedPhone, 
-          purpose: 'login'
-        });
-      } else {
-        const response = await api.post('/auth/signup', { phone: cleanedPhone, role: selectedRole });
-        console.log('Signup response:', response.data);
-        navigation.navigate('OtpVerification', { 
-          phone: cleanedPhone, 
-          role: selectedRole,
-          purpose: 'signup'
-        });
-      }
-    } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to send OTP. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    requestOtp.mutate(
+      { phone: canonical, purpose: mode },
+      {
+        onSuccess: () => navigation.navigate('OtpVerification', { phone: canonical, role: 'customer', purpose: mode }),
+        onError: (e: unknown) =>
+          setError((e as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ?? (e as Error).message ?? 'Failed to send OTP. Please try again.'),
+      },
+    );
   };
 
   return (
-    <Screen style={{ flex: 1, padding: theme.spacing.lg }}>
-      <StatusBarHidden />
-      <Column style={{ flex: 1, justifyContent: 'center' }} gap="xl">
+    <Screen>
+      <Column style={styles.container} gap="lg" justify="center">
         <Center>
-          <Box style={{ 
-            width: 100, 
-            height: 100, 
-            borderRadius: theme.borderRadius.full, 
-            backgroundColor: theme.colors.navy,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}>
-            <Ionicons name="cube" size={50} color={theme.colors.gold} />
-          </Box>
+          <Column gap="xs" align="center">
+            <Text variant="h1" color="inherit" style={{ color: theme.roles.text }}>TrustLink</Text>
+            <Text variant="body" color="inherit" style={{ color: theme.roles.textMuted }}>Secure. Swift. Strategic.</Text>
+          </Column>
         </Center>
-        
-        <Column gap="md" style={{ alignItems: 'center' }}>
-          <TextComponent variant="h2" color="textPrimary" style={{ textAlign: 'center' }}>
-            Welcome to TrustLink
-          </TextComponent>
-          <TextComponent variant="body" color="textSecondary" style={{ textAlign: 'center' }}>
-            Secure. Swift. Strategic.
-          </TextComponent>
-        </Column>
 
-        <Card style={{ padding: theme.spacing.xl }}>
+        <Card>
           <Column gap="lg">
-            <Column gap="sm">
-              <TextComponent variant="h4" color="textPrimary" style={{ textAlign: 'center' }}>
-                {isLogin ? 'Welcome back' : 'Enter your phone number'}
-              </TextComponent>
-              <TextComponent variant="bodySmall" color="textSecondary" style={{ textAlign: 'center' }}>
-                {isLogin 
-                  ? 'We\'ll send a verification code to log you in' 
-                  : 'We\'ll send a verification code via SMS'}
-              </TextComponent>
+            <Column gap="xs">
+              <Text variant="h4" color="inherit" style={{ color: theme.roles.text }}>{mode === 'login' ? 'Welcome back' : 'Create your account'}</Text>
+              <Text variant="bodySmall" color="inherit" style={{ color: theme.roles.textMuted }}>
+                {mode === 'login' ? "We'll send a verification code to log you in." : "We'll send a verification code via SMS."}
+              </Text>
             </Column>
 
-            <Input
-              label="Phone Number"
-              placeholder="080 1234 5678"
-              value={phone}
-              onChangeText={handlePhoneChange}
-              keyboardType="phone-pad"
-              maxLength={14}
-              leftIcon={<Ionicons name="call" size={24} color={theme.colors.textTertiary} />}
-            />
+            <PhoneInput value={phone} onChangeText={setPhone} error={error} />
 
-            {!isLogin && (
-              <>
-                <Column gap="md" style={{ marginTop: theme.spacing.md }}>
-                  <TextComponent variant="bodySmall" color="textSecondary" style={{ marginBottom: theme.spacing.xs }}>
-                    I am a:
-                  </TextComponent>
-                  <Row gap="md">
-                    <TouchableRoleButton
-                      label="Customer"
-                      icon="person"
-                      selected={selectedRole === 'customer'}
-                      onPress={() => setSelectedRole('customer')}
-                    />
-                    <TouchableRoleButton
-                      label="Rider"
-                      icon="bicycle"
-                      selected={selectedRole === 'rider'}
-                      onPress={() => setSelectedRole('rider')}
-                    />
-                  </Row>
-                </Column>
-              </>
-            )}
+            {data.source === 'mock' ? <Row><Chip label={`Demo OTP: ${DEMO_OTP}`} /></Row> : null}
 
-            <Button
-              variant="primary"
-              size="lg"
-              loading={isLoading}
-              onPress={handleContinue}
-              style={{ marginTop: theme.spacing.md }}
-            >
-              {isLogin ? 'Log In' : 'Continue'}
+            <Button variant="primary" size="lg" loading={requestOtp.isPending} onPress={submit}>
+              {mode === 'login' ? 'Log in' : 'Continue'}
             </Button>
 
-            <Button
-              variant="ghost"
-              size="md"
-              onPress={() => setIsLogin(!isLogin)}
-              style={{ marginTop: theme.spacing.sm }}
-            >
-              {isLogin ? 'Don\'t have an account? Sign Up' : 'Already have an account? Log In'}
+            <Button variant="ghost" size="md" onPress={() => { setError(undefined); setMode(mode === 'login' ? 'signup' : 'login'); }}>
+              {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Log in'}
             </Button>
           </Column>
         </Card>
 
-        <Center>
-          <TextComponent variant="caption" color="textTertiary">
-            By continuing, you agree to our Terms of Service and Privacy Policy
-          </TextComponent>
-        </Center>
+        <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted, textAlign: 'center' }}>
+          By continuing you agree to our{' '}
+          <Text variant="caption" color="inherit" onPress={() => Linking.openURL('https://trustlink.ng/terms')} style={{ color: theme.roles.primaryAction, textDecorationLine: 'underline' }}>Terms of Service</Text>
+          {' '}and{' '}
+          <Text variant="caption" color="inherit" onPress={() => Linking.openURL('https://trustlink.ng/privacy')} style={{ color: theme.roles.primaryAction, textDecorationLine: 'underline' }}>Privacy Policy</Text>.
+        </Text>
+
+        {error ? <Banner variant="error" message={error} /> : null}
       </Column>
     </Screen>
   );
 }
 
-function TouchableRoleButton({ label, icon, selected, onPress }: any) {
-  return (
-    <Button
-      variant={selected ? 'primary' : 'outline'}
-      size="md"
-      onPress={onPress}
-      style={{ flex: 1 }}
-      leftIcon={<Ionicons name={icon} size={20} color={selected ? theme.colors.white : theme.colors.navy} />}
-    >
-      {label}
-    </Button>
-  );
-}
-
-function StatusBarHidden() {
-  return null;
-}
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 24 },
+});
