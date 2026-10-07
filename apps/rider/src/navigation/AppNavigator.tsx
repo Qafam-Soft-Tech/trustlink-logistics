@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '@trustlink/shared';
+import { useTheme } from '@trustlink/shared';
 
 import { HomeScreen } from '../screens/HomeScreen';
 import { JobsScreen } from '../screens/JobsScreen';
@@ -10,21 +10,23 @@ import { EarningsScreen } from '../screens/EarningsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { AuthNavigator } from './AuthNavigator';
 import { KycScreen } from '../screens/KycScreen';
+import { DesignGalleryScreen } from '../screens/DesignGalleryScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function MainTabs() {
+  const { theme } = useTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.navy,
-        tabBarInactiveTintColor: theme.colors.textTertiary,
+        tabBarActiveTintColor: theme.roles.primaryAction,
+        tabBarInactiveTintColor: theme.roles.textMuted,
         tabBarStyle: {
-          backgroundColor: theme.colors.surface,
+          backgroundColor: theme.roles.surface,
           borderTopWidth: 1,
-          borderTopColor: theme.colors.border,
+          borderTopColor: theme.roles.border,
           height: 80,
           paddingBottom: 10,
         },
@@ -112,6 +114,7 @@ export function AppNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Auth" component={AuthNavigator} />
       <Stack.Screen name="Main" component={MainTabs} />
+      {__DEV__ ? <Stack.Screen name="DesignGallery" component={DesignGalleryScreen} /> : null}
     </Stack.Navigator>
   );
 }
