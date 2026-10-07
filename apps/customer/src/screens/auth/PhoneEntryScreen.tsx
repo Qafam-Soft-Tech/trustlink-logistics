@@ -3,18 +3,19 @@ import { Keyboard, Alert } from 'react-native';
 import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Center, Row } from '@trustlink/shared';
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../../utils/api';
 
 export function PhoneEntryScreen({ navigation }: any) {
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'customer' | 'rider'>('customer');
+  const [isLogin, setIsLogin] = useState(false);
 
   const formatPhone = (text: string) => {
     const cleaned = text.replace(/\D/g, '');
     if (cleaned.length <= 3) return cleaned;
     if (cleaned.length <= 6) return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
-    if (cleaned.length <= 10) return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 10)}`;
+    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
   };
 
   const handlePhoneChange = (text: string) => {
@@ -31,20 +32,24 @@ export function PhoneEntryScreen({ navigation }: any) {
 
     setIsLoading(true);
     try {
-      // TODO: Call backend API to send OTP
-      // const response = await api.post('/auth/signup', { phone: cleanedPhone, role: selectedRole });
-      console.log('Sending OTP to:', cleanedPhone, 'Role:', selectedRole);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      navigation.navigate('OtpVerification', { 
-        phone: cleanedPhone, 
-        role: selectedRole,
-        purpose: 'signup'
-      });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to send OTP. Please try again.');
+      if (isLogin) {
+        const response = await api.post('/auth/login', { phone: cleanedPhone });
+        console.log('Login response:', response.data);
+        navigation.navigate('OtpVerification', { 
+          phone: cleanedPhone, 
+          purpose: 'login'
+        });
+      } else {
+        const response = await api.post('/auth/signup', { phone: cleanedPhone, role: selectedRole });
+        console.log('Signup response:', response.data);
+        navigation.navigate('OtpVerification', { 
+          phone: cleanedPhone, 
+          role: selectedRole,
+          purpose: 'signup'
+        });
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to send OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -63,7 +68,7 @@ export function PhoneEntryScreen({ navigation }: any) {
             justifyContent: 'center',
             alignItems: 'center',
           }}>
-            <Ionicons name="logo-trustlink" size={50} color={theme.colors.gold} />
+            <Ionicons name="cube" size={50} color={theme.colors.gold} />
           </Box>
         </Center>
         
@@ -79,11 +84,13 @@ export function PhoneEntryScreen({ navigation }: any) {
         <Card style={{ padding: theme.spacing.xl }}>
           <Column gap="lg">
             <Column gap="sm">
-              <TextComponent variant="h4" color="textPrimary">
-                Enter your phone number
+              <TextComponent variant="h4" color="textPrimary" style={{ textAlign: 'center' }}>
+                {isLogin ? 'Welcome back' : 'Enter your phone number'}
               </TextComponent>
-              <TextComponent variant="bodySmall" color="textSecondary">
-                We'll send a verification code via SMS
+              <TextComponent variant="bodySmall" color="textSecondary" style={{ textAlign: 'center' }}>
+                {isLogin 
+                  ? 'We\'ll send a verification code to log you in' 
+                  : 'We\'ll send a verification code via SMS'}
               </TextComponent>
             </Column>
 
@@ -97,25 +104,29 @@ export function PhoneEntryScreen({ navigation }: any) {
               leftIcon={<Ionicons name="call" size={24} color={theme.colors.textTertiary} />}
             />
 
-            <Column gap="md" style={{ marginTop: theme.spacing.md }}>
-              <TextComponent variant="bodySmall" color="textSecondary" style={{ marginBottom: theme.spacing.xs }}>
-                I am a:
-              </TextComponent>
-              <Row gap="md">
-                <TouchableRoleButton
-                  label="Customer"
-                  icon="person"
-                  selected={selectedRole === 'customer'}
-                  onPress={() => setSelectedRole('customer')}
-                />
-                <TouchableRoleButton
-                  label="Rider"
-                  icon="bicycle"
-                  selected={selectedRole === 'rider'}
-                  onPress={() => setSelectedRole('rider')}
-                />
-              </Row>
-            </Column>
+            {!isLogin && (
+              <>
+                <Column gap="md" style={{ marginTop: theme.spacing.md }}>
+                  <TextComponent variant="bodySmall" color="textSecondary" style={{ marginBottom: theme.spacing.xs }}>
+                    I am a:
+                  </TextComponent>
+                  <Row gap="md">
+                    <TouchableRoleButton
+                      label="Customer"
+                      icon="person"
+                      selected={selectedRole === 'customer'}
+                      onPress={() => setSelectedRole('customer')}
+                    />
+                    <TouchableRoleButton
+                      label="Rider"
+                      icon="bicycle"
+                      selected={selectedRole === 'rider'}
+                      onPress={() => setSelectedRole('rider')}
+                    />
+                  </Row>
+                </Column>
+              </>
+            )}
 
             <Button
               variant="primary"
@@ -124,7 +135,16 @@ export function PhoneEntryScreen({ navigation }: any) {
               onPress={handleContinue}
               style={{ marginTop: theme.spacing.md }}
             >
-              Continue
+              {isLogin ? 'Log In' : 'Continue'}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="md"
+              onPress={() => setIsLogin(!isLogin)}
+              style={{ marginTop: theme.spacing.sm }}
+            >
+              {isLogin ? 'Don\'t have an account? Sign Up' : 'Already have an account? Log In'}
             </Button>
           </Column>
         </Card>

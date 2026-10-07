@@ -3,6 +3,7 @@ import { Keyboard, Alert } from 'react-native';
 import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Row, Center, Avatar, Divider } from '@trustlink/shared';
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../utils/api';
 
 export function ProfileScreen() {
   const [user, setUser] = useState({
@@ -23,14 +24,13 @@ export function ProfileScreen() {
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      // TODO: Call backend API to update profile
-      console.log('Saving profile:', editForm);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await api.put('/users/profile', editForm);
+      console.log('Profile saved:', response.data);
       setUser(prev => ({ ...prev, ...editForm }));
       setIsEditing(false);
       Alert.alert('Success', 'Profile updated successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update profile');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
     } finally {
       setIsLoading(false);
     }

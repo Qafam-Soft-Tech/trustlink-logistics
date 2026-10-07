@@ -3,10 +3,11 @@ import { Keyboard, Alert } from 'react-native';
 import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Center, Row } from '@trustlink/shared';
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../../utils/api';
 
 interface OtpVerificationScreenProps {
   navigation: any;
-  route: { params: { phone: string; role: string; purpose: string } };
+  route: any;
 }
 
 export function OtpVerificationScreen({ navigation, route }: OtpVerificationScreenProps) {
@@ -54,16 +55,16 @@ export function OtpVerificationScreen({ navigation, route }: OtpVerificationScre
 
     setIsLoading(true);
     try {
-      console.log('Verifying OTP:', code, 'for phone:', phone);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await api.post('/auth/verify-otp', { phone, code, purpose });
+      console.log('OTP verified:', response.data);
       
       if (purpose === 'signup') {
         navigation.navigate('ProfileSetup', { phone, role });
       } else {
         navigation.replace('Main');
       }
-    } catch (error) {
-      Alert.alert('Invalid OTP', 'The code you entered is incorrect or expired.');
+    } catch (error: any) {
+      Alert.alert('Invalid OTP', error.response?.data?.message || 'The code you entered is incorrect or expired.');
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } finally {
@@ -75,12 +76,12 @@ export function OtpVerificationScreen({ navigation, route }: OtpVerificationScre
     if (!canResend) return;
     setIsLoading(true);
     try {
-      console.log('Resending OTP to:', phone);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await api.post('/auth/resend-otp', { phone, purpose });
+      console.log('OTP resent');
       setResendTimer(60);
       setCanResend(false);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to resend OTP. Please try again.');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to resend OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -10,6 +10,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { OtpService } from './services/otp.service';
+import { TermiiSmsService } from './services/termii-sms.service';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { OtpService } from './services/otp.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, OtpService],
+  providers: [AuthService, JwtStrategy, OtpService, TermiiSmsService],
   exports: [AuthService, JwtModule, OtpService],
 })
 export class AuthModule {}

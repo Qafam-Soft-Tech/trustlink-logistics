@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, SafeAreaView, ScrollView, Text, TouchableOpacity, ViewProps, ScrollViewProps } from 'react-native';
 import { theme, Theme } from '../theme';
 import { Box, Text as TextComponent, Button, Avatar } from './primitives';
 
@@ -7,7 +7,7 @@ type ThemedProps = {
   theme?: Theme;
 };
 
-export const Screen = React.forwardRef<SafeAreaView, SafeAreaView['props'] & ThemedProps & {
+export const Screen = React.forwardRef<SafeAreaView, ViewProps & ThemedProps & {
   backgroundColor?: keyof typeof theme.colors;
 }>(
   ({ theme: customTheme = theme, children, style, backgroundColor = 'background', ...props }, ref) => {
@@ -28,7 +28,7 @@ export const Screen = React.forwardRef<SafeAreaView, SafeAreaView['props'] & The
 );
 Screen.displayName = 'Screen';
 
-export const ScrollableScreen = React.forwardRef<ScrollView, ScrollView['props'] & ThemedProps & {
+export const ScrollableScreen = React.forwardRef<ScrollView, ScrollViewProps & ThemedProps & {
   backgroundColor?: keyof typeof theme.colors;
   contentContainerStyle?: any;
 }>(
@@ -52,7 +52,7 @@ export const ScrollableScreen = React.forwardRef<ScrollView, ScrollView['props']
 );
 ScrollableScreen.displayName = 'ScrollableScreen';
 
-export const Header = React.forwardRef<View, View['props'] & ThemedProps & {
+export const Header = React.forwardRef<View, ViewProps & ThemedProps & {
   title: string;
   leftAction?: React.ReactNode;
   rightAction?: React.ReactNode;
@@ -96,7 +96,7 @@ export const Header = React.forwardRef<View, View['props'] & ThemedProps & {
 );
 Header.displayName = 'Header';
 
-export const TabBar = React.forwardRef<View, View['props'] & ThemedProps & {
+export const TabBar = React.forwardRef<View, ViewProps & ThemedProps & {
   tabs: Array<{ label: string; icon: React.ReactNode; activeIcon?: React.ReactNode; badge?: string | number }>;
   activeIndex: number;
   onPress: (index: number) => void;
@@ -156,7 +156,7 @@ export const TabBar = React.forwardRef<View, View['props'] & ThemedProps & {
 );
 TabBar.displayName = 'TabBar';
 
-export const Divider = React.forwardRef<View, View['props'] & ThemedProps & {
+export const Divider = React.forwardRef<View, ViewProps & ThemedProps & {
   orientation?: 'horizontal' | 'vertical';
   label?: string;
 }>(
@@ -204,7 +204,7 @@ export const Divider = React.forwardRef<View, View['props'] & ThemedProps & {
 );
 Divider.displayName = 'Divider';
 
-export const Row = React.forwardRef<View, View['props'] & ThemedProps & {
+export const Row = React.forwardRef<View, ViewProps & ThemedProps & {
   align?: 'start' | 'center' | 'end' | 'stretch';
   justify?: 'start' | 'center' | 'end' | 'space-between' | 'space-around' | 'space-evenly';
   gap?: keyof typeof theme.spacing | number;
@@ -216,7 +216,7 @@ export const Row = React.forwardRef<View, View['props'] & ThemedProps & {
         ref={ref}
         style={[
           styles.row,
-          { alignItems: align, justifyContent: justify, gap: gapValue },
+          { alignItems: align as any, justifyContent: justify as any, gap: gapValue },
           style,
         ]}
         {...props}
@@ -228,7 +228,7 @@ export const Row = React.forwardRef<View, View['props'] & ThemedProps & {
 );
 Row.displayName = 'Row';
 
-export const Column = React.forwardRef<View, View['props'] & ThemedProps & {
+export const Column = React.forwardRef<View, ViewProps & ThemedProps & {
   align?: 'start' | 'center' | 'end' | 'stretch';
   justify?: 'start' | 'center' | 'end' | 'space-between' | 'space-around' | 'space-evenly';
   gap?: keyof typeof theme.spacing | number;
@@ -240,7 +240,7 @@ export const Column = React.forwardRef<View, View['props'] & ThemedProps & {
         ref={ref}
         style={[
           styles.column,
-          { alignItems: align, justifyContent: justify, gap: gapValue },
+          { alignItems: align as any, justifyContent: justify as any, gap: gapValue },
           style,
         ]}
         {...props}
@@ -252,7 +252,7 @@ export const Column = React.forwardRef<View, View['props'] & ThemedProps & {
 );
 Column.displayName = 'Column';
 
-export const Center = React.forwardRef<View, View['props'] & ThemedProps>(
+export const Center = React.forwardRef<View, ViewProps & ThemedProps>(
   ({ theme: customTheme = theme, children, style, ...props }, ref) => {
     return (
       <View
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: themeSpacing.sm,
+    paddingVertical: theme.spacing.sm,
   },
   headerContent: {
     flexDirection: 'row',
@@ -302,8 +302,8 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    paddingHorizontal: themeSpacing.md,
-    paddingVertical: themeSpacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     height: 80,
   },
   tabItem: {
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: themeSpacing.md,
+    gap: theme.spacing.md,
   },
   dividerHorizontal: {
     flex: 1,
@@ -338,7 +338,6 @@ const styles = StyleSheet.create({
     width: 1,
   },
   dividerLabel: {
-    whiteSpace: 'nowrap',
   },
   row: {
     flexDirection: 'row',

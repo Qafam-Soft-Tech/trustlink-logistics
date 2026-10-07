@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { api } from '../utils/api';
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'general' | 'pricing' | 'notifications' | 'integrations' | 'security'>('general');
@@ -59,9 +60,13 @@ export function SettingsPage() {
     { id: 'security', label: 'Security', icon: 'shield' },
   ];
 
-  const handleSave = (section: string) => {
-    console.log(`Saving ${section} settings:`, settings[section as keyof typeof settings]);
-    alert(`${section.charAt(0).toUpperCase() + section.slice(1)} settings saved successfully!`);
+  const handleSave = async (section: string) => {
+    try {
+      await api.put(`/admin/settings/${section}`, settings[section as keyof typeof settings]);
+      alert(`${section.charAt(0).toUpperCase() + section.slice(1)} settings saved successfully!`);
+    } catch (error: any) {
+      alert(`Failed to save ${section} settings: ${error.response?.data?.message || error.message}`);
+    }
   };
 
   const renderGeneral = () => (

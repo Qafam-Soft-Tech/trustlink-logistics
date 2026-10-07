@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(npm:*)",
+      "Shell(docker:*)",
+      "Shell(npx expo export --platform android --output-dir \"C:\\Users\\Qafams\\AppData\\Local\\Temp\\commandcode\\C--Users-Qafams-Desktop-TrustLink-Logistics\\9d2db8e7-0653-4c8c-8ae1-04fbe0b7fa3a\\scratchpad\\cust-export\" 2>&1)"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

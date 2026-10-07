@@ -1,54 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Screen, Text as TextComponent, Box, Button, Card, Column, Row, Center, Avatar, Badge, Divider } from '@trustlink/shared';
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
-
-const mockHistory = [
-  {
-    id: 'TLK-2024-001',
-    status: 'delivered',
-    pickup: 'Wuse 2, Abuja',
-    dropoff: 'Garki, Abuja',
-    date: '2024-01-15',
-    time: '10:45 AM',
-    amount: 2500,
-    riderName: 'Mike Johnson',
-    proofOfDelivery: true,
-  },
-  {
-    id: 'TLK-2024-002',
-    status: 'delivered',
-    pickup: 'Maitama, Abuja',
-    dropoff: 'Asokoro, Abuja',
-    date: '2024-01-12',
-    time: '02:30 PM',
-    amount: 3200,
-    riderName: 'Sarah Williams',
-    proofOfDelivery: true,
-  },
-  {
-    id: 'TLK-2024-003',
-    status: 'cancelled',
-    pickup: 'Garki, Abuja',
-    dropoff: 'Wuse 2, Abuja',
-    date: '2024-01-10',
-    time: '11:00 AM',
-    amount: 0,
-    riderName: '',
-    proofOfDelivery: false,
-  },
-  {
-    id: 'TLK-2024-004',
-    status: 'delivered',
-    pickup: 'Jabi, Abuja',
-    dropoff: 'Utako, Abuja',
-    date: '2024-01-08',
-    time: '04:15 PM',
-    amount: 1800,
-    riderName: 'David Brown',
-    proofOfDelivery: true,
-  },
-];
+import { api } from '../utils/api';
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   delivered: { label: 'Delivered', color: theme.colors.statusDelivered },
@@ -59,10 +13,26 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 export function HistoryScreen() {
   const [filter, setFilter] = useState<'all' | 'delivered' | 'cancelled'>('all');
+  const [history, setHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await api.get('/deliveries/history');
+        setHistory(response.data);
+      } catch (error) {
+        console.error('Failed to fetch history:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHistory();
+  }, []);
 
   const filteredHistory = filter === 'all' 
-    ? mockHistory 
-    : mockHistory.filter(d => d.status === filter);
+    ? history 
+    : history.filter(d => d.status === filter);
 
   return (
     <Screen style={{ flex: 1 }}>
@@ -89,7 +59,11 @@ export function HistoryScreen() {
           ))}
         </Row>
 
-        {filteredHistory.length === 0 ? (
+        {loading ? (
+          <Center style={{ flex: 1, padding: theme.spacing.xxl }}>
+            <Ionicons name="sync" size={48} color={theme.colors.navy} />
+          </Center>
+        ) : filteredHistory.length === 0 ? (
           <Center style={{ flex: 1, padding: theme.spacing.xxl }}>
             <Column gap="md" align="center">
               <Ionicons name="time-outline" size={64} color={theme.colors.textTertiary} />

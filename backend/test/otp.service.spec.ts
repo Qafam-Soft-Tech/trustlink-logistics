@@ -6,6 +6,7 @@ jest.mock('@nestjs/typeorm', () => ({
 import { Repository } from 'typeorm';
 import { OtpService } from '../src/modules/auth/services/otp.service';
 import { OtpCode } from '../src/modules/auth/entities/otp-code.entity';
+import { TermiiSmsService } from '../src/modules/auth/services/termii-sms.service';
 
 class MockRepository<T> {
   private items: T[] = [];
@@ -65,10 +66,12 @@ class MockRepository<T> {
 describe('OtpService', () => {
   let service: OtpService;
   let otpRepository: MockRepository<OtpCode>;
+  let termiiSms: jest.Mocked<TermiiSmsService>;
 
   beforeEach(() => {
     otpRepository = new MockRepository<OtpCode>();
-    service = new OtpService(otpRepository as any);
+    termiiSms = { sendOtp: jest.fn().mockResolvedValue(true) } as any;
+    service = new OtpService(otpRepository as any, termiiSms);
   });
 
   describe('generateOtp', () => {

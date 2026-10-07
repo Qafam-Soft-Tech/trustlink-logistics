@@ -1,14 +1,15 @@
 {
   "name": "@trustlink/shared",
   "version": "1.0.0",
-  "main": "index.ts",
-  "types": "index.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
-    "test": "echo \"No tests specified\""
+    "test": "echo \"No tests specified\"",
+    "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "react": "18.2.0",
-    "react-native": "0.74.5"
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
   },
   "devDependencies": {
     "@types/react": "~18.2.45",

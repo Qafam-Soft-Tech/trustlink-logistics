@@ -108,14 +108,14 @@ function QuickActionButton({ icon, label, color, onPress }: any) {
 }
 
 function DeliveryCard({ id, status, pickup, dropoff, riderName, estimatedTime }: any) {
-  const getStatusConfig = (status: string) => {
+  const getStatusConfig = (status: string): { color: string; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] } => {
     switch (status) {
       case 'in_transit':
         return { color: theme.colors.statusInTransit, label: 'In Transit', icon: 'bicycle' };
       case 'assigned':
         return { color: theme.colors.statusAssigned, label: 'Assigned', icon: 'person' };
       case 'picked_up':
-        return { color: theme.colors.statusPickedUp, label: 'Picked Up', icon: 'package' };
+        return { color: theme.colors.statusPickedUp, label: 'Picked Up', icon: 'cube' };
       case 'delivered':
         return { color: theme.colors.statusDelivered, label: 'Delivered', icon: 'checkmark-circle' };
       default:

@@ -1,12 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 
 import { OtpCode } from '../entities/otp-code.entity';
+import { TermiiSmsService } from './termii-sms.service';
 
 @Injectable()
 export class OtpService {
+  private readonly logger = new Logger(OtpService.name);
   private readonly OTP_LENGTH = 6;
   private readonly OTP_EXPIRY_MINUTES = 10;
   private readonly MAX_ATTEMPTS = 3;
@@ -14,6 +16,7 @@ export class OtpService {
   constructor(
     @InjectRepository(OtpCode)
     private otpRepository: Repository<OtpCode>,
+    private termiiSms: TermiiSmsService,
   ) {}
 
   async sendOtp(phone: string, purpose: 'signup' | 'login' | 'reset' = 'signup'): Promise<void> {
@@ -39,7 +42,12 @@ export class OtpService {
       await this.otpRepository.save(otp);
     }
 
-    console.log(`[OTP] Phone: ${phone}, Code: ${code}, Purpose: ${purpose}`);
+    this.logger.log(`[OTP] Phone: ${phone}, Code: ${code}, Purpose: ${purpose}`);
+
+    const sent = await this.termiiSms.sendOtp(phone, code);
+    if (!sent) {
+      this.logger.warn(`OTP for ${phone} stored but SMS not sent (check Termii config)`);
+    }
   }
 
   async verifyOtp(phone: string, code: string, purpose: 'signup' | 'login' | 'reset' = 'signup'): Promise<boolean> {

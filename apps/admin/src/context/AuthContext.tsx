@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { api } from '../utils/api';
 
 interface User {
   id: string;
@@ -37,24 +38,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const response = await api.post('/auth/admin/login', { email, password });
     
-    // Mock validation
-    if (email === 'admin@trustlink.com' && password === 'admin123') {
-      const userData: User = {
-        id: '1',
-        email,
-        firstName: 'Admin',
-        lastName: 'User',
-        role: 'admin',
-      };
-      setUser(userData);
-      localStorage.setItem('admin_token', 'mock-jwt-token');
-      localStorage.setItem('admin_user', JSON.stringify(userData));
-    } else {
-      throw new Error('Invalid credentials');
-    }
+    const userData: User = {
+      id: response.data.user.id,
+      email: response.data.user.email,
+      firstName: response.data.user.firstName,
+      lastName: response.data.user.lastName,
+      role: 'admin',
+    };
+    setUser(userData);
+    localStorage.setItem('admin_token', response.data.token);
+    localStorage.setItem('admin_user', JSON.stringify(userData));
   };
 
   const logout = () => {

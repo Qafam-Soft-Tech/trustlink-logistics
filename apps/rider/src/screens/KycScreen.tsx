@@ -4,6 +4,7 @@ import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Row, C
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { api } from '../utils/api';
 
 interface KycScreenProps {
   navigation: any;
@@ -77,12 +78,32 @@ export function KycScreen({ navigation }: KycScreenProps) {
 
     setIsSubmitting(true);
     try {
-      console.log('Submitting KYC:', kycData);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const formData = new FormData();
+      formData.append('nin', kycData.nin);
+      formData.append('idType', kycData.idType);
+      
+      // Append images
+      const appendFile = (field: string, uri: string) => {
+        formData.append(field, {
+          uri,
+          name: `${field}.jpg`,
+          type: 'image/jpeg',
+        } as any);
+      };
+      
+      appendFile('idFront', kycData.idFront);
+      appendFile('idBack', kycData.idBack);
+      appendFile('selfie', kycData.selfie);
+      appendFile('vehicleRegistration', kycData.vehicleRegistration);
+
+      const response = await api.post('/rider/kyc', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      console.log('KYC submitted:', response.data);
       setKycStatus('pending');
       Alert.alert('Submitted', 'Your KYC documents have been submitted for review. This typically takes 24-48 hours.');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit KYC. Please try again.');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to submit KYC. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

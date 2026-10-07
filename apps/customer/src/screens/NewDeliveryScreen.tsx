@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Keyboard, Alert } from 'react-native';
-import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Row, Center, Divider, Badge } from '@trustlink/shared';
+import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Center, Row, Divider } from '@trustlink/shared';
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../utils/api';
 
 export function NewDeliveryScreen({ navigation }: any) {
   const [step, setStep] = useState(1);
@@ -47,15 +48,13 @@ export function NewDeliveryScreen({ navigation }: any) {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-      // TODO: Call backend API to create delivery
-      // const response = await api.post('/deliveries', formData);
-      console.log('Creating delivery:', formData);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await api.post('/deliveries', formData);
+      console.log('Delivery created:', response.data);
       
       Alert.alert('Success', 'Delivery request created! Redirecting to payment...');
       navigation.navigate('Tracking');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create delivery. Please try again.');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to create delivery. Please try again.');
     } finally {
       setIsLoading(false);
     }

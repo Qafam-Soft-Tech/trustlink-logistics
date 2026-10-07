@@ -1,48 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Screen, Text as TextComponent, Box, Button, Card, Column, Row, Center, Avatar, Badge, Divider } from '@trustlink/shared';
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
-
-const mockDeliveries = [
-  {
-    id: 'TLK-2024-001',
-    status: 'in_transit',
-    pickup: 'Wuse 2, Abuja',
-    dropoff: 'Garki, Abuja',
-    riderName: 'Mike Johnson',
-    riderPhone: '080 1111 2222',
-    riderRating: 4.9,
-    estimatedTime: '15 min',
-    distance: '3.2 km',
-    timeline: [
-      { status: 'requested', time: '10:00 AM', completed: true },
-      { status: 'searching', time: '10:05 AM', completed: true },
-      { status: 'assigned', time: '10:10 AM', completed: true },
-      { status: 'picked_up', time: '10:25 AM', completed: true },
-      { status: 'in_transit', time: '10:30 AM', completed: true },
-      { status: 'delivered', time: '10:45 AM', completed: false },
-    ],
-  },
-  {
-    id: 'TLK-2024-002',
-    status: 'assigned',
-    pickup: 'Maitama, Abuja',
-    dropoff: 'Asokoro, Abuja',
-    riderName: 'Sarah Williams',
-    riderPhone: '080 3333 4444',
-    riderRating: 4.8,
-    estimatedTime: '30 min',
-    distance: '5.1 km',
-    timeline: [
-      { status: 'requested', time: '09:30 AM', completed: true },
-      { status: 'searching', time: '09:35 AM', completed: true },
-      { status: 'assigned', time: '09:40 AM', completed: true },
-      { status: 'picked_up', time: '--', completed: false },
-      { status: 'in_transit', time: '--', completed: false },
-      { status: 'delivered', time: '--', completed: false },
-    ],
-  },
-];
+import { api } from '../utils/api';
 
 const statusConfig: Record<string, { label: string; color: string; icon: string }> = {
   requested: { label: 'Requested', color: theme.colors.statusRequested, icon: 'time' },
@@ -54,7 +14,36 @@ const statusConfig: Record<string, { label: string; color: string; icon: string 
 };
 
 export function TrackingScreen() {
-  const [selectedDelivery, setSelectedDelivery] = useState(mockDeliveries[0]);
+  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [selectedDelivery, setSelectedDelivery] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDeliveries = async () => {
+      try {
+        const response = await api.get('/deliveries');
+        setDeliveries(response.data);
+        if (response.data.length > 0) {
+          setSelectedDelivery(response.data[0]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch deliveries:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDeliveries();
+  }, []);
+
+  if (loading) {
+    return (
+      <Screen style={{ flex: 1 }}>
+        <Center style={{ flex: 1 }}>
+          <Ionicons name="sync" size={48} color={theme.colors.navy} />
+        </Center>
+      </Screen>
+    );
+  }
 
   return (
     <Screen style={{ flex: 1 }}>
@@ -65,11 +54,11 @@ export function TrackingScreen() {
           <Column gap="md">
             <TextComponent variant="h4" color="textPrimary">Active Deliveries</TextComponent>
             <Column gap="sm">
-              {mockDeliveries.map(delivery => (
+              {deliveries.map((delivery: any) => (
                 <DeliverySummaryCard
                   key={delivery.id}
                   delivery={delivery}
-                  selected={selectedDelivery.id === delivery.id}
+                  selected={selectedDelivery?.id === delivery.id}
                   onPress={() => setSelectedDelivery(delivery)}
                 />
               ))}
@@ -147,13 +136,13 @@ export function TrackingScreen() {
 
             <TextComponent variant="h4" color="textPrimary">Timeline</TextComponent>
             <Column gap={0}>
-              {selectedDelivery.timeline.map((item, index) => (
+              {selectedDelivery?.timeline.map((item: any, index: number) => (
                 <TimelineItem
                   key={item.status}
                   {...item}
                   isFirst={index === 0}
                   isLast={index === selectedDelivery.timeline.length - 1}
-                  isCurrent={item.completed && (index === selectedDelivery.timeline.findIndex(t => !t.completed) - 1) === index}
+                  isCurrent={item.completed && (index === selectedDelivery.timeline.findIndex((t: any) => !t.completed) - 1)}
                 />
               ))}
             </Column>

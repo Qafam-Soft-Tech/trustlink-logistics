@@ -3,10 +3,11 @@ import { Keyboard, Alert } from 'react-native';
 import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Center, Row, Avatar } from '@trustlink/shared';
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../../utils/api';
 
 interface ProfileSetupScreenProps {
   navigation: any;
-  route: { params: { phone: string; role: string } };
+  route: any;
 }
 
 export function ProfileSetupScreen({ navigation, route }: ProfileSetupScreenProps) {
@@ -24,16 +25,12 @@ export function ProfileSetupScreen({ navigation, route }: ProfileSetupScreenProp
 
     setIsLoading(true);
     try {
-      // TODO: Call backend API to complete profile
-      // const response = await api.post('/auth/profile/setup', { phone, firstName, lastName, email, role });
-      console.log('Completing profile:', { phone, firstName, lastName, email, role });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await api.post('/auth/profile/setup', { phone, firstName, lastName, email, role });
+      console.log('Profile completed:', response.data);
       
       navigation.replace('Main');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to complete profile. Please try again.');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to complete profile. Please try again.');
     } finally {
       setIsLoading(false);
     }

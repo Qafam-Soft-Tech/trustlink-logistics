@@ -10,10 +10,20 @@ import { OtpService } from './services/otp.service';
 
 export interface SignupDto {
   phone: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   role: UserRole;
   email?: string;
+}
+
+export interface ProfileSetupDto {
+  phone: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  role: UserRole;
+  vehicleType?: string;
+  vehiclePlate?: string;
 }
 
 export interface VerifyOtpDto {
@@ -104,6 +114,11 @@ export class AuthService {
     return { user: this.sanitizeUser(user), token };
   }
 
+  async resendOtp(phone: string, purpose: 'signup' | 'login' | 'reset' = 'signup') {
+    await this.otpService.sendOtp(phone, purpose);
+    return { message: 'OTP resent successfully' };
+  }
+
   async getProfile(userId: string) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
@@ -128,6 +143,28 @@ export class AuthService {
     Object.assign(user, data);
     await this.userRepository.save(user);
     return this.sanitizeUser(user);
+  }
+
+  async setupProfile(dto: ProfileSetupDto) {
+    const user = await this.userRepository.findOne({ where: { phone: dto.phone } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    user.firstName = dto.firstName;
+    user.lastName = dto.lastName;
+    user.email = dto.email || user.email;
+    user.role = dto.role;
+    if (dto.vehicleType) {
+      (user as any).vehicleType = dto.vehicleType;
+    }
+    if (dto.vehiclePlate) {
+      (user as any).vehiclePlate = dto.vehiclePlate;
+    }
+    await this.userRepository.save(user);
+
+    const token = this.generateToken(user);
+    return { user: this.sanitizeUser(user), token };
   }
 
   private generateToken(user: User): string {

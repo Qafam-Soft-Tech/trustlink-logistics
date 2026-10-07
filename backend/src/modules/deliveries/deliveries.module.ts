@@ -9,9 +9,11 @@ import { User } from '../auth/entities/user.entity';
 import { DeliveryController } from './delivery.controller';
 import { DispatchController } from './dispatch.controller';
 import { IssueController } from './issue.controller';
+import { RiderProfileController } from './rider-profile.controller';
 import { DeliveryService } from './services/delivery.service';
 import { DispatchService } from './services/dispatch.service';
 import { IssueService } from './services/issue.service';
+import { RiderProfileService } from './services/rider-profile.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
@@ -19,8 +21,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
     TypeOrmModule.forFeature([Delivery, Address, DeliveryEvent, ProofOfDelivery, RiderProfile, Issue, User]),
     NotificationsModule,
   ],
-  controllers: [DeliveryController, DispatchController, IssueController],
-  providers: [DeliveryService, DispatchService, IssueService],
-  exports: [DeliveryService, DispatchService, IssueService],
+  controllers: [DeliveryController, DispatchController, IssueController, RiderProfileController],
+  providers: [DeliveryService, DispatchService, IssueService, RiderProfileService],
+  exports: [DeliveryService, DispatchService, IssueService, RiderProfileService],
 })
 export class DeliveriesModule {}

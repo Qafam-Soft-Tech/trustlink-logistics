@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { Alert } from 'react-native';
 import { Screen, Text as TextComponent, Box, Button, Card, Column, Row, Center, Badge, Divider } from '@trustlink/shared';
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../utils/api';
 
 const mockJobs = [
   {
@@ -53,6 +55,24 @@ const mockJobs = [
 export function JobsScreen({ navigation }: any) {
   const [filter, setFilter] = useState<'all' | 'available' | 'active' | 'completed'>('all');
 
+  const handleAcceptJob = async (jobId: string) => {
+    try {
+      await api.post(`/jobs/${jobId}/accept`);
+      Alert.alert('Accepted', `Job ${jobId} accepted successfully`);
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to accept job');
+    }
+  };
+
+  const handleStartPickup = async (jobId: string) => {
+    try {
+      await api.post(`/jobs/${jobId}/pickup`);
+      Alert.alert('Started', `Pickup started for ${jobId}`);
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to start pickup');
+    }
+  };
+
   const filteredJobs = filter === 'all' 
     ? mockJobs 
     : mockJobs.filter(j => j.status === filter || (filter === 'active' && ['assigned', 'picked_up', 'in_transit'].includes(j.status)));
@@ -90,7 +110,7 @@ export function JobsScreen({ navigation }: any) {
         ) : (
           <Column gap="md">
             {filteredJobs.map(job => (
-              <JobCard key={job.id} job={job} />
+              <JobCard key={job.id} job={job} onAcceptJob={handleAcceptJob} onStartPickup={handleStartPickup} />
             ))}
           </Column>
         )}
@@ -99,7 +119,7 @@ export function JobsScreen({ navigation }: any) {
   );
 }
 
-function JobCard({ job }: any) {
+function JobCard({ job, onAcceptJob, onStartPickup }: any) {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'available': return { color: theme.colors.success, label: 'Available', variant: 'success' as const };
@@ -172,7 +192,7 @@ function JobCard({ job }: any) {
         )}
 
         {job.status === 'available' && (
-          <Button variant="primary" size="md" onPress={() => Alert.alert('Accept Job', `Accept ${job.id}?`)}>
+          <Button variant="primary" size="md" onPress={() => onAcceptJob?.(job.id)}>
             Accept Job
           </Button>
         )}
@@ -183,10 +203,10 @@ function JobCard({ job }: any) {
 
         {job.status === 'assigned' && (
           <Row gap="md">
-            <Button variant="outline" size="md" onPress={() => {}} style={{ flex: 1 }}>
+            <Button variant="outline" size="md" onPress={() => navigation.navigate('Maps', { jobId: job.id } as any)} style={{ flex: 1 }}>
               Navigate
             </Button>
-            <Button variant="secondary" size="md" onPress={() => {}} style={{ flex: 1 }}>
+            <Button variant="secondary" size="md" onPress={() => onStartPickup?.(job.id)} style={{ flex: 1 }}>
               Start Pickup
             </Button>
           </Row>

@@ -1,13 +1,56 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Screen, Text as TextComponent, Box, Button, Card, Column, Row, Center, Avatar, Badge, Divider } from '@trustlink/shared';
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../utils/api';
 
 export function HomeScreen({ navigation }: any) {
-  const isOnline = true;
-  const todayEarnings = 12500;
-  const todayDeliveries = 8;
-  const rating = 4.9;
+  const [isOnline, setIsOnline] = useState(false);
+  const [todayEarnings, setTodayEarnings] = useState(0);
+  const [todayDeliveries, setTodayDeliveries] = useState(0);
+  const [rating, setRating] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const fetchRiderData = async () => {
+    try {
+      const [profileRes, earningsRes] = await Promise.all([
+        api.get('/rider/profile'),
+        api.get('/rider/earnings'), // assuming this endpoint exists
+      ]);
+      
+      setIsOnline(profileRes.data.status === 'online');
+      setTodayEarnings(earningsRes.data?.todayTotal || 12500);
+      setTodayDeliveries(earningsRes.data?.todayDeliveries || 8);
+      setRating(profileRes.data.rating || 4.9);
+    } catch (error) {
+      console.error('Failed to fetch rider data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleOnlineStatus = async () => {
+    try {
+      const response = await api.put('/rider/profile/status');
+      setIsOnline(response.data.status === 'online');
+    } catch (error) {
+      console.error('Failed to toggle online status:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchRiderData();
+  }, []);
+
+  if (loading) {
+    return (
+      <Screen style={{ flex: 1 }}>
+        <Center style={{ flex: 1 }}>
+          <Ionicons name="sync" size={48} color={theme.colors.navy} />
+        </Center>
+      </Screen>
+    );
+  }
 
   return (
     <Screen style={{ flex: 1 }}>
@@ -56,7 +99,7 @@ export function HomeScreen({ navigation }: any) {
                 icon={isOnline ? 'toggle' : 'toggle-outline'}
                 label={isOnline ? 'Go Offline' : 'Go Online'}
                 color={isOnline ? theme.colors.warning : theme.colors.success}
-                onPress={() => {}}
+                onPress={toggleOnlineStatus}
               />
               <QuickActionButton
                 icon="navigate"

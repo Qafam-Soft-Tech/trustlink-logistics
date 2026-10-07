@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Keyboard, Alert } from 'react-native';
-import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Center, Row, Avatar } from '@trustlink/shared';
+import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Center, Row, Avatar, Divider } from '@trustlink/shared';
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../../utils/api';
 
 interface ProfileSetupScreenProps {
   navigation: any;
-  route: { params: { phone: string; role: string } };
+  route: any;
 }
 
 export function ProfileSetupScreen({ navigation, route }: ProfileSetupScreenProps) {
@@ -21,8 +22,8 @@ export function ProfileSetupScreen({ navigation, route }: ProfileSetupScreenProp
   const vehicleTypes = [
     { value: 'motorcycle', label: 'Motorcycle', icon: 'bicycle' },
     { value: 'van', label: 'Van', icon: 'car' },
-    { value: 'truck', label: 'Truck', icon: 'truck' },
-  ];
+    { value: 'truck', label: 'Truck', icon: 'bus' },
+  ] as const;
 
   const handleComplete = async () => {
     if (!firstName.trim() || !lastName.trim() || !vehiclePlate.trim()) {
@@ -32,12 +33,12 @@ export function ProfileSetupScreen({ navigation, route }: ProfileSetupScreenProp
 
     setIsLoading(true);
     try {
-      console.log('Completing rider profile:', { phone, firstName, lastName, email, vehicleType, vehiclePlate });
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await api.post('/auth/profile/setup', { phone, firstName, lastName, email, role: 'rider', vehicleType, vehiclePlate });
+      console.log('Rider profile completed:', response.data);
       
       navigation.replace('Main');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to complete profile. Please try again.');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to complete profile. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { Alert } from 'react-native';
 import { Screen, Text as TextComponent, Box, Button, Card, Column, Row, Center, Avatar, Badge, Divider } from '@trustlink/shared';
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../utils/api';
 
 const mockEarnings = [
   { id: 'TLK-2024-001', date: '2024-01-15', amount: 2500, status: 'paid' },
@@ -14,6 +16,16 @@ const mockEarnings = [
 
 export function EarningsScreen() {
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
+
+  const handleWithdraw = async () => {
+    try {
+      const response = await api.post('/rider/earnings/withdraw');
+      console.log('Withdrawal initiated:', response.data);
+      Alert.alert('Success', 'Withdrawal initiated. Funds will be transferred to your bank account within 24 hours.');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to initiate withdrawal');
+    }
+  };
 
   const todayTotal = mockEarnings.filter(e => e.date === '2024-01-15').reduce((sum, e) => sum + e.amount, 0);
   const weekTotal = mockEarnings.filter(e => ['2024-01-15', '2024-01-14', '2024-01-13'].includes(e.date)).reduce((sum, e) => sum + e.amount, 0);
@@ -91,7 +103,7 @@ export function EarningsScreen() {
                 <TextComponent variant="h3" color="navy" style={{ fontWeight: '700' }}>₦{totals.month.toLocaleString()}</TextComponent>
               </Column>
             </Row>
-            <Button variant="primary" size="lg" onPress={() => Alert.alert('Withdraw', 'Withdrawal feature coming soon')}>
+            <Button variant="primary" size="lg" onPress={handleWithdraw}>
               Withdraw Earnings
             </Button>
           </Column>

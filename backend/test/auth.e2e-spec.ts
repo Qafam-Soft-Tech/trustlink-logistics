@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -33,7 +33,7 @@ describe('AuthController (e2e)', () => {
 
   beforeEach(async () => {
     await otpRepository.clear();
-    await userRepository.clear();
+    await userRepository.query('TRUNCATE TABLE "users" RESTART IDENTITY CASCADE');
   });
 
   describe('/auth/signup (POST)', () => {

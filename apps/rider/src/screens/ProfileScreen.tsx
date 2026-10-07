@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Keyboard, Alert } from 'react-native';
-import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Row, Center, Avatar, Divider } from '@trustlink/shared';
+import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Row, Center, Avatar, Divider, Badge } from '@trustlink/shared';
 import { theme } from '@trustlink/shared';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../utils/api';
 
 export function ProfileScreen({ navigation }: any) {
   const [user, setUser] = useState({
@@ -14,6 +15,9 @@ export function ProfileScreen({ navigation }: any) {
     vehicleType: 'motorcycle',
     vehiclePlate: 'ABC 123 XY',
     kycStatus: 'approved',
+    zone: 'Wuse',
+    vehicleModel: '',
+    vehicleColor: '',
   });
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -22,25 +26,60 @@ export function ProfileScreen({ navigation }: any) {
     email: 'mike@example.com',
     vehicleType: 'motorcycle',
     vehiclePlate: 'ABC 123 XY',
+    vehicleModel: '',
+    vehicleColor: '',
+    zone: 'Wuse',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   const vehicleTypes = [
     { value: 'motorcycle', label: 'Motorcycle', icon: 'bicycle' },
     { value: 'van', label: 'Van', icon: 'car' },
-    { value: 'truck', label: 'Truck', icon: 'truck' },
-  ];
+    { value: 'truck', label: 'Truck', icon: 'bus' },
+  ] as const;
+
+const fetchProfile = async () => {
+    try {
+      const response = await api.get('/rider/profile');
+      const profile = response.data;
+      setUser((prev: any) => ({
+        ...prev,
+        vehicleType: profile.vehicleType || 'motorcycle',
+        vehiclePlate: profile.vehiclePlate || '',
+        vehicleModel: profile.vehicleModel || '',
+        vehicleColor: profile.vehicleColor || '',
+        zone: profile.zone || 'Wuse',
+      }));
+      setEditForm((prev: any) => ({
+        ...prev,
+        vehicleType: profile.vehicleType || 'motorcycle',
+        vehiclePlate: profile.vehiclePlate || '',
+        vehicleModel: profile.vehicleModel || '',
+        vehicleColor: profile.vehicleColor || '',
+        zone: profile.zone || 'Wuse',
+      }));
+    } catch (error) {
+      console.error('Failed to fetch profile:', error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      console.log('Saving profile:', editForm);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await api.put('/rider/profile', editForm);
+      console.log('Profile saved:', response.data);
       setUser(prev => ({ ...prev, ...editForm }));
       setIsEditing(false);
       Alert.alert('Success', 'Profile updated successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update profile');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
     } finally {
       setIsLoading(false);
     }
@@ -128,8 +167,26 @@ export function ProfileScreen({ navigation }: any) {
                     autoCapitalize="characters"
                     leftIcon={<Ionicons name="card" size={24} color={theme.colors.gold} />}
                   />
+                  <Input
+                    label="Vehicle Model"
+                    value={editForm.vehicleModel}
+                    onChangeText={v => setEditForm(prev => ({ ...prev, vehicleModel: v }))}
+                    leftIcon={<Ionicons name="car" size={24} color={theme.colors.gold} />}
+                  />
+                  <Input
+                    label="Vehicle Color"
+                    value={editForm.vehicleColor}
+                    onChangeText={v => setEditForm(prev => ({ ...prev, vehicleColor: v }))}
+                    leftIcon={<Ionicons name="color-palette" size={24} color={theme.colors.gold} />}
+                  />
+                  <Input
+                    label="Service Zone"
+                    value={editForm.zone}
+                    onChangeText={v => setEditForm(prev => ({ ...prev, zone: v }))}
+                    leftIcon={<Ionicons name="map" size={24} color={theme.colors.gold} />}
+                  />
                   <Row gap="md">
-                    <Button variant="outline" size="md" onPress={() => { setIsEditing(false); setEditForm({ firstName: user.firstName, lastName: user.lastName, email: user.email, vehicleType: user.vehicleType, vehiclePlate: user.vehiclePlate }); }} style={{ flex: 1 }}>
+                    <Button variant="outline" size="md" onPress={() => { setIsEditing(false); setEditForm({ firstName: user.firstName, lastName: user.lastName, email: user.email, vehicleType: user.vehicleType, vehiclePlate: user.vehiclePlate, vehicleModel: user.vehicleModel, vehicleColor: user.vehicleColor, zone: user.zone }); }} style={{ flex: 1 }}>
                       Cancel
                     </Button>
                     <Button variant="secondary" size="md" loading={isLoading} onPress={handleSave} style={{ flex: 1 }}>
@@ -140,9 +197,56 @@ export function ProfileScreen({ navigation }: any) {
               </Card>
             )}
             {!isEditing && (
-              <Button variant="ghost" size="sm" onPress={() => setIsEditing(true)} style={{ marginTop: theme.spacing.md }}>
-                <TextComponent variant="button" color="gold">Edit Profile</TextComponent>
-              </Button>
+              <>
+                <Card style={{ marginTop: theme.spacing.md, backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                  <Column gap="sm">
+                    <Row gap="sm" align="center">
+                      <Ionicons name="car" size={20} color={theme.colors.gold} />
+                      <TextComponent variant="bodySmall" color="gold">Vehicle Type</TextComponent>
+                      <TextComponent variant="body" color="white" style={{ fontWeight: '600' }}>
+                        {user.vehicleType === 'motorcycle' ? 'Motorcycle' : user.vehicleType === 'van' ? 'Van' : 'Truck'}
+                      </TextComponent>
+                    </Row>
+                    <Row gap="sm" align="center">
+                      <Ionicons name="card" size={20} color={theme.colors.gold} />
+                      <TextComponent variant="bodySmall" color="gold">Plate</TextComponent>
+                      <TextComponent variant="body" color="white" style={{ fontWeight: '600' }}>
+                        {user.vehiclePlate || 'Not set'}
+                      </TextComponent>
+                    </Row>
+                    {user.vehicleModel && (
+                      <Row gap="sm" align="center">
+                        <Ionicons name="car" size={20} color={theme.colors.gold} />
+                        <TextComponent variant="bodySmall" color="gold">Model</TextComponent>
+                        <TextComponent variant="body" color="white" style={{ fontWeight: '600' }}>
+                          {user.vehicleModel}
+                        </TextComponent>
+                      </Row>
+                    )}
+                    {user.vehicleColor && (
+                      <Row gap="sm" align="center">
+                        <Ionicons name="color-palette" size={20} color={theme.colors.gold} />
+                        <TextComponent variant="bodySmall" color="gold">Color</TextComponent>
+                        <TextComponent variant="body" color="white" style={{ fontWeight: '600' }}>
+                          {user.vehicleColor}
+                        </TextComponent>
+                      </Row>
+                    )}
+                    {user.zone && (
+                      <Row gap="sm" align="center">
+                        <Ionicons name="map" size={20} color={theme.colors.gold} />
+                        <TextComponent variant="bodySmall" color="gold">Service Zone</TextComponent>
+                        <TextComponent variant="body" color="white" style={{ fontWeight: '600' }}>
+                          {user.zone}
+                        </TextComponent>
+                      </Row>
+                    )}
+                  </Column>
+                </Card>
+                <Button variant="ghost" size="sm" onPress={() => setIsEditing(true)} style={{ marginTop: theme.spacing.md }}>
+                  <TextComponent variant="button" color="gold">Edit Profile</TextComponent>
+                </Button>
+              </>
             )}
           </Column>
         </Box>

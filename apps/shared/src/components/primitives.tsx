@@ -1,36 +1,44 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ActivityIndicator } from 'react-native';
+import { View, Text as RNText, StyleSheet, TouchableOpacity, TextInput, Image, ActivityIndicator, ViewProps, TextProps, TouchableOpacityProps, TextInputProps, ImageProps } from 'react-native';
 import { theme, Theme } from '../theme';
 
 type ThemedProps = {
   theme?: Theme;
 };
 
-export const Box = React.forwardRef<View, View['props'] & ThemedProps>(
+export const Box = React.forwardRef<View, ViewProps & ThemedProps>(
   ({ theme: customTheme = theme, children, style, ...props }, ref) => {
     return <View ref={ref} style={[styles.container, style]} {...props}>{children}</View>;
   },
 );
 Box.displayName = 'Box';
 
-export const Text = React.forwardRef<Text, Text['props'] & ThemedProps>(
+export type ThemedTextProps = TextProps & ThemedProps & {
+  variant?: 'h1' | 'h2' | 'h3' | 'h4' | 'body' | 'bodySmall' | 'caption' | 'button';
+  color?: string;
+};
+
+export const Text = React.forwardRef<RNText, ThemedTextProps>(
   ({ theme: customTheme = theme, children, style, variant = 'body', color = 'textPrimary', ...props }, ref) => {
     const themeColors = customTheme.colors;
     const themeTypography = customTheme.typography;
 
+    const tFontSize = themeTypography.fontSize;
+    const tWeight = themeTypography.fontWeight;
+    const tLineHeight = themeTypography.lineHeight;
     const variants = {
-      h1: { fontSize: themeTypography.fontSize.xxxl, fontWeight: themeTypography.fontWeight.bold, lineHeight: themeTypography.lineHeight.tight },
-      h2: { fontSize: themeTypography.fontSize.xxl, fontWeight: themeTypography.fontWeight.bold, lineHeight: themeTypography.lineHeight.tight },
-      h3: { fontSize: themeTypography.fontSize.xl, fontWeight: themeTypography.fontWeight.semibold, lineHeight: themeTypography.lineHeight.normal },
-      h4: { fontSize: themeTypography.fontSize.lg, fontWeight: themeTypography.fontWeight.semibold, lineHeight: themeTypography.lineHeight.normal },
-      body: { fontSize: themeTypography.fontSize.md, fontWeight: themeTypography.fontWeight.regular, lineHeight: themeTypography.lineHeight.normal },
-      bodySmall: { fontSize: themeTypography.fontSize.sm, fontWeight: themeTypography.fontWeight.regular, lineHeight: themeTypography.lineHeight.normal },
-      caption: { fontSize: themeTypography.fontSize.xs, fontWeight: themeTypography.fontWeight.regular, lineHeight: themeTypography.lineHeight.normal },
-      button: { fontSize: themeTypography.fontSize.md, fontWeight: themeTypography.fontWeight.semibold, lineHeight: themeTypography.lineHeight.normal },
+      h1: { fontSize: tFontSize.xxxl, fontWeight: tWeight.bold, lineHeight: Math.round(tFontSize.xxxl * tLineHeight.tight) },
+      h2: { fontSize: tFontSize.xxl, fontWeight: tWeight.bold, lineHeight: Math.round(tFontSize.xxl * tLineHeight.tight) },
+      h3: { fontSize: tFontSize.xl, fontWeight: tWeight.semibold, lineHeight: Math.round(tFontSize.xl * tLineHeight.normal) },
+      h4: { fontSize: tFontSize.lg, fontWeight: tWeight.semibold, lineHeight: Math.round(tFontSize.lg * tLineHeight.normal) },
+      body: { fontSize: tFontSize.md, fontWeight: tWeight.regular, lineHeight: Math.round(tFontSize.md * tLineHeight.normal) },
+      bodySmall: { fontSize: tFontSize.sm, fontWeight: tWeight.regular, lineHeight: Math.round(tFontSize.sm * tLineHeight.normal) },
+      caption: { fontSize: tFontSize.xs, fontWeight: tWeight.regular, lineHeight: Math.round(tFontSize.xs * tLineHeight.normal) },
+      button: { fontSize: tFontSize.md, fontWeight: tWeight.semibold, lineHeight: Math.round(tFontSize.md * tLineHeight.normal) },
     };
 
     return (
-      <Text
+      <RNText
         ref={ref}
         style={[
           styles.text,
@@ -41,13 +49,13 @@ export const Text = React.forwardRef<Text, Text['props'] & ThemedProps>(
         {...props}
       >
         {children}
-      </Text>
+      </RNText>
     );
   },
 );
 Text.displayName = 'Text';
 
-export const Button = React.forwardRef<TouchableOpacity, TouchableOpacity['props'] & ThemedProps & {
+export const Button = React.forwardRef<View, TouchableOpacityProps & ThemedProps & {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
@@ -151,7 +159,7 @@ export const Button = React.forwardRef<TouchableOpacity, TouchableOpacity['props
 );
 Button.displayName = 'Button';
 
-export const Input = React.forwardRef<TextInput, TextInput['props'] & ThemedProps & {
+export const Input = React.forwardRef<TextInput, TextInputProps & ThemedProps & {
   label?: string;
   error?: string;
   helperText?: string;
@@ -214,28 +222,38 @@ export const Input = React.forwardRef<TextInput, TextInput['props'] & ThemedProp
 );
 Input.displayName = 'Input';
 
-export const Card = React.forwardRef<View, View['props'] & ThemedProps & {
+export const Card = React.forwardRef<View, ViewProps & ThemedProps & {
   elevation?: 'none' | 'sm' | 'md' | 'lg';
+  onPress?: () => void;
+  activeOpacity?: number;
 }>(
-  ({ theme: customTheme = theme, children, style, elevation = 'md', ...props }, ref) => {
+  ({ theme: customTheme = theme, children, style, elevation = 'md', onPress, activeOpacity = 0.9, ...props }, ref) => {
     const themeColors = customTheme.colors;
     const themeShadows = customTheme.shadows;
     const themeBorderRadius = customTheme.borderRadius;
 
+    const cardStyle = [
+      styles.card,
+      {
+        backgroundColor: themeColors.surface,
+        borderRadius: themeBorderRadius.lg,
+        ...(elevation === 'none' ? undefined : themeShadows[elevation]),
+      },
+      style,
+    ];
+
+    if (onPress) {
+      return (
+        <TouchableOpacity onPress={onPress} activeOpacity={activeOpacity}>
+          <View ref={ref} style={cardStyle} {...props}>
+            {children}
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
     return (
-      <View
-        ref={ref}
-        style={[
-          styles.card,
-          {
-            backgroundColor: themeColors.surface,
-            borderRadius: themeBorderRadius.lg,
-            ...themeShadows[elevation],
-          },
-          style,
-        ]}
-        {...props}
-      >
+      <View ref={ref} style={cardStyle} {...props}>
         {children}
       </View>
     );
@@ -243,7 +261,7 @@ export const Card = React.forwardRef<View, View['props'] & ThemedProps & {
 );
 Card.displayName = 'Card';
 
-export const Avatar = React.forwardRef<Image, Image['props'] & ThemedProps & {
+export const Avatar = React.forwardRef<Image, ImageProps & ThemedProps & {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   name?: string;
 }>(
@@ -331,9 +349,9 @@ export const Avatar = React.forwardRef<Image, Image['props'] & ThemedProps & {
 );
 Avatar.displayName = 'Avatar';
 
-export const Badge = React.forwardRef<View, View['props'] & ThemedProps & {
+export const Badge = React.forwardRef<View, ViewProps & ThemedProps & {
   variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'primary';
-  size?: 'sm' | 'md';
+  size?: 'xs' | 'sm' | 'md';
 }>(
   ({ theme: customTheme = theme, children, style, variant = 'default', size = 'md', ...props }, ref) => {
     const themeColors = customTheme.colors;
@@ -351,6 +369,7 @@ export const Badge = React.forwardRef<View, View['props'] & ThemedProps & {
     };
 
     const sizes = {
+      xs: { paddingHorizontal: themeSpacing.xs, paddingVertical: 2, fontSize: themeTypography.fontSize.xs },
       sm: { paddingHorizontal: themeSpacing.sm, paddingVertical: themeSpacing.xs, fontSize: themeTypography.fontSize.xs },
       md: { paddingHorizontal: themeSpacing.md, paddingVertical: themeSpacing.xs, fontSize: themeTypography.fontSize.sm },
     };
