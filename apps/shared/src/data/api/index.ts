@@ -63,6 +63,8 @@ export function createApiAdapters(http: HttpClient): DataPorts {
           ? http.post<AuthResult>('/auth/verify-otp', { phone: input.phone, code: input.code })
           : http.post<AuthResult>('/auth/verify-login-otp', { phone: input.phone, code: input.code }),
       resendOtp: (input) => http.post<{ message: string }>('/auth/resend-otp', { phone: input.phone, purpose: input.purpose }),
+      // The real API is stateless — the stored token is already attached by the axios interceptor.
+      hydrate: async () => undefined,
       getProfile: () => http.get<User>('/auth/profile'),
       updateProfile: (patch) => http.put<User>('/auth/profile', patch),
       setupProfile: (input) => http.post<AuthResult>('/auth/profile/setup', input),

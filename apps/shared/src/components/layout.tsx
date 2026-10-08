@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ViewProps, ScrollViewProps } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ViewProps, ScrollViewProps } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 import { useTheme } from '../theme/ThemeProvider';
 import { Text as TextComponent } from './primitives';
@@ -9,7 +10,7 @@ const HIT_TARGET = 44;
 type ColorKey = keyof typeof colors;
 
 /** ScreenContainer — themed root surface. `Screen` is kept as an alias for existing usage. */
-export const Screen = React.forwardRef<SafeAreaView, ViewProps & { backgroundColor?: ColorKey }>(
+export const Screen = React.forwardRef<View, ViewProps & { backgroundColor?: ColorKey }>(
   ({ children, style, backgroundColor, ...props }, ref) => {
     const { theme } = useTheme();
     const bg = backgroundColor ? theme.colors[backgroundColor] : theme.roles.bg;

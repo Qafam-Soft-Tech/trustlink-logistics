@@ -1,4 +1,5 @@
 import React from 'react';
+import { ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNotifications } from '../hooks';
@@ -15,7 +16,8 @@ export function AlertsScreen() {
   return (
     <Screen>
       <TopBar title="Alerts" />
-      <Column style={{ flex: 1, padding: 16 }} gap="md">
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <Column gap="md">
         {isLoading ? (
           <Column gap="sm"><Skeleton height={64} /><Skeleton height={64} /><Skeleton height={64} /></Column>
         ) : isError ? (
@@ -49,6 +51,7 @@ export function AlertsScreen() {
           </Column>
         )}
       </Column>
+      </ScrollView>
     </Screen>
   );
 }

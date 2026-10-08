@@ -42,6 +42,7 @@ export function createMockAdaptersFromStore(getStore: () => MockStore): DataPort
       requestOtp: (input) => run((s) => s.authRequestOtp(input)),
       verifyOtp: (input) => run((s) => s.authVerifyOtp(input)),
       resendOtp: (input) => run((s) => s.authResendOtp(input)),
+      hydrate: (user) => run((s) => s.hydrateSession(user)),
       getProfile: () => run((s) => s.getSession().user),
       updateProfile: (patch) => run((s) => s.updateProfile(patch)),
       setupProfile: (input) => run((s) => s.setupProfile(input)),

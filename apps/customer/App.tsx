@@ -9,6 +9,7 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@exp
 import { ThemeProvider, useTheme } from '@trustlink/shared';
 
 import { AppNavigator, linking } from './src/navigation/AppNavigator';
+import { navigationRef } from './src/navigation/navigationRef';
 import { DataProvider } from './src/data/DataContext';
 import { SessionProvider } from './src/session/SessionContext';
 import { DemoMenuProvider } from './src/demo/DemoMenuContext';
@@ -41,7 +42,7 @@ function Root() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <NavigationContainer theme={navigationTheme} linking={linking as never}>
+        <NavigationContainer ref={navigationRef} theme={navigationTheme} linking={linking as never}>
           <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
           <AppNavigator />
         </NavigationContainer>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,8 +34,9 @@ export function HomeScreen() {
         rightAction={<Ionicons name="notifications-outline" size={24} color={theme.roles.primaryAction} />}
         onRightPress={() => rootNav.navigate('Main', { screen: 'Alerts' })}
       />
-      <Column style={{ flex: 1, padding: 16 }} gap="lg">
-        <Row justify="space-between" align="center">
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <Column gap="lg">
+          <Row justify="space-between" align="center">
           <Column gap="xs">
             <Text variant="h3" color="inherit" style={{ color: theme.roles.text }}>Welcome back, {name}</Text>
             <Text variant="bodySmall" color="inherit" style={{ color: theme.roles.textMuted }}>Ready to send a package?</Text>
@@ -128,7 +130,8 @@ export function HomeScreen() {
         <Row justify="center">
           <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted }}>Secure. Swift. Strategic.</Text>
         </Row>
-      </Column>
+        </Column>
+      </ScrollView>
     </Screen>
   );
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useDeliveries } from '../hooks';
@@ -16,7 +17,8 @@ export function DeliveriesScreen() {
   return (
     <Screen>
       <TopBar title="Deliveries" />
-      <Column style={{ flex: 1, padding: 16 }} gap="md">
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <Column gap="md">
         {isLoading ? (
           <Column gap="sm"><Skeleton height={72} /><Skeleton height={72} /><Skeleton height={72} /></Column>
         ) : isError ? (
@@ -31,6 +33,7 @@ export function DeliveriesScreen() {
           </>
         )}
       </Column>
+      </ScrollView>
     </Screen>
   );
 }

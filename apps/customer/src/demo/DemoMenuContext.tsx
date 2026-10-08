@@ -1,12 +1,10 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme, Button, BottomSheet, Text, Chip, Row, Column, Divider, Banner, SegmentedControl, StatusBadge } from '@trustlink/shared';
 import type { ThemeMode, DeliveryStatus } from '@trustlink/shared';
 import { useData } from '../data/DataContext';
 import { useSession } from '../session/SessionContext';
-import type { RootStackParamList } from '../navigation/types';
+import { navigate } from '../navigation/navigationRef';
 
 type CodeRow = { id: string; trackingNumber: string; status: DeliveryStatus; code: string };
 
@@ -39,7 +37,6 @@ function DemoMenu({ visible, onClose }: { visible: boolean; onClose: () => void 
   const data = useData();
   const demo = data.demo;
   const queryClient = useQueryClient();
-  const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { resetAll } = useSession();
   const { theme, mode, setMode } = useTheme();
   const [codes, setCodes] = useState<CodeRow[]>([]);
@@ -122,7 +119,7 @@ function DemoMenu({ visible, onClose }: { visible: boolean; onClose: () => void 
             onPress={async () => {
               await resetAll();
               onClose();
-              nav.navigate('Splash');
+              navigate('Splash');
             }}
           >
             Reset session &amp; onboarding
@@ -130,7 +127,7 @@ function DemoMenu({ visible, onClose }: { visible: boolean; onClose: () => void 
         </Row>
 
         {__DEV__ ? (
-          <Button variant="outline" size="md" onPress={() => { onClose(); nav.navigate('DesignGallery'); }}>
+          <Button variant="outline" size="md" onPress={() => { onClose(); navigate('DesignGallery'); }}>
             Open Design Gallery
           </Button>
         ) : null}

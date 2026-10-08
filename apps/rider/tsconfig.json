@@ -6,7 +6,8 @@
       "react": ["./node_modules/@types/react/index.d.ts"],
       "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime.d.ts"],
       "react/jsx-dev-runtime": ["./node_modules/@types/react/jsx-dev-runtime.d.ts"],
-      "react-native": ["./node_modules/react-native/types/index.d.ts"]
+      "react-native": ["./node_modules/react-native/types/index.d.ts"],
+      "react-native-safe-area-context": ["./node_modules/react-native-safe-area-context"]
     }
   }
 }

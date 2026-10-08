@@ -170,6 +170,12 @@ export class MockStore {
     return this.state.session;
   }
 
+  /** Re-establish a session for a persisted user (app restored from SecureStore). */
+  hydrateSession(user: User): void {
+    this.state.session = { user, token: `mock-token-${user.id}` };
+    if (!this.state.customers[user.phone]) this.state.customers[user.phone] = user;
+  }
+
   updateProfile(patch: { firstName?: string; lastName?: string; email?: string }): User {
     const s = this.getSession();
     if (patch.firstName !== undefined) s.user.firstName = patch.firstName;

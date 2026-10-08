@@ -36,6 +36,8 @@ export interface AuthPort {
   requestOtp(input: { phone: string; purpose: 'signup' | 'login'; role?: UserRole; firstName?: string; lastName?: string }): Promise<{ message: string; userId?: string }>;
   verifyOtp(input: { phone: string; code: string; purpose: 'signup' | 'login' }): Promise<AuthResult>;
   resendOtp(input: { phone: string; purpose: 'signup' | 'login' }): Promise<{ message: string }>;
+  /** re-establish the session for a persisted user (mock) — no-op against the real API (token already attached) */
+  hydrate(user: User): Promise<void>;
   getProfile(): Promise<User>;
   updateProfile(patch: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
   setupProfile(input: ProfileSetupInput): Promise<AuthResult>;

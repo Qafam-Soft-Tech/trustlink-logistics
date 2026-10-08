@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { useQueryClient } from '@tanstack/react-query';
 import type { User } from '@trustlink/shared';
 import { authStorage } from '../storage/authStorage';
+import { useData } from '../data/DataContext';
 
 export interface Session {
   user: User;
@@ -25,6 +26,7 @@ const SessionContext = createContext<SessionContextValue | undefined>(undefined)
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const data = useData();
   const [session, setSession] = useState<Session | null>(null);
   const [onboardingSeen, setOnboardingSeen] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -37,13 +39,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const [token, user, seen] = await Promise.all([authStorage.loadToken(), authStorage.loadUser(), authStorage.getOnboardingSeen()]);
       if (!active) return;
       setOnboardingSeen(seen);
-      if (token && user) setSession({ token, user });
+      if (token && user) {
+        // Re-establish the (in-memory) mock session so authenticated ports work after a reload.
+        await data.auth.hydrate(user).catch(() => undefined);
+        if (!active) return;
+        setSession({ token, user });
+      }
       setReady(true);
     })();
     return () => {
       active = false;
     };
-  }, []);
+  }, [data]);
 
   // A 401 anywhere → surface the SessionExpired sheet.
   useEffect(() => {
