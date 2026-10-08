@@ -30,7 +30,7 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 |---|---|---|---|
 | SC-16 | `InitializePaymentDto.amount` documented "in kobo", but fares are **naira decimals** (`DEFAULT_PRICING_CONFIG`); payment entity comment also says kobo | Frontend sends **amount in kobo** (`ndaFare × 100`) pending backend confirmation — do **not** hardcode until decided | **Needs decision** |
 | SC-17 | `@Roles(...)` is enforced only where `RolesGuard` is present (only `UsersController`). All other controllers use `JwtAuthGuard` alone, so declared roles (admin/rider/customer) are **not enforced** at the guard | Frontend still restricts by declared role; treat backend enforcement as untrusted for now | **Needs decision** (security) |
-| SC-18 | Deep links in **Expo Go** need the runtime `exp://…` prefix from `expo-linking` (`Linking.createURL('/')`), which is **not** in the approved dependency list | `scheme: trustlink` + `trustlink://` prefix configured (dev builds work); Expo-Go `exp://` prefix deferred | **Needs decision** (add `expo-linking`?) |
+| SC-18 | Deep links in **Expo Go** need the runtime `exp://…` prefix from `expo-linking` (`Linking.createURL('/')`), which is **not** in the approved dependency list | `scheme: trustlink` + `trustlink://` prefix configured (dev builds work); Expo-Go `exp://` prefix deferred | **Resolved (Phase 5)** — `expo-linking` installed (customer); prefixes `[createURL('/'), 'trustlink://']`; see `DEMO.md` §4 |
 
 ---
 

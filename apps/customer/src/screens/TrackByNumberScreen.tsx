@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme, Screen, TopBar, Text, Button, Input, Column, Card, StatusBadge, Banner, ErrorState } from '@trustlink/shared';
 import { useTrackDelivery } from '../hooks';
-import type { TrackingStackParamList } from '../navigation/types';
+import type { HomeStackParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<TrackingStackParamList, 'TrackByNumber'>;
+type Props = NativeStackScreenProps<HomeStackParamList, 'TrackByNumber'>;
 
 export function TrackByNumberScreen({ navigation, route }: Props) {
   const { theme } = useTheme();
@@ -21,15 +21,18 @@ export function TrackByNumberScreen({ navigation, route }: Props) {
       <TopBar title="Track a package" showBack onBack={() => navigation.goBack()} />
       <Column style={{ flex: 1, padding: 16 }} gap="md">
         <Text variant="body" color="inherit" style={{ color: theme.roles.textSecondary }}>
-          Enter a tracking number (e.g. TLK-2026-001).
+          Enter a tracking number (e.g. TLK-2026-001). You must be signed in.
         </Text>
         <Input label="Tracking number" value={value} onChangeText={setValue} autoCapitalize="characters" placeholder="TLK-2026-001" />
         <Button variant="primary" size="lg" loading={track.isPending} onPress={submit}>Track</Button>
 
         {track.isError ? (
-          <Banner variant="error" title="Not found" message="We couldn't find a delivery with that number." />
+          <Column gap="md">
+            <Banner variant="error" title="Not found" message="We couldn't find a delivery with that number." />
+            <Button variant="outline" size="md" onPress={() => navigation.navigate('NotFound', { trackingNumber: value.trim() })}>See details</Button>
+          </Column>
         ) : track.isSuccess && track.data ? (
-          <Card onPress={() => navigation.navigate('TrackingHome', { deliveryId: track.data!.id })}>
+          <Card onPress={() => navigation.navigate('HomeFeed')}>
             <Column gap="sm">
               <Text variant="body" color="inherit" style={{ color: theme.roles.text }}>{track.data.trackingNumber}</Text>
               <StatusBadge status={track.data.status} />

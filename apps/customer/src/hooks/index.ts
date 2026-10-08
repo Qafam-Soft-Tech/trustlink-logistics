@@ -61,3 +61,44 @@ export function useCancelDelivery() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['deliveries'] }),
   });
 }
+
+export function useAddresses() {
+  const data = useData();
+  return useQuery({ queryKey: ['addresses'], queryFn: () => data.delivery.listAddresses() });
+}
+
+export function useCreateAddress() {
+  const data = useData();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<import('@trustlink/shared').Address>) => data.delivery.createAddress(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['addresses'] }),
+  });
+}
+
+export function useUpdateAddress() {
+  const data = useData();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<import('@trustlink/shared').Address> }) => data.delivery.updateAddress(id, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['addresses'] }),
+  });
+}
+
+export function useDeleteAddress() {
+  const data = useData();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => data.delivery.deleteAddress(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['addresses'] }),
+  });
+}
+
+export function useSetDefaultAddress() {
+  const data = useData();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => data.delivery.setDefaultAddress(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['addresses'] }),
+  });
+}

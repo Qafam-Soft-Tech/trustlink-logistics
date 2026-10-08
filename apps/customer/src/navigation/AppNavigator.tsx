@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivityIndicator } from 'react-native';
+import * as Linking from 'expo-linking';
 import { createNativeStackNavigator, type NativeStackScreenProps, type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,27 +12,38 @@ import { DeliveriesScreen } from '../screens/DeliveriesScreen';
 import { AlertsScreen } from '../screens/AlertsScreen';
 import { AccountScreen } from '../screens/AccountScreen';
 import { TrackByNumberScreen } from '../screens/TrackByNumberScreen';
+import { NotFoundScreen } from '../screens/NotFoundScreen';
+import { SavedAddressesScreen } from '../screens/SavedAddressesScreen';
+import { AddressFormScreen } from '../screens/AddressFormScreen';
 import { OnboardingSlidesScreen } from '../screens/onboarding/OnboardingSlidesScreen';
 import { WelcomeScreen } from '../screens/onboarding/WelcomeScreen';
 import { DesignGalleryScreen } from '../screens/DesignGalleryScreen';
 import { SplashScreen } from '../screens/splash/SplashScreen';
 import { SessionExpiredSheet } from '../screens/auth/SessionExpiredSheet';
 import { makePlaceholder } from '../components/PlaceholderScreen';
-import type { RootStackParamList, MainTabParamList, NewDeliveryStackParamList, TrackingStackParamList, OnboardingStackParamList } from './types';
+import type { RootStackParamList, MainTabParamList, HomeStackParamList, NewDeliveryStackParamList, TrackingStackParamList, OnboardingStackParamList } from './types';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
+const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 const OnboardingStack = createNativeStackNavigator<OnboardingStackParamList>();
 const NewDeliveryStack = createNativeStackNavigator<NewDeliveryStackParamList>();
 const TrackingStack = createNativeStackNavigator<TrackingStackParamList>();
 
-/** Deep links: trustlink://track/:trackingNumber and trustlink://delivery/:id */
+/** Deep links: trustlink://track/:trackingNumber, trustlink://delivery/:id (+ Expo Go via createURL). */
 export const linking = {
-  prefixes: ['trustlink://'],
+  prefixes: [Linking.createURL('/'), 'trustlink://'],
   config: {
     screens: {
-      Main: { screens: { Home: 'home', Deliveries: 'deliveries', Alerts: 'alerts', Account: 'account' } },
-      Tracking: { screens: { TrackingHome: 'delivery/:deliveryId', TrackByNumber: 'track/:trackingNumber' } },
+      Main: {
+        screens: {
+          Home: { screens: { HomeFeed: 'home', TrackByNumber: 'track/:trackingNumber', SavedAddresses: 'addresses' } },
+          Deliveries: 'deliveries',
+          Alerts: 'alerts',
+          Account: 'account',
+        },
+      },
+      Tracking: { screens: { TrackingHome: 'delivery/:deliveryId' } },
       NewDelivery: { screens: { Pickup: 'new/pickup' } },
       Auth: { screens: { PhoneEntry: 'signin' } },
     },
@@ -127,10 +139,22 @@ function MainTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
+function HomeNavigator() {
+  return (
+    <HomeStack.Navigator screenOptions={{ headerShown: false }}>
+      <HomeStack.Screen name="HomeFeed" component={HomeScreen} />
+      <HomeStack.Screen name="TrackByNumber" component={TrackByNumberScreen} />
+      <HomeStack.Screen name="NotFound" component={NotFoundScreen} />
+      <HomeStack.Screen name="SavedAddresses" component={SavedAddressesScreen} />
+      <HomeStack.Screen name="AddressForm" component={AddressFormScreen} />
+    </HomeStack.Navigator>
+  );
+}
+
 function MainTabs() {
   return (
     <Tab.Navigator tabBar={(props) => <MainTabBar {...props} />} screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Home" component={HomeNavigator} />
       <Tab.Screen name="Deliveries" component={DeliveriesScreen} />
       <Tab.Screen name="Alerts" component={AlertsScreen} />
       <Tab.Screen name="Account" component={AccountScreen} />
@@ -172,7 +196,6 @@ function TrackingNavigator() {
       <TrackingStack.Screen name="Failed" component={FailedStep} />
       <TrackingStack.Screen name="Returned" component={ReturnedStep} />
       <TrackingStack.Screen name="CancelFlow" component={CancelFlowStep} />
-      <TrackingStack.Screen name="TrackByNumber" component={TrackByNumberScreen} />
     </TrackingStack.Navigator>
   );
 }

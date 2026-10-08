@@ -45,13 +45,22 @@ Items: **Scenario** chips · **Advance** active deliveries + **recipient codes**
 
 ## 4. Deep links
 
-- **trustlink:// (dev builds only).** `apps/{customer,rider}/app.json` declare `"scheme": "trustlink"`. After installing a **development build** (`npx expo run:android`, or `eas build --profile development`), test:
-  ```
-  npx uri-scheme open "trustlink://track/TLK-2026-001" --android     # → Track-by-number
-  npx uri-scheme open "trustlink://delivery/del-005" --android       # → Tracking
-  ```
-  (iOS: `--ios`.)
-- **Expo Go (`exp://…/--/track/…`) — NOT currently wired.** React Navigation needs the runtime dev prefix from `expo-linking` (`Linking.createURL('/')`), which is **not an approved/installed dependency**. Until that's decided, use the in-app **Track by number** flow in Expo Go. See `CONTRACT_LEDGER.md` "Needs decision".
+The customer app declares `"scheme": "trustlink"` and registers prefixes **`[Linking.createURL('/'), 'trustlink://']`** (expo-linking). Routes: `track/:trackingNumber` (→ Home → Track-by-number) and `delivery/:deliveryId` (→ Tracking).
+
+**Expo Go** (dev server running; note the URL printed by `npx expo start`, e.g. `exp://192.168.0.152:8081`):
+```
+npx uri-scheme open "exp://192.168.0.152:8081/--/track/TLK-2026-001" --android
+npx uri-scheme open "exp://192.168.0.152:8081/--/delivery/del-005" --android
+```
+(On iOS use `--ios`. Replace the host/port with your own dev URL.)
+
+**Development / release build** (after `npx expo run:android` or `eas build`):
+```
+npx uri-scheme open "trustlink://track/TLK-2026-001" --android
+npx uri-scheme open "trustlink://delivery/del-005" --android
+```
+
+In-app equivalents (no URL needed): Home → **Track by number**, and Deliveries/Alerts → a delivery.
 
 ## 5. Consent links (temporary)
 The PhoneEntry consent line opens these external URLs via `Linking.openURL`:

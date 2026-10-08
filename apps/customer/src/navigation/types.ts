@@ -13,8 +13,16 @@ export type AuthStackParamList = {
   AccountReady: undefined;
 };
 
+export type HomeStackParamList = {
+  HomeFeed: undefined;
+  TrackByNumber: { trackingNumber: string };
+  NotFound: { trackingNumber?: string };
+  SavedAddresses: undefined;
+  AddressForm: { id?: string };
+};
+
 export type MainTabParamList = {
-  Home: undefined;
+  Home: NavigatorScreenParams<HomeStackParamList> | undefined;
   Deliveries: undefined;
   Alerts: undefined;
   Account: undefined;
@@ -39,7 +47,6 @@ export type TrackingStackParamList = {
   Failed: { deliveryId: string };
   Returned: { deliveryId: string };
   CancelFlow: { deliveryId: string };
-  TrackByNumber: { trackingNumber: string };
 };
 
 export type RootStackParamList = {

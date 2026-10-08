@@ -1,175 +1,134 @@
-import React from 'react';
-import { Screen, Text as TextComponent, Box, Button, Card, Column, Row, Center, Avatar, Badge, Divider } from '@trustlink/shared';
-import { theme } from '@trustlink/shared';
+import React, { useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme, Screen, TopBar, Text, Button, Card, Column, Row, Divider, StatusBadge, Skeleton, EmptyState, ErrorState, Banner, Avatar, Input } from '@trustlink/shared';
+import { useProfile, useDeliveries } from '../hooks';
+import type { HomeStackParamList, RootStackParamList } from '../navigation/types';
 
-export function HomeScreen({ navigation }: any) {
+type HomeNav = NativeStackNavigationProp<HomeStackParamList>;
+const ACTIVE = ['requested', 'searching', 'assigned', 'picked_up', 'in_transit'];
+
+export function HomeScreen() {
+  const { theme } = useTheme();
+  const homeNav = useNavigation<HomeNav>();
+  const rootNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const profile = useProfile();
+  const deliveries = useDeliveries();
+  const [trackingInput, setTrackingInput] = useState('');
+
+  const name = profile.data?.firstName ?? 'there';
+  const all = deliveries.data ?? [];
+  const active = all.filter((d) => ACTIVE.includes(d.status));
+  const recents = all.filter((d) => !ACTIVE.includes(d.status)).slice(0, 3);
+  const offline = (deliveries.error as Error | null)?.name === 'OfflineError';
+  const loading = deliveries.isLoading || profile.isLoading;
+
+  const openDelivery = (id: string) => rootNav.navigate('Tracking', { screen: 'TrackingHome', params: { deliveryId: id } });
+
   return (
-    <Screen style={{ flex: 1 }}>
-      <Column style={{ flex: 1, padding: theme.spacing.md }} gap="lg">
+    <Screen>
+      <TopBar
+        title="Home"
+        rightAction={<Ionicons name="notifications-outline" size={24} color={theme.roles.primaryAction} />}
+        onRightPress={() => rootNav.navigate('Main', { screen: 'Alerts' })}
+      />
+      <Column style={{ flex: 1, padding: 16 }} gap="lg">
         <Row justify="space-between" align="center">
           <Column gap="xs">
-            <TextComponent variant="h2" color="textPrimary">
-              Welcome back, John
-            </TextComponent>
-            <TextComponent variant="bodySmall" color="textSecondary">
-              Ready to send a package?
-            </TextComponent>
+            <Text variant="h3" color="inherit" style={{ color: theme.roles.text }}>Welcome back, {name}</Text>
+            <Text variant="bodySmall" color="inherit" style={{ color: theme.roles.textMuted }}>Ready to send a package?</Text>
           </Column>
-          <Avatar size="md" name="John Doe" />
+          <Avatar size="md" name={`${profile.data?.firstName ?? ''} ${profile.data?.lastName ?? ''}`.trim() || 'Customer'} />
         </Row>
 
+        <Button variant="primary" size="lg" leftIcon={<Ionicons name="add-circle-outline" size={22} color={theme.roles.primaryActionText} />} onPress={() => rootNav.navigate('NewDelivery')}>
+          Send a package
+        </Button>
+
         <Card>
           <Column gap="md">
-            <Row justify="space-between">
-              <TextComponent variant="h4" color="textPrimary">Quick Actions</TextComponent>
-            </Row>
-            <Row gap="md">
-              <QuickActionButton
-                icon="add-circle"
-                label="New Delivery"
-                color={theme.colors.navy}
-                onPress={() => navigation.navigate('NewDelivery')}
-              />
-              <QuickActionButton
-                icon="location"
-                label="Track Package"
-                color={theme.colors.gold}
-                onPress={() => navigation.navigate('Tracking')}
-              />
-              <QuickActionButton
-                icon="time"
-                label="History"
-                color={theme.colors.info}
-                onPress={() => navigation.navigate('Deliveries')}
-              />
+            <Text variant="h4" color="inherit" style={{ color: theme.roles.text }}>Track by number</Text>
+            <Row gap="sm" align="end">
+              <Column style={{ flex: 1 }}>
+                <Input placeholder="TLK-2026-001" value={trackingInput} onChangeText={setTrackingInput} autoCapitalize="characters" />
+              </Column>
+              <Button variant="outline" size="md" onPress={() => homeNav.navigate('TrackByNumber', { trackingNumber: trackingInput.trim() })}>Track</Button>
             </Row>
           </Column>
         </Card>
 
+        {offline ? <Banner variant="offline" message="You're offline. Showing saved data." /> : null}
+
         <Card>
           <Column gap="md">
-            <Row justify="space-between">
-              <TextComponent variant="h4" color="textPrimary">Active Deliveries</TextComponent>
-              <Button variant="ghost" size="sm" onPress={() => navigation.navigate('Tracking')}>
-                View All
+            <Row justify="space-between" align="center">
+              <Text variant="h4" color="inherit" style={{ color: theme.roles.text }}>Active deliveries</Text>
+              <Button variant="ghost" size="sm" onPress={() => rootNav.navigate('Main', { screen: 'Deliveries' })}>
+                <Text variant="bodySmall" color="inherit" style={{ color: theme.roles.primaryAction }}>View all</Text>
               </Button>
             </Row>
-            <Column gap="sm">
-              <DeliveryCard
-                id="TLK-2024-001"
-                status="in_transit"
-                pickup="Wuse 2, Abuja"
-                dropoff="Garki, Abuja"
-                riderName="Mike Johnson"
-                estimatedTime="15 min"
-              />
-              <DeliveryCard
-                id="TLK-2024-002"
-                status="assigned"
-                pickup="Maitama, Abuja"
-                dropoff="Asokoro, Abuja"
-                riderName="Sarah Williams"
-                estimatedTime="30 min"
-              />
-            </Column>
+            {loading ? (
+              <Column gap="sm"><Skeleton height={64} /><Skeleton height={64} /></Column>
+            ) : deliveries.isError && !offline ? (
+              <ErrorState message="Couldn't load your deliveries." onAction={() => deliveries.refetch()} />
+            ) : active.length === 0 ? (
+              <EmptyState icon="📦" title="No active deliveries" message="Send a package to get started." actionLabel="Send a package" onAction={() => rootNav.navigate('NewDelivery')} />
+            ) : (
+              <Column gap="sm">
+                {active.map((d) => (
+                  <Card key={d.id} elevation="none" onPress={() => openDelivery(d.id)}>
+                    <Row justify="space-between" align="center">
+                      <Column gap="xs">
+                        <Text variant="body" color="inherit" style={{ color: theme.roles.text }}>{d.trackingNumber}</Text>
+                        <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted }}>{d.pickupArea} → {d.dropoffArea}</Text>
+                      </Column>
+                      <StatusBadge status={d.status} />
+                    </Row>
+                  </Card>
+                ))}
+              </Column>
+            )}
           </Column>
         </Card>
+
+        {recents.length > 0 ? (
+          <Card>
+            <Column gap="md">
+              <Text variant="h4" color="inherit" style={{ color: theme.roles.text }}>Recent</Text>
+              <Column gap="sm">
+                {recents.map((d) => (
+                  <Card key={d.id} elevation="none" onPress={() => openDelivery(d.id)}>
+                    <Row justify="space-between" align="center">
+                      <Text variant="bodySmall" color="inherit" style={{ color: theme.roles.textSecondary }}>{d.trackingNumber} · {d.dropoffArea}</Text>
+                      <StatusBadge status={d.status} />
+                    </Row>
+                  </Card>
+                ))}
+              </Column>
+            </Column>
+          </Card>
+        ) : null}
 
         <Card>
           <Column gap="md">
-            <TextComponent variant="h4" color="textPrimary">Account Summary</TextComponent>
+            <Text variant="h4" color="inherit" style={{ color: theme.roles.text }}>Quick actions</Text>
             <Row gap="md">
-              <StatItem label="This Month" value="12" subtitle="Deliveries" />
-              <StatItem label="Spent" value="₦45,000" subtitle="Total" />
-              <StatItem label="Rating" value="4.9" subtitle="Stars" />
+              <Button variant="outline" size="md" style={{ flex: 1 }} leftIcon={<Ionicons name="location-outline" size={20} color={theme.roles.primaryAction} />} onPress={() => homeNav.navigate('SavedAddresses')}>
+                Addresses
+              </Button>
+              <Button variant="outline" size="md" style={{ flex: 1 }} leftIcon={<Ionicons name="time-outline" size={20} color={theme.roles.primaryAction} />} onPress={() => rootNav.navigate('Main', { screen: 'Deliveries' })}>
+                Deliveries
+              </Button>
             </Row>
           </Column>
         </Card>
+
+        <Divider />
+        <Row justify="center">
+          <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted }}>Secure. Swift. Strategic.</Text>
+        </Row>
       </Column>
     </Screen>
-  );
-}
-
-function QuickActionButton({ icon, label, color, onPress }: any) {
-  return (
-    <Button
-      variant="outline"
-      size="md"
-      onPress={onPress}
-      style={{ flex: 1, paddingVertical: theme.spacing.lg }}
-      leftIcon={<Ionicons name={icon} size={24} color={color} />}
-    >
-      <TextComponent variant="bodySmall" color={color as any} style={{ textAlign: 'center' }}>
-        {label}
-      </TextComponent>
-    </Button>
-  );
-}
-
-function DeliveryCard({ id, status, pickup, dropoff, riderName, estimatedTime }: any) {
-  const getStatusConfig = (status: string): { color: string; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] } => {
-    switch (status) {
-      case 'in_transit':
-        return { color: theme.colors.statusInTransit, label: 'In Transit', icon: 'bicycle' };
-      case 'assigned':
-        return { color: theme.colors.statusAssigned, label: 'Assigned', icon: 'person' };
-      case 'picked_up':
-        return { color: theme.colors.statusPickedUp, label: 'Picked Up', icon: 'cube' };
-      case 'delivered':
-        return { color: theme.colors.statusDelivered, label: 'Delivered', icon: 'checkmark-circle' };
-      default:
-        return { color: theme.colors.statusRequested, label: 'Requested', icon: 'time' };
-    }
-  };
-
-  const config = getStatusConfig(status);
-
-  return (
-    <Box style={{ padding: theme.spacing.md, backgroundColor: theme.colors.backgroundSecondary, borderRadius: theme.borderRadius.md }}>
-      <Row justify="space-between">
-        <Column gap="xs">
-          <Row gap="sm" align="center">
-            <TextComponent variant="body" color="textPrimary" style={{ fontWeight: '600' }}>
-              {id}
-            </TextComponent>
-            <Badge variant="info" size="sm">{config.label}</Badge>
-          </Row>
-          <Row gap="md">
-            <Column gap="xs" style={{ flex: 1 }}>
-              <Row gap="xs" align="center">
-                <Ionicons name="location" size={14} color={theme.colors.textTertiary} />
-                <TextComponent variant="caption" color="textSecondary">Pickup: {pickup}</TextComponent>
-              </Row>
-              <Row gap="xs" align="center">
-                <Ionicons name="location" size={14} color={theme.colors.textTertiary} />
-                <TextComponent variant="caption" color="textSecondary">Drop: {dropoff}</TextComponent>
-              </Row>
-            </Column>
-            <Column gap="xs" align="end">
-              <Row gap="xs" align="center">
-                <Ionicons name={config.icon} size={14} color={config.color} />
-                <TextComponent variant="caption" color={config.color} style={{ fontWeight: '600' }}>
-                  {estimatedTime}
-                </TextComponent>
-              </Row>
-              <TextComponent variant="caption" color="textTertiary">Rider: {riderName}</TextComponent>
-            </Column>
-          </Row>
-        </Column>
-      </Row>
-    </Box>
-  );
-}
-
-function StatItem({ label, value, subtitle }: any) {
-  return (
-    <Column gap="xs" style={{ flex: 1, alignItems: 'center', paddingVertical: theme.spacing.md }}>
-      <TextComponent variant="h3" color="navy" style={{ fontWeight: '700' }}>
-        {value}
-      </TextComponent>
-      <TextComponent variant="caption" color="textSecondary">{label}</TextComponent>
-      <TextComponent variant="caption" color="textTertiary">{subtitle}</TextComponent>
-    </Column>
   );
 }
