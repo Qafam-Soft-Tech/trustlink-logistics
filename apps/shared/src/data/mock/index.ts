@@ -19,6 +19,8 @@ export interface DemoControls {
   reset(): void;
   advance(deliveryId: string): Delivery;
   recipientCodes(): Array<{ id: string; trackingNumber: string; status: DeliveryStatus; code: string }>;
+  /** force the pending OTP to be expired */
+  expireOtp(): void;
 }
 
 export function createMockStore(options: MockLayerOptions = {}): MockStore {
@@ -39,7 +41,7 @@ export function createMockAdaptersFromStore(getStore: () => MockStore): DataPort
     auth: {
       requestOtp: (input) => run((s) => s.authRequestOtp(input)),
       verifyOtp: (input) => run((s) => s.authVerifyOtp(input)),
-      resendOtp: () => run(() => ({ message: 'OTP resent successfully' })),
+      resendOtp: (input) => run((s) => s.authResendOtp(input)),
       getProfile: () => run((s) => s.getSession().user),
       updateProfile: (patch) => run((s) => s.updateProfile(patch)),
       setupProfile: (input) => run((s) => s.setupProfile(input)),
@@ -149,6 +151,7 @@ export function createMockLayer(options: MockLayerOptions = {}): { ports: DataPo
     },
     advance: (deliveryId) => store.advanceDelivery(deliveryId),
     recipientCodes: () => store.activeRecipientCodes(),
+    expireOtp: () => store.expireOtpNow(),
   };
   return { ports, demo };
 }

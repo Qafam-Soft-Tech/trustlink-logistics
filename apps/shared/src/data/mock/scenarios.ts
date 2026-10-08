@@ -47,6 +47,7 @@ function configsFromPricing(): PricingConfig[] {
 export function buildBaseState(): MockState {
   return {
     customer: copy(DEMO_CUSTOMER),
+    customers: { [DEMO_CUSTOMER.phone]: copy(DEMO_CUSTOMER) },
     addresses: copy(DEMO_ADDRESSES),
     deliveries: copy(DEMO_DELIVERIES),
     riders: copy(DEMO_RIDERS),
@@ -56,6 +57,8 @@ export function buildBaseState(): MockState {
     pricing: { ...DEFAULT_PRICING },
     pricingConfigs: configsFromPricing(),
     session: null,
+    authFlow: null,
+    lockedPhones: [],
     flags: { offline: false, serverError: false },
     podByDelivery: {},
     paymentShouldFail: false,

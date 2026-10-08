@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme, Button, BottomSheet, Text, Chip, Row, Column, Divider, Banner, SegmentedControl, StatusBadge } from '@trustlink/shared';
 import type { ThemeMode, DeliveryStatus } from '@trustlink/shared';
 import { useData } from '../data/DataContext';
+import { useSession } from '../session/SessionContext';
 import type { RootStackParamList } from '../navigation/types';
 
 type CodeRow = { id: string; trackingNumber: string; status: DeliveryStatus; code: string };
@@ -39,6 +40,7 @@ function DemoMenu({ visible, onClose }: { visible: boolean; onClose: () => void 
   const demo = data.demo;
   const queryClient = useQueryClient();
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { resetAll } = useSession();
   const { theme, mode, setMode } = useTheme();
   const [codes, setCodes] = useState<CodeRow[]>([]);
 
@@ -109,6 +111,22 @@ function DemoMenu({ visible, onClose }: { visible: boolean; onClose: () => void 
         <Row gap="md">
           <Button variant="ghost" size="md" onPress={() => { demo.reset(); refresh(); }} style={{ flex: 1 }}>Reset data</Button>
           <Button variant="primary" size="md" onPress={onClose} style={{ flex: 1 }}>Close</Button>
+        </Row>
+
+        <Row gap="md">
+          <Button variant="outline" size="md" onPress={() => demo.expireOtp()} style={{ flex: 1 }}>Expire OTP now</Button>
+          <Button
+            variant="outline"
+            size="md"
+            style={{ flex: 1 }}
+            onPress={async () => {
+              await resetAll();
+              onClose();
+              nav.navigate('Splash');
+            }}
+          >
+            Reset session &amp; onboarding
+          </Button>
         </Row>
 
         {__DEV__ ? (

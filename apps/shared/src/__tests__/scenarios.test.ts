@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createMockAdapters } from '../data/mock';
 import { SCENARIOS, type ScenarioName } from '../data/mock/scenarios';
 import { ConflictError } from '../data/http';
+import { DEMO_OTP } from '../domain/constants';
 
 const CUSTOMER_PHONE = '08031234567';
 const RIDER_PHONE = '08050000001';
@@ -9,11 +10,11 @@ const RECIPIENT_CODE = '482913';
 
 async function loginCustomer(ports: ReturnType<typeof createMockAdapters>) {
   await ports.auth.requestOtp({ phone: CUSTOMER_PHONE, purpose: 'login' });
-  return ports.auth.verifyOtp({ phone: CUSTOMER_PHONE, code: '123456', purpose: 'login' });
+  return ports.auth.verifyOtp({ phone: CUSTOMER_PHONE, code: DEMO_OTP, purpose: 'login' });
 }
 async function loginRider(ports: ReturnType<typeof createMockAdapters>) {
   await ports.auth.requestOtp({ phone: RIDER_PHONE, purpose: 'login' });
-  return ports.auth.verifyOtp({ phone: RIDER_PHONE, code: '123456', purpose: 'login' });
+  return ports.auth.verifyOtp({ phone: RIDER_PHONE, code: DEMO_OTP, purpose: 'login' });
 }
 
 describe('mock scenarios', () => {

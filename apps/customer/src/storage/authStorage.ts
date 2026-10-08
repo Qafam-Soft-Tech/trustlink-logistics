@@ -69,6 +69,13 @@ export const authStorage = {
       /* ignore */
     }
   },
+  async clearOnboarding(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(ONBOARDING_KEY);
+    } catch {
+      /* ignore */
+    }
+  },
   setUnauthorizedHandler(fn: (() => void) | null): void {
     unauthorizedHandler = fn;
   },

@@ -17,6 +17,8 @@ interface SessionContextValue {
   signOut: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
   clearSessionExpired: () => void;
+  /** clears token, user, onboarding flag and the query cache (Demo menu) */
+  resetAll: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue | undefined>(undefined);
@@ -68,9 +70,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setOnboardingSeen(true);
   }, []);
 
+  const resetAll = useCallback(async () => {
+    await authStorage.clearToken();
+    await authStorage.clearOnboarding();
+    setSession(null);
+    setOnboardingSeen(false);
+    setSessionExpired(false);
+    queryClient.clear();
+  }, [queryClient]);
+
   const value = useMemo<SessionContextValue>(
-    () => ({ session, onboardingSeen, ready, sessionExpired, signIn, signOut, completeOnboarding, clearSessionExpired: () => setSessionExpired(false) }),
-    [session, onboardingSeen, ready, sessionExpired, signIn, signOut, completeOnboarding],
+    () => ({ session, onboardingSeen, ready, sessionExpired, signIn, signOut, completeOnboarding, clearSessionExpired: () => setSessionExpired(false), resetAll }),
+    [session, onboardingSeen, ready, sessionExpired, signIn, signOut, completeOnboarding, resetAll],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

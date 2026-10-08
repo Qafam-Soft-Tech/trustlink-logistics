@@ -33,6 +33,7 @@ import type {
 } from '../../domain/types';
 import { calculateFare, DEFAULT_PRICING } from '../../domain/fare';
 import { canTransition, computeCancellation, statusAfterFailure } from '../../domain/stateMachine';
+import { OTP_EXPIRY_SECONDS, MAX_OTP_ATTEMPTS, DEMO_OTP } from '../../domain/constants';
 import { ConflictError, NotFoundError, ValidationError } from '../http';
 import { distanceBetween, type AbujaArea } from '../../mocks/fixtures';
 import type { RiderFixture } from '../../mocks/fixtures';
@@ -43,8 +44,23 @@ export interface MockSession {
   token: string;
 }
 
+/** Deterministic demo auth flow state. */
+export interface AuthFlow {
+  phone: string;
+  purpose: 'signup' | 'login';
+  isNew: boolean;
+  attempts: number;
+  expiresAt: number;
+  locked: boolean;
+}
+
+/** Phone whose account is permanently locked (demo: shows the locked state). */
+export const LOCKED_ACCOUNT_PHONE = '08000000000';
+
 export interface MockState {
   customer: User;
+  /** registered customers keyed by phone (demo customer + any signed-up phones) */
+  customers: Record<string, User>;
   addresses: Address[];
   deliveries: Delivery[];
   riders: RiderFixture[];
@@ -54,6 +70,8 @@ export interface MockState {
   pricing: PricingValues;
   pricingConfigs: PricingConfig[];
   session: MockSession | null;
+  authFlow: AuthFlow | null;
+  lockedPhones: string[];
   flags: MockFlags;
   podByDelivery: Record<string, ProofOfDelivery>;
   /** payment verifications should fail (scenario `paymentFails`) */
@@ -78,27 +96,73 @@ export class MockStore {
   }
 
   /* ---------------- auth ---------------- */
+  private returningPhone(): string {
+    return this.state.customer.phone;
+  }
+
   authRequestOtp(input: { phone: string; purpose: 'signup' | 'login'; role?: UserRole }): { message: string; userId: string } {
     const phone = input.phone.replace(/\s/g, '');
     if (!/^0\d{10}$/.test(phone)) throw new ValidationError('Enter a valid 11-digit Nigerian phone number');
-    const rider = this.state.riders.find((r) => r.user.phone === phone);
-    const user = rider ? rider.user : this.state.customer;
-    // remember role for verify
+    if (phone === LOCKED_ACCOUNT_PHONE) throw new ConflictError('This account is locked. Contact support.');
+    if (this.state.lockedPhones.includes(phone)) throw new ConflictError('Too many attempts. Account locked — use Demo menu → Reset data.');
+    const isRider = this.state.riders.some((r) => r.user.phone === phone);
+    const isNew = phone !== this.returningPhone() && !isRider;
+    if (input.purpose === 'login' && isNew) throw new NotFoundError('No account found for this number');
+    if (input.purpose === 'signup' && !isNew) throw new ConflictError('An account already exists for this number');
     this.state.session = null;
-    this.pendingPhone = phone;
-    return { message: 'OTP sent to phone number', userId: user.id };
+    this.state.authFlow = { phone, purpose: input.purpose, isNew, attempts: 0, expiresAt: Date.now() + OTP_EXPIRY_SECONDS * 1000, locked: false };
+    return { message: 'OTP sent to phone number', userId: isNew ? `new-${phone}` : this.state.customer.id };
   }
 
-  private pendingPhone: string | null = null;
+  authResendOtp(input: { phone: string; purpose: 'signup' | 'login' }): { message: string } {
+    const phone = input.phone.replace(/\s/g, '');
+    if (this.state.lockedPhones.includes(phone)) throw new ConflictError('Too many attempts. Account locked — use Demo menu → Reset data.');
+    if (!this.state.authFlow || this.state.authFlow.phone !== phone) throw new ValidationError('Request a new code first');
+    this.state.authFlow.attempts = 0;
+    this.state.authFlow.expiresAt = Date.now() + OTP_EXPIRY_SECONDS * 1000;
+    return { message: 'OTP resent successfully' };
+  }
 
   authVerifyOtp(input: { phone: string; code: string }): MockSession {
-    if (!/^\d{6}$/.test(input.code)) throw new ValidationError('Invalid or expired OTP');
     const phone = input.phone.replace(/\s/g, '');
-    const rider = this.state.riders.find((r) => r.user.phone === phone);
-    const user = rider ? rider.user : this.state.customer;
+    const flow = this.state.authFlow;
+    if (!flow || flow.phone !== phone) throw new ValidationError('Invalid or expired OTP');
+    if (flow.locked) throw new ConflictError('Account locked — use Demo menu → Reset data.');
+    if (Date.now() > flow.expiresAt) throw new ValidationError('OTP expired. Resend a new code.');
+    if (input.code !== DEMO_OTP) {
+      flow.attempts += 1;
+      if (flow.attempts >= MAX_OTP_ATTEMPTS) {
+        flow.locked = true;
+        if (!this.state.lockedPhones.includes(phone)) this.state.lockedPhones.push(phone);
+        throw new ValidationError('Too many attempts. Account locked — use Demo menu → Reset data.');
+      }
+      throw new ValidationError(`Incorrect code. ${MAX_OTP_ATTEMPTS - flow.attempts} attempt(s) left.`);
+    }
+    const riderUser = this.state.riders.find((r) => r.user.phone === phone)?.user;
+    const user = riderUser ?? (flow.isNew ? this.ensureCustomer(phone) : this.state.customer);
     const session = { user, token: `mock-token-${user.id}` };
     this.state.session = session;
     return session;
+  }
+
+  private ensureCustomer(phone: string): User {
+    if (!this.state.customers[phone]) {
+      this.state.customers[phone] = {
+        id: `new-${phone}`,
+        phone,
+        role: 'customer',
+        kycStatus: 'pending',
+        isActive: true,
+        isPhoneVerified: true,
+        createdAt: nowIso(),
+      };
+    }
+    return this.state.customers[phone];
+  }
+
+  /** Demo control: force the pending OTP to be expired. */
+  expireOtpNow(): void {
+    if (this.state.authFlow) this.state.authFlow.expiresAt = 0;
   }
 
   getSession(): MockSession {
@@ -116,8 +180,8 @@ export class MockStore {
 
   setupProfile(input: ProfileSetupInput): MockSession {
     const phone = input.phone.replace(/\s/g, '');
-    const rider = this.state.riders.find((r) => r.user.phone === phone);
-    const user = rider ? rider.user : this.state.customer;
+    const riderUser = this.state.riders.find((r) => r.user.phone === phone)?.user;
+    const user = riderUser ?? this.state.customers[phone] ?? this.state.customer;
     user.firstName = input.firstName;
     user.lastName = input.lastName;
     if (input.email) user.email = input.email;
