@@ -34,6 +34,8 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-19 | Payment retry: backend §12 blocks a new `payments/initialize` while a payment is `SUCCESS` **or `PROCESSING`**; a declined/cancelled/timed-out attempt would therefore stay blocked | Mock + UI block only when a payment is **SUCCESS** (or the delivery has left REQUESTED); retry after decline/cancel/timeout is allowed | **Needs decision** (retry-after-processing) |
 | SC-20 | No backend distance source (`POST /pricing/calculate` needs `distanceKm`; no maps in R1) | Client-side estimate `pricing.estimateDistance` from launch-area coordinates (domain-owned table) → sent to `calculate` | **Needs decision** (restates SC-8; confirm fixture-table estimate is acceptable) |
 | SC-21 | "Copy" on the confirmation screen needs a clipboard API; `expo-clipboard` is not in the approved dependency list | Used React Native core `Clipboard` (deprecated in RN, still present) behind `utils/clipboard.ts` | Resolved (swap to `expo-clipboard` when a dep is approved) |
+| SC-22 | Rider card needs the rider's **vehicle type**, but `Delivery` embeds only the rider `User` (vehicle type lives on `RiderProfile`) | Demo-only `Delivery.riderVehicleType` (mock decorates on read); the card hides the badge when absent (api mode) | **Needs decision** (add vehicle to the delivery payload, or a rider lookup endpoint) |
+| SC-23 | Cancellation "reason" — `POST /notifications/cancel/:deliveryId` accepts no body | UI collects an optional reason and shows it as support context; it is **not sent** (no contract field) | **Needs decision** (accept a reason body server-side) |
 
 ---
 
@@ -104,6 +106,8 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 6. **Admin login** — backend endpoint + seed credentials, or interim frontend mock (Phase 4).
 7. **SC-19** — retry after a declined/cancelled/timed-out payment (backend §12 would block on `PROCESSING`; UI allows retry).
 8. **SC-21** — approve a clipboard dependency (`expo-clipboard`) to replace RN core `Clipboard`.
+9. **SC-22** — rider vehicle type is not on the delivery payload (demo-only field used in the tracking rider card).
+10. **SC-23** — cancellation reason is collected in the UI but the backend route accepts no body.
 
 ## E. Backend issues deferred (not blocking frontend, tracked here)
 - Signup DTO validation missing (interfaces, no class-validator).

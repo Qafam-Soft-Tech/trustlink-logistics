@@ -6,11 +6,10 @@ Temporary scaffolds present in the frontend. Every scaffold is a branded placeho
 |---|---|---|---|
 | `ScreenScaffold` component | `apps/customer/src/components/ScreenScaffold.tsx` | — (shared by placeholders) | Remove when the last placeholder is replaced |
 | Onboarding "Slides" copy | `apps/customer/src/screens/onboarding/OnboardingSlidesScreen.tsx` | `Onboarding → Slides` | Real art/copy in Phase 17 |
-| Tracking screens | `PlaceholderScreen` in `AppNavigator.tsx` | `Tracking → TrackingHome / Timeline / POD / Failed / Returned / CancelFlow` | Phases 8–9 |
+| Tracking terminal screens | `PlaceholderScreen` in `AppNavigator.tsx` | `Tracking → Timeline / POD / Failed / Returned` | Phase 9 |
 | Deliveries list | `apps/customer/src/screens/DeliveriesScreen.tsx` (real shell over ports) | `Main → Deliveries` | Phase 9 |
 | Alerts list | `apps/customer/src/screens/AlertsScreen.tsx` (real shell over ports) | `Main → Alerts` | Phase 10 |
 | Account | `apps/customer/src/screens/AccountScreen.tsx` (real shell) | `Main → Account` | Phase 11 |
-| Track by number | `apps/customer/src/screens/TrackByNumberScreen.tsx` (real shell over port) | `Tracking → TrackByNumber` | Phase 8 |
 | Demo menu | `apps/customer/src/demo/DemoMenuContext.tsx` | Overlay on Welcome/Account | Permanent (demo tool); refine per phase |
 | Consent links (Terms/Privacy) | `apps/customer/src/screens/auth/PhoneEntryScreen.tsx` | external URLs `https://trustlink.ng/terms`, `https://trustlink.ng/privacy` (via `Linking.openURL`) | Phase 11 (in-app Terms/Privacy screens) |
 

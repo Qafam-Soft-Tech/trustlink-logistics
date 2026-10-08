@@ -146,6 +146,8 @@ export interface Delivery {
   events?: DeliveryEvent[];
   /** demo-only: recipient delivery code (backend does not generate one — SC row) */
   recipientCode?: string;
+  /** demo-only: rider's vehicle type (backend Delivery embeds only the rider User — SC-22) */
+  riderVehicleType?: VehicleType | null;
   rider?: User | null;
   customer?: User | null;
 }

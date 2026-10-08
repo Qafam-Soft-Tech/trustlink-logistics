@@ -239,16 +239,27 @@ export class MockStore {
     const all = this.state.deliveries.filter(
       (d) => (s.user.role === 'customer' ? d.customerId === s.user.id : s.user.role === 'rider' ? d.riderId === s.user.id : true),
     );
-    return status ? all.filter((d) => d.status === status) : all;
+    const filtered = status ? all.filter((d) => d.status === status) : all;
+    return filtered.map((d) => this.withRider(d));
   }
 
   listDeliveriesAdmin(status?: DeliveryStatus): Delivery[] {
-    return status ? this.state.deliveries.filter((d) => d.status === status) : [...this.state.deliveries];
+    const all = status ? this.state.deliveries.filter((d) => d.status === status) : [...this.state.deliveries];
+    return all.map((d) => this.withRider(d));
   }
 
   getDelivery(id: string): Delivery {
     const d = this.state.deliveries.find((x) => x.id === id);
     if (!d) throw new NotFoundError('Delivery not found');
+    return this.withRider(d);
+  }
+
+  /** Attach the rider's vehicle type for the tracking rider card (demo-only field — SC-22). */
+  private withRider(d: Delivery): Delivery {
+    if (d.riderId) {
+      const fixture = this.state.riders.find((x) => x.user.id === d.riderId);
+      d.riderVehicleType = fixture?.profile.vehicleType ?? null;
+    }
     return d;
   }
 
@@ -256,7 +267,7 @@ export class MockStore {
     this.getSession(); // requires a session, as the real API does
     const d = this.state.deliveries.find((x) => x.trackingNumber === trackingNumber);
     if (!d) throw new NotFoundError('Delivery not found');
-    return d;
+    return this.withRider(d);
   }
 
   proof(id: string): ProofOfDelivery | null {

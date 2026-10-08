@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useTheme, Screen, TopBar, Text, Button, Input, Column, Card, StatusBadge, Banner, ErrorState } from '@trustlink/shared';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTheme, Screen, TopBar, Text, Button, Input, Column, Card, StatusBadge, Banner } from '@trustlink/shared';
 import { useTrackDelivery } from '../hooks';
-import type { HomeStackParamList } from '../navigation/types';
+import type { HomeStackParamList, RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'TrackByNumber'>;
 
 export function TrackByNumberScreen({ navigation, route }: Props) {
   const { theme } = useTheme();
+  const rootNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [value, setValue] = useState(route.params?.trackingNumber ?? '');
   const track = useTrackDelivery();
 
@@ -32,15 +35,18 @@ export function TrackByNumberScreen({ navigation, route }: Props) {
             <Button variant="outline" size="md" onPress={() => navigation.navigate('NotFound', { trackingNumber: value.trim() })}>See details</Button>
           </Column>
         ) : track.isSuccess && track.data ? (
-          <Card onPress={() => navigation.navigate('HomeFeed')}>
+          <Card onPress={() => rootNav.navigate('Tracking', { screen: 'TrackingHome', params: { deliveryId: track.data!.id } })}>
             <Column gap="sm">
               <Text variant="body" color="inherit" style={{ color: theme.roles.text }}>{track.data.trackingNumber}</Text>
               <StatusBadge status={track.data.status} />
               <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted }}>{track.data.pickupArea} → {track.data.dropoffArea}</Text>
+              <Text variant="caption" color="inherit" style={{ color: theme.roles.primaryAction }}>Open tracking</Text>
             </Column>
           </Card>
         ) : (
-          <ErrorState title="Track by number" message="Results appear here after a successful lookup." actionLabel="Back" onAction={() => navigation.goBack()} />
+          <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted }}>
+            Enter a number above to see its status.
+          </Text>
         )}
       </Column>
     </Screen>

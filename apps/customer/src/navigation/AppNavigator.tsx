@@ -26,6 +26,8 @@ import { FareScreen } from '../screens/payment/FareScreen';
 import { PaySummaryScreen } from '../screens/payment/PaySummaryScreen';
 import { ProcessingScreen } from '../screens/payment/ProcessingScreen';
 import { ResultScreen } from '../screens/payment/ResultScreen';
+import { TrackingHomeScreen } from '../screens/tracking/TrackingHomeScreen';
+import { CancelFlowScreen } from '../screens/tracking/CancelFlowScreen';
 import { DesignGalleryScreen } from '../screens/DesignGalleryScreen';
 import { SplashScreen } from '../screens/splash/SplashScreen';
 import { SessionExpiredSheet } from '../screens/auth/SessionExpiredSheet';
@@ -60,12 +62,10 @@ export const linking = {
 };
 
 // ---- placeholders for unbuilt screens (see SCAFFOLD_REGISTER.md) ----
-const TrackingHome = makePlaceholder('Tracking', 'Live status arrives in Phase 8.');
 const TimelineStep = makePlaceholder('Timeline', 'Timeline detail arrives in Phase 8.');
 const PodStep = makePlaceholder('Proof of delivery', 'POD view arrives in Phase 9.');
 const FailedStep = makePlaceholder('Delivery unsuccessful', 'Failure state arrives in Phase 9.');
 const ReturnedStep = makePlaceholder('Returned', 'Returned state arrives in Phase 9.');
-const CancelFlowStep = makePlaceholder('Cancel delivery', 'Cancellation flow arrives in Phase 8.');
 
 function MainTabBar({ state, navigation }: BottomTabBarProps) {
   const { theme } = useTheme();
@@ -143,12 +143,12 @@ function NewDeliveryNavigator() {
 function TrackingNavigator() {
   return (
     <TrackingStack.Navigator screenOptions={{ headerShown: false }}>
-      <TrackingStack.Screen name="TrackingHome" component={TrackingHome} />
+      <TrackingStack.Screen name="TrackingHome" component={TrackingHomeScreen} />
       <TrackingStack.Screen name="Timeline" component={TimelineStep} />
       <TrackingStack.Screen name="POD" component={PodStep} />
       <TrackingStack.Screen name="Failed" component={FailedStep} />
       <TrackingStack.Screen name="Returned" component={ReturnedStep} />
-      <TrackingStack.Screen name="CancelFlow" component={CancelFlowStep} />
+      <TrackingStack.Screen name="CancelFlow" component={CancelFlowScreen} />
     </TrackingStack.Navigator>
   );
 }
