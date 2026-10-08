@@ -147,3 +147,12 @@ export function usePayment(reference?: string) {
     enabled: Boolean(reference),
   });
 }
+
+export function useDeliveryProof(id?: string) {
+  const data = useData();
+  return useQuery({
+    queryKey: ['proof', id],
+    queryFn: () => data.delivery.proof(id as string),
+    enabled: Boolean(id),
+  });
+}

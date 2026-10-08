@@ -42,10 +42,11 @@ export type NewDeliveryStackParamList = {
 
 export type TrackingStackParamList = {
   TrackingHome: { deliveryId?: string } | undefined;
-  Timeline: { deliveryId: string };
-  POD: { deliveryId: string };
+  Pod: { deliveryId: string };
   Failed: { deliveryId: string };
   Returned: { deliveryId: string };
+  Cancelled: { deliveryId: string };
+  Details: { deliveryId: string };
   CancelFlow: { deliveryId: string };
 };
 

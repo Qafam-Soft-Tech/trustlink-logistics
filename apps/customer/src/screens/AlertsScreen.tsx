@@ -31,8 +31,11 @@ export function AlertsScreen() {
               const status = (n.data as { status?: string } | null)?.status ?? '';
               const open = () => {
                 if (!deliveryId) return;
-                if (isTerminal(status)) navigation.navigate('Tracking', { screen: 'POD', params: { deliveryId } });
-                else navigation.navigate('Tracking', { screen: 'TrackingHome', params: { deliveryId } });
+                // Terminal states open the details screen; active deliveries open live tracking.
+                navigation.navigate('Tracking', {
+                  screen: isTerminal(status) ? 'Details' : 'TrackingHome',
+                  params: { deliveryId },
+                });
               };
               return (
                 <Card key={n.id} onPress={open}>

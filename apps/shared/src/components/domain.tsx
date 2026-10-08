@@ -1,6 +1,7 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Image, StyleSheet } from 'react-native';
 import type { DeliveryEvent, DeliveryStatus, FareBreakdown as FareBreakdownType, PaymentProvider, ProofOfDelivery } from '../domain/types';
+import { deliveryStatusLabel } from '../domain/tracking';
 import { formatNaira, formatDate, formatDateTime } from '../formatters';
 import { useTheme } from '../theme/ThemeProvider';
 import { Text, Card, Button } from './primitives';
@@ -8,22 +9,10 @@ import { Divider } from './layout';
 import { BottomSheet, Banner } from './feedback';
 import { SegmentedControl } from './forms';
 
-const STATUS_LABELS: Record<DeliveryStatus, string> = {
-  requested: 'Requested',
-  searching: 'Searching',
-  assigned: 'Assigned',
-  picked_up: 'Picked up',
-  in_transit: 'In transit',
-  delivered: 'Delivered',
-  failed: 'Failed',
-  returned: 'Returned',
-  cancelled: 'Cancelled',
-};
-
-/** Accessible status text is provided by the theme (roles.statusText). */
+/** Accessible status text is provided by the theme (roles.statusText); labels live in the domain. */
 
 export function statusLabel(status: DeliveryStatus): string {
-  return STATUS_LABELS[status] ?? status;
+  return deliveryStatusLabel(status);
 }
 
 export function StatusBadge({ status }: { status: DeliveryStatus }) {
@@ -168,12 +157,26 @@ export function CheckoutSheet({ visible, amount, provider, onProviderChange, onP
 
 export function PodCard({ pod }: { pod: ProofOfDelivery }) {
   const { theme } = useTheme();
+  const [failed, setFailed] = useState(false);
+  const loadable = /^(https?:|file:|data:|content:)/.test(pod.photoUrl || '');
   return (
     <Card elevation="sm">
       <View style={{ gap: 8 }}>
-        <View style={[styles.podPhoto, { backgroundColor: theme.roles.bgSecondary, borderColor: theme.roles.border }]}>
-          <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted }}>Delivery photo</Text>
-        </View>
+        {loadable && !failed ? (
+          <Image
+            source={{ uri: pod.photoUrl }}
+            style={[styles.podPhoto, { backgroundColor: theme.roles.bgSecondary, borderColor: theme.roles.border }]}
+            resizeMode="cover"
+            onError={() => setFailed(true)}
+            accessibilityLabel="Proof of delivery photo"
+          />
+        ) : (
+          <View style={[styles.podPhoto, { backgroundColor: theme.roles.bgSecondary, borderColor: theme.roles.border }]}>
+            <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted }}>
+              {pod.photoUrl ? 'Delivery photo unavailable' : 'No delivery photo'}
+            </Text>
+          </View>
+        )}
         <View style={styles.fareRow}>
           <Text variant="bodySmall" color="inherit" style={{ color: theme.roles.textSecondary }}>Received by</Text>
           <Text variant="bodySmall" color="inherit" style={{ color: theme.roles.text }}>{pod.recipientName}</Text>

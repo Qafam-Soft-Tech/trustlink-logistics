@@ -26,10 +26,12 @@ import {
   estimateDistanceKm,
   estimateEtaMinutes,
   isAssigningDelayed,
+  isRedeliveryScheduled,
   trackingHeadline,
   trackingShareText,
   wasReassigned,
   RECIPIENT_CODE_NOTE,
+  REDELIVERY_NOTICE,
   type VehicleType,
 } from '@trustlink/shared';
 import { useDelivery, useCancelPreview } from '../../hooks';
@@ -96,6 +98,7 @@ export function TrackingHomeScreen({ navigation, route }: Props) {
   const stale = secondsAgo > STALE_SECONDS;
   const delayed = isAssigningDelayed(data);
   const reassigned = wasReassigned(data);
+  const redelivery = isRedeliveryScheduled(data);
   const distanceKm = estimateDistanceKm(data.pickupArea, data.dropoffArea);
   const showRider = Boolean(data.rider) && RIDER_STATUSES.includes(data.status);
   const canCancel = Boolean(preview.data?.canCancel);
@@ -146,6 +149,8 @@ export function TrackingHomeScreen({ navigation, route }: Props) {
         ) : null}
 
         {reassigned ? <Banner variant="info" title="Rider reassigned" message="Dispatch assigned a different rider to your delivery." /> : null}
+
+        {redelivery ? <Banner variant="info" title="Redelivery scheduled" message={REDELIVERY_NOTICE} /> : null}
 
         {showRider && data.rider ? (
           <Card>

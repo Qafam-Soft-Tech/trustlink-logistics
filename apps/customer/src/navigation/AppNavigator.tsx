@@ -27,11 +27,15 @@ import { PaySummaryScreen } from '../screens/payment/PaySummaryScreen';
 import { ProcessingScreen } from '../screens/payment/ProcessingScreen';
 import { ResultScreen } from '../screens/payment/ResultScreen';
 import { TrackingHomeScreen } from '../screens/tracking/TrackingHomeScreen';
+import { PodScreen } from '../screens/tracking/PodScreen';
+import { FailedScreen } from '../screens/tracking/FailedScreen';
+import { ReturnedScreen } from '../screens/tracking/ReturnedScreen';
+import { CancelledScreen } from '../screens/tracking/CancelledScreen';
+import { DetailsScreen } from '../screens/tracking/DetailsScreen';
 import { CancelFlowScreen } from '../screens/tracking/CancelFlowScreen';
 import { DesignGalleryScreen } from '../screens/DesignGalleryScreen';
 import { SplashScreen } from '../screens/splash/SplashScreen';
 import { SessionExpiredSheet } from '../screens/auth/SessionExpiredSheet';
-import { makePlaceholder } from '../components/PlaceholderScreen';
 import type { RootStackParamList, MainTabParamList, HomeStackParamList, NewDeliveryStackParamList, TrackingStackParamList, OnboardingStackParamList } from './types';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -60,12 +64,6 @@ export const linking = {
     },
   },
 };
-
-// ---- placeholders for unbuilt screens (see SCAFFOLD_REGISTER.md) ----
-const TimelineStep = makePlaceholder('Timeline', 'Timeline detail arrives in Phase 8.');
-const PodStep = makePlaceholder('Proof of delivery', 'POD view arrives in Phase 9.');
-const FailedStep = makePlaceholder('Delivery unsuccessful', 'Failure state arrives in Phase 9.');
-const ReturnedStep = makePlaceholder('Returned', 'Returned state arrives in Phase 9.');
 
 function MainTabBar({ state, navigation }: BottomTabBarProps) {
   const { theme } = useTheme();
@@ -144,10 +142,11 @@ function TrackingNavigator() {
   return (
     <TrackingStack.Navigator screenOptions={{ headerShown: false }}>
       <TrackingStack.Screen name="TrackingHome" component={TrackingHomeScreen} />
-      <TrackingStack.Screen name="Timeline" component={TimelineStep} />
-      <TrackingStack.Screen name="POD" component={PodStep} />
-      <TrackingStack.Screen name="Failed" component={FailedStep} />
-      <TrackingStack.Screen name="Returned" component={ReturnedStep} />
+      <TrackingStack.Screen name="Pod" component={PodScreen} />
+      <TrackingStack.Screen name="Failed" component={FailedScreen} />
+      <TrackingStack.Screen name="Returned" component={ReturnedScreen} />
+      <TrackingStack.Screen name="Cancelled" component={CancelledScreen} />
+      <TrackingStack.Screen name="Details" component={DetailsScreen} />
       <TrackingStack.Screen name="CancelFlow" component={CancelFlowScreen} />
     </TrackingStack.Navigator>
   );

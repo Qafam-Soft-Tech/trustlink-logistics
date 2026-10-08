@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from 'react';
 import { draftReducer, initialDraft, isDraftDirty, type DraftAction, type NewDeliveryDraft } from '@trustlink/shared';
 import { useProfile } from '../../hooks';
+import { takeNewDeliveryPrefill } from './prefill';
 
 export interface CreatedDelivery {
   id: string;
@@ -28,7 +29,8 @@ const DraftContext = createContext<DraftContextValue | undefined>(undefined);
  * draft survives Back navigation between steps within the flow.
  */
 export function NewDeliveryDraftProvider({ children }: { children: React.ReactNode }) {
-  const [draft, dispatch] = useReducer(draftReducer, undefined, initialDraft);
+  // A "Send again" prefill (if any) seeds the draft on mount.
+  const [draft, dispatch] = useReducer(draftReducer, undefined, () => takeNewDeliveryPrefill() ?? initialDraft());
   const [created, setCreated] = useState<CreatedDelivery | null>(null);
   const [paymentReference, setPaymentReference] = useState<string | null>(null);
   const profile = useProfile();

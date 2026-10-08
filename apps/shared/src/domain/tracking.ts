@@ -14,6 +14,22 @@ export interface TrackingHeadline {
   message: string;
 }
 
+export const DELIVERY_STATUS_LABELS: Record<DeliveryStatus, string> = {
+  requested: 'Requested',
+  searching: 'Searching',
+  assigned: 'Assigned',
+  picked_up: 'Picked up',
+  in_transit: 'In transit',
+  delivered: 'Delivered',
+  failed: 'Failed',
+  returned: 'Returned',
+  cancelled: 'Cancelled',
+};
+
+export function deliveryStatusLabel(status: DeliveryStatus): string {
+  return DELIVERY_STATUS_LABELS[status] ?? status;
+}
+
 const HEADLINES: Record<DeliveryStatus, TrackingHeadline> = {
   requested: { title: 'Request received', message: 'We\u2019re preparing your request for dispatch.' },
   searching: { title: 'Assigning your rider', message: 'We\u2019re finding the nearest available rider for you.' },
@@ -65,4 +81,32 @@ export function wasReassigned(delivery: Pick<Delivery, 'events'>): boolean {
 export function trackingShareText(delivery: Pick<Delivery, 'trackingNumber' | 'pickupArea' | 'dropoffArea'>): string {
   const route = delivery.pickupArea && delivery.dropoffArea ? ` (${delivery.pickupArea} → ${delivery.dropoffArea})` : '';
   return `TrustLink delivery ${delivery.trackingNumber}${route}. Track it in the TrustLink app.`;
+}
+
+/** Calm copy for the unsuccessful-delivery screen — explains what happens next. */
+const FAILURE_REASONS: Record<string, string> = {
+  recipient_unavailable: 'The recipient wasn\u2019t available to receive the package.',
+  wrong_address: 'We couldn\u2019t locate the address on this request.',
+  refused: 'The recipient declined to accept the package.',
+};
+
+export function failureReasonCopy(reason?: string | null): string {
+  return (reason && FAILURE_REASONS[reason]) || 'This delivery couldn\u2019t be completed.';
+}
+
+export const REDELIVERY_NOTICE =
+  'TrustLink will arrange one redelivery at no extra cost. You\u2019ll get an alert as soon as a rider is found.';
+
+/** A FAILED delivery that dispatch has put back into SEARCHING (D15 — admin-only redelivery). */
+export function isRedeliveryScheduled(delivery: Pick<Delivery, 'status' | 'redeliveryAttempts'>): boolean {
+  return delivery.status === 'searching' && (delivery.redeliveryAttempts ?? 0) >= 1;
+}
+
+/** Which terminal screen a completed delivery opens from the list. */
+export function terminalScreenFor(status: DeliveryStatus): 'Pod' | 'Failed' | 'Returned' | 'Cancelled' | 'Details' {
+  if (status === 'delivered') return 'Pod';
+  if (status === 'failed') return 'Failed';
+  if (status === 'returned') return 'Returned';
+  if (status === 'cancelled') return 'Cancelled';
+  return 'Details';
 }

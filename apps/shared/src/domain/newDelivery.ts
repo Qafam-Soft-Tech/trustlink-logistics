@@ -2,7 +2,7 @@
  * New-delivery request draft — pure model for the create-delivery flow (FR-C04, FR-C07).
  * No React / React Native imports. The reducer + assembly are unit-tested in vitest.
  */
-import type { CreateDeliveryInput, PackageType } from './types';
+import type { CreateDeliveryInput, Delivery, PackageType } from './types';
 import { SERVICE_AREAS } from './constants';
 import { isValidNigerianPhone, toCanonicalPhone } from '../validation';
 
@@ -154,6 +154,7 @@ export type DraftAction =
   | { type: 'setWeight'; value: WeightOption }
   | { type: 'setDescription'; value: string }
   | { type: 'patchSender'; patch: Partial<DraftContact> }
+  | { type: 'hydrate'; value: NewDeliveryDraft }
   | { type: 'reset' };
 
 export function draftReducer(state: NewDeliveryDraft, action: DraftAction): NewDeliveryDraft {
@@ -172,9 +173,58 @@ export function draftReducer(state: NewDeliveryDraft, action: DraftAction): NewD
       return { ...state, packageDescription: action.value };
     case 'patchSender':
       return { ...state, sender: { ...state.sender, ...action.patch } };
+    case 'hydrate':
+      return action.value;
     case 'reset':
       return initialDraft();
     default:
       return state;
   }
+}
+
+/** Smallest weight chip that covers a past delivery's weight. */
+export function weightOptionFor(weightKg: number): WeightOption {
+  return WEIGHT_OPTIONS.find((option) => option >= weightKg) ?? WEIGHT_OPTIONS[WEIGHT_OPTIONS.length - 1];
+}
+
+type RepeatableDelivery = Pick<
+  Delivery,
+  | 'pickupStreet'
+  | 'pickupLandmark'
+  | 'pickupArea'
+  | 'dropoffStreet'
+  | 'dropoffLandmark'
+  | 'dropoffArea'
+  | 'packageType'
+  | 'packageWeight'
+  | 'packageDescription'
+  | 'senderName'
+  | 'senderPhone'
+  | 'recipientName'
+  | 'recipientPhone'
+>;
+
+/** "Send again" — build a fresh draft from a past delivery. */
+export function draftFromDelivery(delivery: RepeatableDelivery): NewDeliveryDraft {
+  return {
+    pickup: {
+      label: 'Pickup',
+      street: delivery.pickupStreet,
+      landmark: delivery.pickupLandmark ?? '',
+      area: delivery.pickupArea ?? '',
+      city: 'Abuja',
+    },
+    dropoff: {
+      label: 'Drop-off',
+      street: delivery.dropoffStreet,
+      landmark: delivery.dropoffLandmark ?? '',
+      area: delivery.dropoffArea ?? '',
+      city: 'Abuja',
+    },
+    recipient: { name: delivery.recipientName, phone: delivery.recipientPhone },
+    packageType: delivery.packageType,
+    packageWeight: weightOptionFor(delivery.packageWeight),
+    packageDescription: delivery.packageDescription ?? '',
+    sender: { name: delivery.senderName, phone: delivery.senderPhone },
+  };
 }

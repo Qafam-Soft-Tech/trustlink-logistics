@@ -36,6 +36,12 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-21 | "Copy" on the confirmation screen needs a clipboard API; `expo-clipboard` is not in the approved dependency list | Used React Native core `Clipboard` (deprecated in RN, still present) behind `utils/clipboard.ts` | Resolved (swap to `expo-clipboard` when a dep is approved) |
 | SC-22 | Rider card needs the rider's **vehicle type**, but `Delivery` embeds only the rider `User` (vehicle type lives on `RiderProfile`) | Demo-only `Delivery.riderVehicleType` (mock decorates on read); the card hides the badge when absent (api mode) | **Needs decision** (add vehicle to the delivery payload, or a rider lookup endpoint) |
 | SC-23 | Cancellation "reason" — `POST /notifications/cancel/:deliveryId` accepts no body | UI collects an optional reason and shows it as support context; it is **not sent** (no contract field) | **Needs decision** (accept a reason body server-side) |
+| SC-24 | No `GET /deliveries/history` route (SC-14) | Completed/failed/cancelled history comes from client-side filtering of `GET /deliveries` (Active / Completed / Cancelled & failed + search) | Resolved (frontend filtering; no history endpoint) |
+| SC-25 | Receipts and proof of delivery: no receipt endpoint, and `recipientOtp` is never issued by the backend (SC §10) | Receipt is generated client-side (`domain/receipt.ts`) and shared as text/email; POD is read from `GET /deliveries/:id/proof` | Resolved (share + email only) |
+| SC-26 | History has no server-side pagination — `GET /deliveries` returns every delivery | UI renders incrementally (8 rows per "Show more") and resets on search; fine for demo volumes | **Needs decision** (add `?page=`/cursor to `/deliveries`; backend frozen) |
+| SC-27 | No refund/return endpoint. `Payment.status` includes `refunded` but nothing ever sets it, and the delivery keeps no refund record | Refund is explanatory copy only (cancel preview/result amounts are shown at cancel time) — no refund action exists | **Needs decision** (refund endpoint; requires backend work) — founder chose to keep copy-only |
+| SC-28 | PDF receipts need `expo-print` + `expo-sharing`, neither on the approved dependency list | **Approved (founder, 2026-10-07)** — installed; `Receipt` offers text share, `mailto:` email and a generated PDF (`utils/receiptPdf.ts`, `receiptHtml()` with theme colours) | Resolved |
+| SC-29 | POD `photoUrl` is a backend-provided string; there is no capture/upload endpoint in R1 | `PodCard` renders any loadable URL (http/https/file/data/content) and falls back to a labelled placeholder; demo values are not real images | Resolved (display-ready; capture is a later phase) |
 
 ---
 
@@ -108,6 +114,9 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 8. **SC-21** — approve a clipboard dependency (`expo-clipboard`) to replace RN core `Clipboard`.
 9. **SC-22** — rider vehicle type is not on the delivery payload (demo-only field used in the tracking rider card).
 10. **SC-23** — cancellation reason is collected in the UI but the backend route accepts no body.
+11. **SC-26** — history pagination must move server-side (`/deliveries` returns everything); frontend "Show more" ships meanwhile.
+12. **SC-27** — refunds/returns have no endpoint (founder: keep copy-only for now).
+13. **SC-28** — *Resolved*: `expo-print` + `expo-sharing` approved and installed for PDF receipts.
 
 ## E. Backend issues deferred (not blocking frontend, tracked here)
 - Signup DTO validation missing (interfaces, no class-validator).

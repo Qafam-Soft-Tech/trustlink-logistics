@@ -9,7 +9,7 @@ import {
   DEMO_NOTIFICATIONS,
   DEMO_RIDERS,
 } from '../../mocks/fixtures';
-import type { PricingConfig } from '../../domain/types';
+import type { PricingConfig, ProofOfDelivery } from '../../domain/types';
 
 export type ScenarioName =
   | 'happy'
@@ -62,10 +62,31 @@ export function buildBaseState(): MockState {
     authFlow: null,
     lockedPhones: [],
     flags: { offline: false, serverError: false },
-    podByDelivery: {},
+    podByDelivery: seedPods(),
     paymentShouldFail: false,
     paymentShouldHang: false,
   };
+}
+
+/** Proof-of-delivery records for the delivered fixtures (so the POD/receipt screens have data). */
+function seedPods(): Record<string, ProofOfDelivery> {
+  const pods: Record<string, ProofOfDelivery> = {};
+  for (const d of DEMO_DELIVERIES) {
+    if (d.status !== 'delivered') continue;
+    pods[d.id] = {
+      id: `pod-${d.id}`,
+      deliveryId: d.id,
+      photoUrl: `file://trustlink-pod-${d.trackingNumber}.jpg`,
+      recipientOtp: d.recipientCode ?? '482913',
+      recipientName: d.recipientName,
+      recipientPhone: d.recipientPhone,
+      latitude: null,
+      longitude: null,
+      notes: 'Handed to the recipient at the drop-off point.',
+      createdAt: d.deliveredAt ?? d.updatedAt ?? d.createdAt,
+    };
+  }
+  return pods;
 }
 
 export function buildScenario(name: ScenarioName): MockState {
