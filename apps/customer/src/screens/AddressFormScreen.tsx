@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useTheme, Screen, TopBar, Text, Button, Input, Card, Column, Row, Chip, Banner, Dialog, isValidAddress, ABUJA_AREAS } from '@trustlink/shared';
-import type { Address } from '@trustlink/shared';
+import { useTheme, Screen, TopBar, Text, Button, Card, Column, Banner, Dialog, isValidAddress } from '@trustlink/shared';
+import type { Address, DraftAddress } from '@trustlink/shared';
 import { useAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress, useSetDefaultAddress } from '../hooks';
+import { AddressFields } from '../components/AddressFields';
 import type { HomeStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'AddressForm'>;
+
+const EMPTY: DraftAddress = { label: 'Home', street: '', landmark: '', area: '', city: 'Abuja' };
 
 export function AddressFormScreen({ navigation, route }: Props) {
   const { theme } = useTheme();
@@ -17,21 +21,13 @@ export function AddressFormScreen({ navigation, route }: Props) {
   const remove = useDeleteAddress();
   const setDefault = useSetDefaultAddress();
 
-  const [label, setLabel] = useState('Home');
-  const [street, setStreet] = useState('');
-  const [landmark, setLandmark] = useState('');
-  const [area, setArea] = useState('');
-  const [city, setCity] = useState('Abuja');
+  const [draft, setDraft] = useState<DraftAddress>(EMPTY);
   const [error, setError] = useState<string | undefined>();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (existing) {
-      setLabel(existing.label);
-      setStreet(existing.street);
-      setLandmark(existing.landmark ?? '');
-      setArea(existing.area ?? '');
-      setCity(existing.city ?? 'Abuja');
+      setDraft({ label: existing.label, street: existing.street, landmark: existing.landmark ?? '', area: existing.area ?? '', city: existing.city ?? 'Abuja' });
     }
   }, [existing]);
 
@@ -39,8 +35,8 @@ export function AddressFormScreen({ navigation, route }: Props) {
 
   const save = () => {
     setError(undefined);
-    const payload: Partial<Address> = { label: label.trim() || 'Home', street: street.trim(), landmark: landmark.trim(), area, city, state: 'FCT', country: 'Nigeria' };
-    if (!isValidAddress({ street: payload.street ?? '', area: payload.area ?? '', city: payload.city ?? '', state: payload.state ?? '' })) {
+    const payload: Partial<Address> = { ...draft, state: 'FCT', country: 'Nigeria' };
+    if (!isValidAddress({ street: draft.street, area: draft.area, city: draft.city, state: 'FCT' })) {
       setError('Enter a street, area, city and state (state is fixed to FCT).');
       return;
     }
@@ -54,22 +50,10 @@ export function AddressFormScreen({ navigation, route }: Props) {
   return (
     <Screen>
       <TopBar title={id ? 'Edit address' : 'Add address'} showBack onBack={() => navigation.goBack()} />
-      <Column style={{ flex: 1, padding: 16 }} gap="md">
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
         <Card>
           <Column gap="lg">
-            <Input label="Label" value={label} onChangeText={setLabel} placeholder="Home / Office" />
-            <Input label="Street" value={street} onChangeText={setStreet} placeholder="12 Aminu Kano Crescent" />
-            <Input label="Landmark (optional)" value={landmark} onChangeText={setLandmark} placeholder="Nearest bus stop / building" />
-            <Column gap="sm">
-              <Text variant="label" color="inherit" style={{ color: theme.roles.textSecondary }}>Area</Text>
-              <Row gap="sm" style={{ flexWrap: 'wrap' }} justify="start">
-                {ABUJA_AREAS.map((a) => (
-                  <Chip key={a} label={a} selected={area === a} onPress={() => setArea(a)} />
-                ))}
-              </Row>
-            </Column>
-            <Input label="City" value={city} onChangeText={setCity} placeholder="Abuja" />
-            <Input label="State" value="FCT" editable={false} />
+            <AddressFields value={draft} onChange={setDraft} />
             {error ? <Banner variant="error" message={error} /> : null}
             <Button variant="primary" size="lg" loading={saving} onPress={save}>{id ? 'Save changes' : 'Save address'}</Button>
           </Column>
@@ -81,7 +65,11 @@ export function AddressFormScreen({ navigation, route }: Props) {
             <Button variant="destructive" size="md" onPress={() => setConfirmDelete(true)}>Delete address</Button>
           </Column>
         ) : null}
-      </Column>
+
+        <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted }}>
+          State is fixed to FCT and city to Abuja for the R1 launch.
+        </Text>
+      </ScrollView>
 
       <Dialog
         visible={confirmDelete}

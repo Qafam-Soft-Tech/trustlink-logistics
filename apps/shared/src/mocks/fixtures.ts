@@ -15,22 +15,12 @@ import type {
   VehicleType,
 } from '../domain/types';
 import { DEFAULT_PRICING, calculateFare } from '../domain/fare';
+import { SERVICE_AREAS } from '../domain/constants';
 
 export const RECIPIENT_CODE = '482913';
 
-/** Abuja areas (R1 launch city). */
-export const ABUJA_AREAS = [
-  'Wuse 2',
-  'Maitama',
-  'Garki',
-  'Jabi',
-  'Utako',
-  'Gwarinpa',
-  'Kubwa',
-  'Lugbe',
-  'Asokoro',
-  'CBD',
-] as const;
+/** Abuja areas (R1 launch city) — alias of the domain service-area list. */
+export const ABUJA_AREAS = SERVICE_AREAS;
 export type AbujaArea = (typeof ABUJA_AREAS)[number];
 
 /** Approximate coordinates → deterministic area-pair distance table. */
@@ -83,7 +73,28 @@ export const DEMO_ADDRESSES: Address[] = [
   mkAddress('addr-2', 'Office', 'Plot 447 Constitution Avenue', 'Central Business District', 'CBD', false),
   mkAddress('addr-3', "Mum's place", '5 Moshood Abiola Way', 'Beside Zenith Bank', 'Garki', false),
   mkAddress('addr-4', 'Gym', '9 Gana Street', 'Opposite Transcorp Hilton', 'Maitama', false),
+  mkOutOfAreaAddress('addr-5', 'Kano office', '12 Zoo Road', 'Near Kano Club'),
 ];
+
+/** A saved address outside the R1 launch zone — exercises the "out of area" state. */
+function mkOutOfAreaAddress(id: string, label: string, street: string, landmark: string): Address {
+  return {
+    id,
+    userId: DEMO_CUSTOMER.id,
+    label,
+    street,
+    landmark,
+    area: 'Kano',
+    city: 'Kano',
+    state: 'Kano',
+    country: 'Nigeria',
+    latitude: null,
+    longitude: null,
+    isDefault: false,
+    createdAt: '2026-01-04T08:05:00.000Z',
+    updatedAt: '2026-01-04T08:05:00.000Z',
+  };
+}
 
 function mkAddress(id: string, label: string, street: string, landmark: string, area: AbujaArea, isDefault: boolean): Address {
   const c = AREA_COORDS[area];

@@ -17,6 +17,12 @@ import { SavedAddressesScreen } from '../screens/SavedAddressesScreen';
 import { AddressFormScreen } from '../screens/AddressFormScreen';
 import { OnboardingSlidesScreen } from '../screens/onboarding/OnboardingSlidesScreen';
 import { WelcomeScreen } from '../screens/onboarding/WelcomeScreen';
+import { PickupScreen } from '../screens/newdelivery/PickupScreen';
+import { DropoffScreen } from '../screens/newdelivery/DropoffScreen';
+import { PackageScreen } from '../screens/newdelivery/PackageScreen';
+import { SenderScreen } from '../screens/newdelivery/SenderScreen';
+import { ReviewScreen } from '../screens/newdelivery/ReviewScreen';
+import { NewDeliveryDraftProvider } from '../screens/newdelivery/DraftContext';
 import { DesignGalleryScreen } from '../screens/DesignGalleryScreen';
 import { SplashScreen } from '../screens/splash/SplashScreen';
 import { SessionExpiredSheet } from '../screens/auth/SessionExpiredSheet';
@@ -51,11 +57,6 @@ export const linking = {
 };
 
 // ---- placeholders for unbuilt screens (see SCAFFOLD_REGISTER.md) ----
-const PickupStep = makePlaceholder('Pickup', 'Address entry arrives in Phase 6.');
-const DropoffStep = makePlaceholder('Drop-off & recipient', 'Address entry arrives in Phase 6.');
-const PackageStep = makePlaceholder('Package details', 'Weight chips arrive in Phase 6.');
-const SenderStep = makePlaceholder('Sender contact', 'Sender details arrive in Phase 6.');
-const ReviewStep = makePlaceholder('Review', 'Review step arrives in Phase 6.');
 const FareStep = makePlaceholder('Fare quote', 'Fare breakdown arrives in Phase 7.');
 const PaySummaryStep = makePlaceholder('Pay summary', 'Payment summary arrives in Phase 7.');
 const TrackingHome = makePlaceholder('Tracking', 'Live status arrives in Phase 8.');
@@ -173,17 +174,19 @@ function OnboardingNavigator() {
 
 function NewDeliveryNavigator() {
   return (
-    <NewDeliveryStack.Navigator screenOptions={{ headerShown: false }}>
-      <NewDeliveryStack.Screen name="Pickup" component={PickupStep} />
-      <NewDeliveryStack.Screen name="Dropoff" component={DropoffStep} />
-      <NewDeliveryStack.Screen name="Package" component={PackageStep} />
-      <NewDeliveryStack.Screen name="Sender" component={SenderStep} />
-      <NewDeliveryStack.Screen name="Review" component={ReviewStep} />
-      <NewDeliveryStack.Screen name="Fare" component={FareStep} />
-      <NewDeliveryStack.Screen name="PaySummary" component={PaySummaryStep} />
-      <NewDeliveryStack.Screen name="Processing" component={ProcessingScreen} options={{ gestureEnabled: false }} />
-      <NewDeliveryStack.Screen name="Result" component={PayResultScreen} options={{ gestureEnabled: false }} />
-    </NewDeliveryStack.Navigator>
+    <NewDeliveryDraftProvider>
+      <NewDeliveryStack.Navigator screenOptions={{ headerShown: false }}>
+        <NewDeliveryStack.Screen name="Pickup" component={PickupScreen} />
+        <NewDeliveryStack.Screen name="Dropoff" component={DropoffScreen} />
+        <NewDeliveryStack.Screen name="Package" component={PackageScreen} />
+        <NewDeliveryStack.Screen name="Sender" component={SenderScreen} />
+        <NewDeliveryStack.Screen name="Review" component={ReviewScreen} />
+        <NewDeliveryStack.Screen name="Fare" component={FareStep} />
+        <NewDeliveryStack.Screen name="PaySummary" component={PaySummaryStep} />
+        <NewDeliveryStack.Screen name="Processing" component={ProcessingScreen} options={{ gestureEnabled: false }} />
+        <NewDeliveryStack.Screen name="Result" component={PayResultScreen} options={{ gestureEnabled: false }} />
+      </NewDeliveryStack.Navigator>
+    </NewDeliveryDraftProvider>
   );
 }
 
