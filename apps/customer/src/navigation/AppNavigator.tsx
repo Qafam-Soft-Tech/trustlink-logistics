@@ -1,10 +1,9 @@
 import React from 'react';
-import { ActivityIndicator } from 'react-native';
 import * as Linking from 'expo-linking';
-import { createNativeStackNavigator, type NativeStackScreenProps, type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme, TabBar, Screen, Center, Column, Text, Button, Banner } from '@trustlink/shared';
+import { useTheme, TabBar } from '@trustlink/shared';
 
 import { AuthNavigator } from './AuthNavigator';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -23,6 +22,10 @@ import { PackageScreen } from '../screens/newdelivery/PackageScreen';
 import { SenderScreen } from '../screens/newdelivery/SenderScreen';
 import { ReviewScreen } from '../screens/newdelivery/ReviewScreen';
 import { NewDeliveryDraftProvider } from '../screens/newdelivery/DraftContext';
+import { FareScreen } from '../screens/payment/FareScreen';
+import { PaySummaryScreen } from '../screens/payment/PaySummaryScreen';
+import { ProcessingScreen } from '../screens/payment/ProcessingScreen';
+import { ResultScreen } from '../screens/payment/ResultScreen';
 import { DesignGalleryScreen } from '../screens/DesignGalleryScreen';
 import { SplashScreen } from '../screens/splash/SplashScreen';
 import { SessionExpiredSheet } from '../screens/auth/SessionExpiredSheet';
@@ -57,65 +60,12 @@ export const linking = {
 };
 
 // ---- placeholders for unbuilt screens (see SCAFFOLD_REGISTER.md) ----
-const FareStep = makePlaceholder('Fare quote', 'Fare breakdown arrives in Phase 7.');
-const PaySummaryStep = makePlaceholder('Pay summary', 'Payment summary arrives in Phase 7.');
 const TrackingHome = makePlaceholder('Tracking', 'Live status arrives in Phase 8.');
 const TimelineStep = makePlaceholder('Timeline', 'Timeline detail arrives in Phase 8.');
 const PodStep = makePlaceholder('Proof of delivery', 'POD view arrives in Phase 9.');
 const FailedStep = makePlaceholder('Delivery unsuccessful', 'Failure state arrives in Phase 9.');
 const ReturnedStep = makePlaceholder('Returned', 'Returned state arrives in Phase 9.');
 const CancelFlowStep = makePlaceholder('Cancel delivery', 'Cancellation flow arrives in Phase 8.');
-
-function ProcessingScreen({ navigation }: NativeStackScreenProps<NewDeliveryStackParamList, 'Processing'>) {
-  const { theme } = useTheme();
-  React.useEffect(() => navigation.addListener('beforeRemove', (e) => e.preventDefault()), [navigation]);
-  return (
-    <Screen>
-      <Center style={{ flex: 1, padding: 24 }}>
-        <Column gap="lg" align="center">
-          <ActivityIndicator size="large" color={theme.roles.primaryAction} />
-          <Text variant="h4" color="inherit" style={{ color: theme.roles.text }}>Processing payment…</Text>
-          <Banner variant="info" message="Please don't close the app while we confirm your payment." />
-          <Button variant="primary" size="md" onPress={() => navigation.replace('Result', { status: 'success' })}>
-            Simulate result
-          </Button>
-        </Column>
-      </Center>
-    </Screen>
-  );
-}
-
-function PayResultScreen({ navigation, route }: NativeStackScreenProps<NewDeliveryStackParamList, 'Result'>) {
-  const { theme } = useTheme();
-  const root = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
-  const ok = route.params.status === 'success';
-  return (
-    <Screen>
-      <Center style={{ flex: 1, padding: 24 }}>
-        <Column gap="lg" align="center">
-          <Text variant="h2" color="inherit" style={{ color: ok ? theme.colors.success : theme.colors.error }}>
-            {ok ? '✓' : '!'}
-          </Text>
-          <Text variant="h4" color="inherit" style={{ color: theme.roles.text }}>
-            {ok ? 'Request confirmed' : route.params.status === 'failed' ? 'Payment failed' : 'Payment cancelled'}
-          </Text>
-          {ok ? (
-            <Button
-              variant="primary"
-              size="lg"
-              onPress={() => root?.navigate('Tracking', { screen: 'TrackingHome', params: { deliveryId: route.params.deliveryId } })}
-            >
-              Track this delivery
-            </Button>
-          ) : (
-            <Button variant="primary" size="lg" onPress={() => root?.navigate('Main')}>Back to home</Button>
-          )}
-          <Button variant="ghost" size="md" onPress={() => root?.navigate('Main')}>Done</Button>
-        </Column>
-      </Center>
-    </Screen>
-  );
-}
 
 function MainTabBar({ state, navigation }: BottomTabBarProps) {
   const { theme } = useTheme();
@@ -181,10 +131,10 @@ function NewDeliveryNavigator() {
         <NewDeliveryStack.Screen name="Package" component={PackageScreen} />
         <NewDeliveryStack.Screen name="Sender" component={SenderScreen} />
         <NewDeliveryStack.Screen name="Review" component={ReviewScreen} />
-        <NewDeliveryStack.Screen name="Fare" component={FareStep} />
-        <NewDeliveryStack.Screen name="PaySummary" component={PaySummaryStep} />
+        <NewDeliveryStack.Screen name="Fare" component={FareScreen} />
+        <NewDeliveryStack.Screen name="PaySummary" component={PaySummaryScreen} />
         <NewDeliveryStack.Screen name="Processing" component={ProcessingScreen} options={{ gestureEnabled: false }} />
-        <NewDeliveryStack.Screen name="Result" component={PayResultScreen} options={{ gestureEnabled: false }} />
+        <NewDeliveryStack.Screen name="Result" component={ResultScreen} options={{ gestureEnabled: false }} />
       </NewDeliveryStack.Navigator>
     </NewDeliveryDraftProvider>
   );

@@ -36,8 +36,8 @@ export type NewDeliveryStackParamList = {
   Review: undefined;
   Fare: undefined;
   PaySummary: undefined;
-  Processing: undefined;
-  Result: { status: 'success' | 'failed' | 'cancelled'; deliveryId?: string };
+  Processing: { deliveryId: string; reference: string };
+  Result: { status: 'success' | 'failed' | 'cancelled' | 'timeout'; deliveryId?: string; reference?: string; trackingNumber?: string };
 };
 
 export type TrackingStackParamList = {

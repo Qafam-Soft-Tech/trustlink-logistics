@@ -60,6 +60,8 @@ export interface DeliveryPort {
 
 export interface PricingPort {
   calculate(input: { distanceKm: number; weightKg: number; packageType: string }): Promise<FareBreakdown>;
+  /** Client-side distance estimate (km) for a pickup/drop-off area pair — feeds `calculate` (SC-8). */
+  estimateDistance(input: { pickupArea: string; dropoffArea: string }): Promise<number>;
   getValues(): Promise<PricingValues>;
   getConfigs(): Promise<PricingConfig[]>;
   updateConfig(key: PricingConfigKey, value: number, description?: string): Promise<PricingConfig>;

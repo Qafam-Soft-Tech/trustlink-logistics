@@ -17,6 +17,7 @@ export type ScenarioName =
   | 'failedTwiceReturned'
   | 'assigningDelayed'
   | 'paymentFails'
+  | 'paymentPending'
   | 'emptyAccount'
   | 'offline'
   | 'serverError';
@@ -27,6 +28,7 @@ export const SCENARIOS: ScenarioName[] = [
   'failedTwiceReturned',
   'assigningDelayed',
   'paymentFails',
+  'paymentPending',
   'emptyAccount',
   'offline',
   'serverError',
@@ -62,6 +64,7 @@ export function buildBaseState(): MockState {
     flags: { offline: false, serverError: false },
     podByDelivery: {},
     paymentShouldFail: false,
+    paymentShouldHang: false,
   };
 }
 
@@ -77,6 +80,9 @@ export function buildScenario(name: ScenarioName): MockState {
       return { ...base, flags: { offline: false, serverError: true } };
     case 'paymentFails':
       return { ...base, paymentShouldFail: true };
+    case 'paymentPending':
+      // verifyPayment keeps returning "pending" → the Processing screen polls and times out.
+      return { ...base, paymentShouldHang: true };
     case 'failedOnce':
     case 'failedTwiceReturned':
     case 'assigningDelayed':

@@ -34,8 +34,8 @@ import type {
 import { calculateFare, DEFAULT_PRICING } from '../../domain/fare';
 import { canTransition, computeCancellation, statusAfterFailure } from '../../domain/stateMachine';
 import { OTP_EXPIRY_SECONDS, MAX_OTP_ATTEMPTS, DEMO_OTP } from '../../domain/constants';
+import { estimateDistanceKm } from '../../domain/serviceArea';
 import { ConflictError, NotFoundError, ValidationError } from '../http';
-import { distanceBetween, type AbujaArea } from '../../mocks/fixtures';
 import type { RiderFixture } from '../../mocks/fixtures';
 import type { MockFlags } from './transport';
 
@@ -76,6 +76,8 @@ export interface MockState {
   podByDelivery: Record<string, ProofOfDelivery>;
   /** payment verifications should fail (scenario `paymentFails`) */
   paymentShouldFail: boolean;
+  /** payment verifications stay pending forever (scenario `paymentPending` → UI timeout) */
+  paymentShouldHang: boolean;
 }
 
 let counter = 1000;
@@ -229,16 +231,7 @@ export class MockStore {
   }
 
   private distance(input: { pickupArea?: string; dropoffArea?: string }): number {
-    const a = input.pickupArea as AbujaArea | undefined;
-    const b = input.dropoffArea as AbujaArea | undefined;
-    if (a && b) {
-      try {
-        return distanceBetween(a, b);
-      } catch {
-        /* fall through */
-      }
-    }
-    return 5;
+    return estimateDistanceKm(input.pickupArea, input.dropoffArea);
   }
 
   listDeliveries(status?: DeliveryStatus): Delivery[] {
@@ -378,6 +371,9 @@ export class MockStore {
   }
 
   /* ---------------- pricing ---------------- */
+  estimateDistance(input: { pickupArea: string; dropoffArea: string }): number {
+    return estimateDistanceKm(input.pickupArea, input.dropoffArea);
+  }
   calculateFare(input: { distanceKm: number; weightKg: number; packageType: string }): FareBreakdown {
     return calculateFare(this.state.pricing, input);
   }
@@ -398,6 +394,10 @@ export class MockStore {
   initializePayment(input: { deliveryId: string; amountNaira: number; email?: string; phone?: string; provider: 'paystack' | 'flutterwave' }): Payment {
     const d = this.getDelivery(input.deliveryId);
     if (d.status !== 'requested') throw new ConflictError('Payment can only be initiated for REQUESTED deliveries');
+    // No double-pay: a completed payment for this delivery blocks another (mirrors backend §12 SUCCESS rule).
+    if (this.state.payments.some((p) => p.deliveryId === d.id && p.status === 'success')) {
+      throw new ConflictError('This delivery has already been paid for');
+    }
     const reference = `TLK_${nextId('ref').toUpperCase()}`;
     const payment: Payment = {
       id: nextId('pay'),
@@ -424,6 +424,10 @@ export class MockStore {
   }
   verifyPayment(reference: string): { status: string; amount: number; paidAt?: string; channel?: string; gatewayResponse: string } {
     const p = this.paymentByReference(reference);
+    // Gateway still confirming — the UI polls and eventually times out (scenario `paymentPending`).
+    if (this.state.paymentShouldHang) {
+      return { status: 'pending', amount: p.amount, gatewayResponse: 'Pending' };
+    }
     if (this.state.paymentShouldFail) {
       p.status = 'failed';
       p.failedAt = nowIso();

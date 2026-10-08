@@ -1,11 +1,23 @@
-import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from 'react';
 import { draftReducer, initialDraft, isDraftDirty, type DraftAction, type NewDeliveryDraft } from '@trustlink/shared';
 import { useProfile } from '../../hooks';
+
+export interface CreatedDelivery {
+  id: string;
+  trackingNumber: string;
+  fare: number;
+}
 
 interface DraftContextValue {
   draft: NewDeliveryDraft;
   dispatch: React.Dispatch<DraftAction>;
   dirty: boolean;
+  /** delivery created at the fare step (REQUESTED) */
+  created: CreatedDelivery | null;
+  setCreated: (created: CreatedDelivery) => void;
+  /** reference of the in-flight payment attempt */
+  paymentReference: string | null;
+  setPaymentReference: (reference: string | null) => void;
   reset: () => void;
 }
 
@@ -17,6 +29,8 @@ const DraftContext = createContext<DraftContextValue | undefined>(undefined);
  */
 export function NewDeliveryDraftProvider({ children }: { children: React.ReactNode }) {
   const [draft, dispatch] = useReducer(draftReducer, undefined, initialDraft);
+  const [created, setCreated] = useState<CreatedDelivery | null>(null);
+  const [paymentReference, setPaymentReference] = useState<string | null>(null);
   const profile = useProfile();
   const profileUser = profile.data;
 
@@ -28,9 +42,15 @@ export function NewDeliveryDraftProvider({ children }: { children: React.ReactNo
     dispatch({ type: 'patchSender', patch: { name, phone: profileUser.phone } });
   }, [profileUser, draft.sender.name, draft.sender.phone]);
 
+  const reset = useCallback(() => {
+    dispatch({ type: 'reset' });
+    setCreated(null);
+    setPaymentReference(null);
+  }, []);
+
   const value = useMemo<DraftContextValue>(
-    () => ({ draft, dispatch, dirty: isDraftDirty(draft), reset: () => dispatch({ type: 'reset' }) }),
-    [draft],
+    () => ({ draft, dispatch, dirty: isDraftDirty(draft), created, setCreated, paymentReference, setPaymentReference, reset }),
+    [draft, created, paymentReference, reset],
   );
 
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>;

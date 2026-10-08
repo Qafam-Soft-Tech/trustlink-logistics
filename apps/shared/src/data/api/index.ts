@@ -26,6 +26,7 @@ import type {
   VehicleType,
 } from '../../domain/types';
 import { DEFAULT_PRICING } from '../../domain/fare';
+import { estimateDistanceKm } from '../../domain/serviceArea';
 
 interface KycStatusResponse {
   status: KycStatus;
@@ -87,6 +88,9 @@ export function createApiAdapters(http: HttpClient): DataPorts {
 
     pricing: {
       calculate: (input) => http.post<FareBreakdown>('/pricing/calculate', input),
+      // No backend distance route: the client estimates from launch-area coordinates and
+      // sends `distanceKm` to /pricing/calculate (ledger SC-8).
+      estimateDistance: async ({ pickupArea, dropoffArea }) => estimateDistanceKm(pickupArea, dropoffArea),
       getValues: async () => {
         const configs = await http.get<PricingConfig[]>('/pricing/config');
         const values: PricingValues = { ...DEFAULT_PRICING };

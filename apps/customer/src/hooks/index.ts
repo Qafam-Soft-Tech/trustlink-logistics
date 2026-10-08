@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreateDeliveryInput, DeliveryStatus } from '@trustlink/shared';
+import type { CreateDeliveryInput, DeliveryStatus, InitializePaymentInput, PackageType } from '@trustlink/shared';
 import { useData } from '../data/DataContext';
 
 export function useDeliveries(status?: DeliveryStatus) {
@@ -100,5 +100,50 @@ export function useSetDefaultAddress() {
   return useMutation({
     mutationFn: (id: string) => data.delivery.setDefaultAddress(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['addresses'] }),
+  });
+}
+
+/** Client-side distance estimate for a pickup/drop-off area pair (feeds the fare quote, SC-8). */
+export function useDistanceEstimate(pickupArea?: string, dropoffArea?: string) {
+  const data = useData();
+  return useQuery({
+    queryKey: ['distance', pickupArea, dropoffArea],
+    queryFn: () => data.pricing.estimateDistance({ pickupArea: pickupArea as string, dropoffArea: dropoffArea as string }),
+    enabled: Boolean(pickupArea && dropoffArea),
+  });
+}
+
+export function useFareQuote(input: { distanceKm?: number; weightKg: number; packageType: PackageType }) {
+  const data = useData();
+  return useQuery({
+    queryKey: ['fare', input.distanceKm, input.weightKg, input.packageType],
+    queryFn: () => data.pricing.calculate({ distanceKm: input.distanceKm as number, weightKg: input.weightKg, packageType: input.packageType }),
+    enabled: typeof input.distanceKm === 'number' && input.distanceKm > 0,
+  });
+}
+
+export function useInitializePayment() {
+  const data = useData();
+  return useMutation({ mutationFn: (input: InitializePaymentInput) => data.payment.initialize(input) });
+}
+
+export function useVerifyPayment() {
+  const data = useData();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reference: string) => data.payment.verify(reference),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliveries'] });
+      queryClient.invalidateQueries({ queryKey: ['payment'] });
+    },
+  });
+}
+
+export function usePayment(reference?: string) {
+  const data = useData();
+  return useQuery({
+    queryKey: ['payment', reference],
+    queryFn: () => data.payment.getByReference(reference as string),
+    enabled: Boolean(reference),
   });
 }

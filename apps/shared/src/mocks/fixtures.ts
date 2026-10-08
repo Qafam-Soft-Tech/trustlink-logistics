@@ -16,6 +16,7 @@ import type {
 } from '../domain/types';
 import { DEFAULT_PRICING, calculateFare } from '../domain/fare';
 import { SERVICE_AREAS } from '../domain/constants';
+import { SERVICE_AREA_COORDS, estimateDistanceKm } from '../domain/serviceArea';
 
 export const RECIPIENT_CODE = '482913';
 
@@ -23,34 +24,12 @@ export const RECIPIENT_CODE = '482913';
 export const ABUJA_AREAS = SERVICE_AREAS;
 export type AbujaArea = (typeof ABUJA_AREAS)[number];
 
-/** Approximate coordinates → deterministic area-pair distance table. */
-export const AREA_COORDS: Record<AbujaArea, { lat: number; lng: number }> = {
-  'Wuse 2': { lat: 9.077, lng: 7.479 },
-  Maitama: { lat: 9.088, lng: 7.495 },
-  Garki: { lat: 9.035, lng: 7.49 },
-  Jabi: { lat: 9.068, lng: 7.42 },
-  Utako: { lat: 9.063, lng: 7.445 },
-  Gwarinpa: { lat: 9.105, lng: 7.4 },
-  Kubwa: { lat: 9.155, lng: 7.33 },
-  Lugbe: { lat: 8.97, lng: 7.37 },
-  Asokoro: { lat: 9.04, lng: 7.525 },
-  CBD: { lat: 9.057, lng: 7.495 },
-};
-
-function haversine(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return Math.round(R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s)) * 10) / 10;
-}
+/** Approximate coordinates → deterministic area-pair distance table (domain-owned). */
+export const AREA_COORDS = SERVICE_AREA_COORDS;
 
 /** Deterministic distance (km) between two Abuja areas. */
 export function distanceBetween(a: AbujaArea, b: AbujaArea): number {
-  if (a === b) return 2.5;
-  return haversine(AREA_COORDS[a], AREA_COORDS[b]);
+  return estimateDistanceKm(a, b);
 }
 
 export const PRICING_FIXTURE = { ...DEFAULT_PRICING };

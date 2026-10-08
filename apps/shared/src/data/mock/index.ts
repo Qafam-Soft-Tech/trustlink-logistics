@@ -63,6 +63,7 @@ export function createMockAdaptersFromStore(getStore: () => MockStore): DataPort
     },
     pricing: {
       calculate: (input) => run((s) => s.calculateFare(input)),
+      estimateDistance: (input) => run((s) => s.estimateDistance(input)),
       getValues: () => run((s) => ({ ...s.state.pricing })),
       getConfigs: () => run((s) => s.state.pricingConfigs.map((c) => ({ ...c }))),
       updateConfig: (key, value, description) => run((s) => s.updateConfig(key, value, description)),

@@ -6,8 +6,6 @@ Temporary scaffolds present in the frontend. Every scaffold is a branded placeho
 |---|---|---|---|
 | `ScreenScaffold` component | `apps/customer/src/components/ScreenScaffold.tsx` | — (shared by placeholders) | Remove when the last placeholder is replaced |
 | Onboarding "Slides" copy | `apps/customer/src/screens/onboarding/OnboardingSlidesScreen.tsx` | `Onboarding → Slides` | Real art/copy in Phase 17 |
-| Fare & payment steps | `PlaceholderScreen` in `AppNavigator.tsx` | `NewDelivery → Fare / PaySummary` | Phase 7 |
-| Processing / Result | `apps/customer/src/navigation/AppNavigator.tsx` (inline) | `NewDelivery → Processing / Result` | Phase 7 |
 | Tracking screens | `PlaceholderScreen` in `AppNavigator.tsx` | `Tracking → TrackingHome / Timeline / POD / Failed / Returned / CancelFlow` | Phases 8–9 |
 | Deliveries list | `apps/customer/src/screens/DeliveriesScreen.tsx` (real shell over ports) | `Main → Deliveries` | Phase 9 |
 | Alerts list | `apps/customer/src/screens/AlertsScreen.tsx` (real shell over ports) | `Main → Alerts` | Phase 10 |

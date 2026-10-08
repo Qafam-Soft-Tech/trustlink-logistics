@@ -31,6 +31,9 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-16 | `InitializePaymentDto.amount` documented "in kobo", but fares are **naira decimals** (`DEFAULT_PRICING_CONFIG`); payment entity comment also says kobo | Frontend sends **amount in kobo** (`ndaFare × 100`) pending backend confirmation — do **not** hardcode until decided | **Needs decision** |
 | SC-17 | `@Roles(...)` is enforced only where `RolesGuard` is present (only `UsersController`). All other controllers use `JwtAuthGuard` alone, so declared roles (admin/rider/customer) are **not enforced** at the guard | Frontend still restricts by declared role; treat backend enforcement as untrusted for now | **Needs decision** (security) |
 | SC-18 | Deep links in **Expo Go** need the runtime `exp://…` prefix from `expo-linking` (`Linking.createURL('/')`), which is **not** in the approved dependency list | `scheme: trustlink` + `trustlink://` prefix configured (dev builds work); Expo-Go `exp://` prefix deferred | **Resolved (Phase 5)** — `expo-linking` installed (customer); prefixes `[createURL('/'), 'trustlink://']`; see `DEMO.md` §4 |
+| SC-19 | Payment retry: backend §12 blocks a new `payments/initialize` while a payment is `SUCCESS` **or `PROCESSING`**; a declined/cancelled/timed-out attempt would therefore stay blocked | Mock + UI block only when a payment is **SUCCESS** (or the delivery has left REQUESTED); retry after decline/cancel/timeout is allowed | **Needs decision** (retry-after-processing) |
+| SC-20 | No backend distance source (`POST /pricing/calculate` needs `distanceKm`; no maps in R1) | Client-side estimate `pricing.estimateDistance` from launch-area coordinates (domain-owned table) → sent to `calculate` | **Needs decision** (restates SC-8; confirm fixture-table estimate is acceptable) |
+| SC-21 | "Copy" on the confirmation screen needs a clipboard API; `expo-clipboard` is not in the approved dependency list | Used React Native core `Clipboard` (deprecated in RN, still present) behind `utils/clipboard.ts` | Resolved (swap to `expo-clipboard` when a dep is approved) |
 
 ---
 
@@ -95,10 +98,12 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 
 1. **SC-2 / D14** — confirm cancellation fee tiers (50/75/full vs FR-C11 wording).
 2. **SC-5 / D4** — confirm UI shows 5-min OTP countdown while backend expires at 10 min.
-3. **SC-8 / SC-6** — source of `distanceKm` for fare without maps (fixture table acceptable for demo?).
+3. **SC-8 / SC-6** — source of `distanceKm` for fare without maps (fixture table acceptable for demo?). **Phase 7 implements SC-20 (client estimate)** — confirm acceptable.
 4. **SC-16** — payment `amount` units (kobo vs naira).
 5. **SC-17** — backend role enforcement gap (`@Roles` decorative outside `UsersController`); accept as-is or require backend fix.
 6. **Admin login** — backend endpoint + seed credentials, or interim frontend mock (Phase 4).
+7. **SC-19** — retry after a declined/cancelled/timed-out payment (backend §12 would block on `PROCESSING`; UI allows retry).
+8. **SC-21** — approve a clipboard dependency (`expo-clipboard`) to replace RN core `Clipboard`.
 
 ## E. Backend issues deferred (not blocking frontend, tracked here)
 - Signup DTO validation missing (interfaces, no class-validator).
@@ -114,6 +119,7 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 | Port method | Backend route | Note |
 |---|---|---|
 | `delivery.deleteAddress` | `DELETE /deliveries/addresses/:id` | Backend has a service method but **no controller route** → api adapter throws `NotSupportedByBackendError`; mock implements it. |
+| `pricing.estimateDistance` | — | No backend distance route. Api adapter estimates client-side from launch-area coordinates (SC-20); mock estimates from the same domain function. |
 | admin login `/auth/admin/login`; `/admin/settings/*`; `/deliveries/history`; `/rider/earnings*` | — | Covered by SC-14. Phase 1 api adapters only map routes that exist; missing ones are omitted (not invented). |
 
 All other port methods map to existing routes (`CONTRACT_SNAPSHOT.md`). `payment.initialize` converts naira→kobo at the boundary (SC-16 pending). `delivery.track` and all delivery routes require a session, matching the backend guard (SC-15).

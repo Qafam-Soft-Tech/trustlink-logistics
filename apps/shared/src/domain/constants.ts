@@ -6,6 +6,9 @@ export const OTP_EXPIRY_SECONDS = 300;
 export const DEMO_OTP = '482913';
 export const MAX_OTP_ATTEMPTS = 3;
 
+/** How long a fare quote stays valid before the customer must refresh it. */
+export const QUOTE_TTL_SECONDS = 300;
+
 /** R1 launch-city service areas (Abuja). Single source of truth — fixtures and the request flow both read this. */
 export const SERVICE_AREAS = [
   'Wuse 2',
