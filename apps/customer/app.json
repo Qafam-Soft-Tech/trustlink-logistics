@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "customer",
+    "name": "TrustLink",
     "slug": "customer",
     "version": "1.0.0",
     "scheme": "trustlink",
@@ -11,6 +11,8 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.qafam.trustlink",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",

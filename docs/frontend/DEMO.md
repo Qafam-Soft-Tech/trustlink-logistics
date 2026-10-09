@@ -159,7 +159,7 @@ See `docs/frontend/HANDOFF.md` §2 for the full table. In one line: the **flows,
 ## 11. Known limits (say these out loud if asked)
 
 - **The apps do not share live data.** Each app has its own in-memory mock; the three chapters in §8 are independent (the tracking numbers are chosen to match so the story reads as one platform).
-- **A demo build says so**: a gold **Demo data** strip is visible on every screen while the source is mock, and a production build refuses to start without an explicit `EXPO_PUBLIC_DATA_SOURCE` / `VITE_DATA_SOURCE` (no silent default).
+- **A demo build says so**: a gold **Demo data** strip is visible on every screen while the source is mock, and a production build refuses to start without an explicit `EXPO_PUBLIC_DATA_SOURCE` / `VITE_DATA_SOURCE` (no silent default). For **installable/EAS builds** the data source comes from `eas.json` → `build.<profile>.env` (`.env` files are git-ignored and are not uploaded to EAS): `preview` = mock, `production` = api. See `BUILD.md`.
 - No real payment, SMS or push: payments are simulated, OTPs are `482913`, and alerts are in-app only.
 - Recipient codes are fixture values (the backend never issues them — SC-38).
 - No maps/GPS: “Navigate” opens the device maps app with the address text.

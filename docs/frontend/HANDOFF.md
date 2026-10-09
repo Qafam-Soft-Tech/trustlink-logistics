@@ -83,3 +83,5 @@ Notes: `expo-print` + `expo-sharing` were approved for PDF receipts (SC-28); `ex
 ## 7. Data-source rule (no silent default)
 
 Both mobile apps read `EXPO_PUBLIC_DATA_SOURCE` and the console reads `VITE_DATA_SOURCE`. In **non-development builds the value is required** (`"mock"` or `"api"`); a missing value throws at startup instead of silently defaulting to mock. While the source is `mock`, a gold **Demo data** strip is visible on every screen in all three apps (`DemoModeBanner` for mobile, the console's `DemoBanner`).
+
+**Installable (EAS/standalone) builds must set `EXPO_PUBLIC_DATA_SOURCE` through `eas.json` → `build.<profile>.env`.** `.env` files are git-ignored and are **not uploaded to EAS**, so they do not exist on the build server: `preview` is pinned to `mock` and `production` to `api` (+ the `EXPO_PUBLIC_API_URL` placeholder) in `apps/customer/eas.json` and `apps/rider/eas.json`. `EXPO_PUBLIC_*` values are inlined at build time, so changing data source requires a new build. See `BUILD.md` §2 (`BUILD.md` §6 lists the first-build risks, including the `file:../shared` dependency — SC-45).

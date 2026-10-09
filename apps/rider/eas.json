@@ -1,0 +1,29 @@
+{
+  "cli": {
+    "version": ">= 5.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_DATA_SOURCE": "mock"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_DATA_SOURCE": "api",
+        "EXPO_PUBLIC_API_URL": "https://api.trustlink.example"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
