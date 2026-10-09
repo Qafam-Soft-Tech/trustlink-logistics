@@ -90,3 +90,53 @@ Sign in with:
 The backend has no `/auth/admin/login` route (SC-14), so the console authenticates locally against these credentials (`apps/admin/src/data/adminCredentials.ts`) and runs on an admin-local mock world (same Abuja data as the apps — SC-40).
 
 Try: **Dispatch** → assign a rider to an unassigned delivery, reassign an active one, or **Schedule redelivery** on a failed job; **Riders** → open the KYC queue, view documents, approve or reject with a reason; **Users** → suspend/activate; **Issues** → assign and change status; **Pricing** → edit values and watch the fare preview; **Reports** → toggle per day/week.
+
+## 8. The scripted demo (12–15 minutes)
+
+Run it in this order; the automated half of the same script runs in `apps/shared` (`npm test` → `demoScript.test.ts`).
+
+| # | Where | Do | Should see |
+|---|---|---|---|
+| 1 | Customer | Sign in `08031234567` / `482913` | Splash → Home greeting “Amina” |
+| 2 | Customer | **Send a package** → pick **Home** → **Office** (recipient “Chinedu Obi”, `08060000001`) → **Parcel ≤5 kg** → sender prefilled → Review | Fare screen with the breakdown (base ₦500, distance, weight, minimum ₦1,000) |
+| 3 | Customer | **Accept fare** → **Pay** → **Card** → **Pay** | Processing (back blocked) → **Request confirmed** with a tracking number |
+| 4 | Customer | **Track this delivery** (or Deliveries → the new tracking number) | “Assigning your rider” + a live timeline |
+| 5 | Admin | **Dispatch** → the new delivery under **Unassigned** → **Assign** the nearest approved rider | The job moves to *Active jobs*; the rider turns `on_trip` |
+| 6 | Rider | Sign in `08050000001` / `482913` → **Jobs → Queue** → the job → **Accept job** → confirm | Execution stepper; the status becomes *Assigned* |
+| 7 | Rider | **Navigate with maps** (opens the device maps app) → **Confirm pickup** → **Start trip (in transit)** → **Arrived at drop-off** | Steps advance; the customer’s timeline follows in real time |
+| 8 | Rider | **Complete delivery** → photo → type `000000` → then the real code from the customer Demo menu | `000000` is rejected (“Recipient code does not match”); the real code delivers |
+| 9 | Customer | Deliveries → the delivery | **Delivered** with the POD card, receipt (share / email / PDF) |
+| 10 | Rider | **Jobs** → a job in **Active** → **Report a problem** → *Recipient unavailable* | “Delivery unsuccessful” + the redelivery notice |
+| 11 | Admin | **Dispatch** → **Failed** → **Schedule redelivery** | Back in *Unassigned* at “1 of 2” |
+| 12 | Admin | Assign a rider again → rider delivers it | **Delivered**; the customer sees the POD |
+| 13 | Admin | **Riders** → KYC queue → **Review documents** → **Approve** one (and **Reject** another with a reason) | Badges update; the approved rider becomes assignable |
+| 14 | Admin | **Reports** → toggle **Per day / Per week** | Completion + cancellation rate and revenue (mock) |
+
+**Optional beats:** wrong OTP at step 8; second failure → **Returned to sender**; Demo menu → **emptyAccount** for the empty states; **offline** for the offline banners.
+
+## 9. What is real vs mocked
+
+See `docs/frontend/HANDOFF.md` §2 for the full table. In one line: the **flows, state machine, validation, roles and call order are real**; the **data, providers, OTP codes, maps and money movement are mocked** (no real charge, no SMS, no push).
+
+## 10. One-tap reset to a clean state
+
+| App | Reset | What it restores |
+|---|---|---|
+| Customer | Demo menu (long-press the version text) → **Reset data** | Seeded deliveries/notifications/issues and the scenario |
+| Customer | Demo menu → **Reset session & onboarding** | Clears the token, onboarding flag and query cache → back to Splash |
+| Admin | Avatar menu → **Reset demo data** | The console's seeded mock world (dispatch board, KYC queue, issues, pricing) |
+| Rider | Relaunch the app | Its mock is rebuilt on start (queue, KYC state, jobs) |
+
+## 11. Known limits (say these out loud if asked)
+
+- No real payment, SMS or push: payments are simulated, OTPs are `482913`, and alerts are in-app only.
+- Recipient codes are fixture values (the backend never issues them — SC-38).
+- No maps/GPS: “Navigate” opens the device maps app with the address text.
+- KYC documents are local file paths; no verification provider is wired (SC-35).
+- Refunds are copy only — there is no refund action (SC-27).
+- The console is a mock control tower; nothing persists across a page reload.
+- Legal text is a draft pending counsel (SC-34); support contact details are placeholders (SC-31).
+
+## 12. Hand-off
+
+`docs/frontend/HANDOFF.md` lists the open “Needs decision” rows, the real-vs-mocked map and the backend gaps to close, in priority order.

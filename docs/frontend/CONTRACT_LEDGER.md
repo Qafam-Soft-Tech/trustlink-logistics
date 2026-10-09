@@ -54,6 +54,7 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-39 | `POST /deliveries/:id/failure` accepts only `{ reason }` — no note | The rider note is optional and kept locally for the rider's reference; only the selected reason is sent | **Needs decision** (accept a note server-side) |
 | SC-40 | The admin app cannot import `@trustlink/shared` (separate npm project, no workspace; BASELINE.md blessed no Vite alias) | The admin keeps its own brand CSS and **copies** the minimal domain types + a compatible Abuja mock world (`apps/admin/src/data/`) | Resolved (documented duplication; revisit if a workspace/alias is approved) |
 | SC-41 | Admin auth: no `/auth/admin/login` route exists (SC-14) | The console signs in locally against a documented demo credential (`apps/admin/src/data/adminCredentials.ts`, `DEMO.md` §7) and runs on mock data | **Needs decision** (seed an admin user + endpoint, or accept the demo-only login) |
+| SC-42 | Dispatch assignment: the mock's `assignRider` admits a `REQUESTED` delivery, but the state machine only allows `requested → searching`, so the transition throws (`Cannot transition from requested to assigned`). The admin console's own mock *does* assign from REQUESTED | Follow the state machine: the demo pays first, then dispatches (pay → SEARCHING → assign). The console still lists requested deliveries as assignable | **Needs decision** (can dispatch assign an unpaid REQUESTED delivery? align backend + both mocks) |
 
 ---
 

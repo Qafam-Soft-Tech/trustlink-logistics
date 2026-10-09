@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useAdminData } from '../data/AdminDataContext';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
@@ -127,7 +128,7 @@ function Icon({ name }: { name: string }) {
   );
 }
 
-function Header({ user, onLogout }: { user: { firstName: string; lastName: string; email: string } | null; onLogout: () => void }) {
+function Header({ user, onLogout, onReset }: { user: { firstName: string; lastName: string; email: string } | null; onLogout: () => void; onReset: () => void }) {
   const { pathname } = useLocation();
   const [menu, setMenu] = useState<{ open: boolean; path: string }>({ open: false, path: pathname });
   const menuRef = useRef<HTMLDivElement>(null);
@@ -172,6 +173,9 @@ function Header({ user, onLogout }: { user: { firstName: string; lastName: strin
                   {user?.email}
                 </div>
               </div>
+              <button className="dropdown-item" role="menuitem" onClick={onReset} title="Restore the seeded mock world">
+                Reset demo data
+              </button>
               <button className="dropdown-item danger" role="menuitem" onClick={onLogout}>
                 Logout
               </button>
@@ -186,6 +190,7 @@ function Header({ user, onLogout }: { user: { firstName: string; lastName: strin
 export function AdminLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user, logout } = useAuth();
+  const { resetData } = useAdminData();
   const navigate = useNavigate();
 
   return (
@@ -194,6 +199,7 @@ export function AdminLayout() {
       <div className="admin-main">
         <Header
           user={user}
+          onReset={resetData}
           onLogout={() => {
             logout();
             navigate('/login', { replace: true });
