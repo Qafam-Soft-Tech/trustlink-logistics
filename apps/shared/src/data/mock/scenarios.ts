@@ -7,6 +7,7 @@ import {
   DEMO_DELIVERIES,
   DEMO_ISSUES,
   DEMO_NOTIFICATIONS,
+  DEMO_RIDER_NOTIFICATIONS,
   DEMO_RIDERS,
 } from '../../mocks/fixtures';
 import type { Notification, PricingConfig, ProofOfDelivery } from '../../domain/types';
@@ -53,7 +54,7 @@ export function buildBaseState(): MockState {
     addresses: copy(DEMO_ADDRESSES),
     deliveries: copy(DEMO_DELIVERIES),
     riders: copy(DEMO_RIDERS),
-    notifications: recentNotifications(),
+    notifications: [...recentNotifications(), ...copy(DEMO_RIDER_NOTIFICATIONS)],
     issues: copy(DEMO_ISSUES),
     payments: [],
     pricing: { ...DEFAULT_PRICING },
@@ -65,6 +66,7 @@ export function buildBaseState(): MockState {
     podByDelivery: seedPods(),
     paymentShouldFail: false,
     paymentShouldHang: false,
+    kycSubmittedAt: null,
   };
 }
 

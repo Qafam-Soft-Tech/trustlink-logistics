@@ -78,6 +78,8 @@ export interface MockState {
   paymentShouldFail: boolean;
   /** payment verifications stay pending forever (scenario `paymentPending` → UI timeout) */
   paymentShouldHang: boolean;
+  /** when the current rider last submitted KYC (distinguishes "not started" from "under review") */
+  kycSubmittedAt: string | null;
 }
 
 let counter = 1000;
@@ -514,6 +516,7 @@ export class MockStore {
       throw new ValidationError('All document uploads are required');
     }
     s.user.kycStatus = 'pending';
+    this.state.kycSubmittedAt = nowIso();
     return { status: 'pending' };
   }
   kycStatus(): { status: NonNullable<User['kycStatus']>; rejectionReason: string | null; submittedAt: string | null; reviewedAt: string | null } {
@@ -521,7 +524,7 @@ export class MockStore {
     return {
       status: s.user.kycStatus ?? 'pending',
       rejectionReason: s.user.kycRejectionReason ?? null,
-      submittedAt: null,
+      submittedAt: this.state.kycSubmittedAt,
       reviewedAt: null,
     };
   }

@@ -47,6 +47,8 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-32 | `CreateIssueDto` requires `priority`, but the report form only asks type + description | Reports are filed with priority `medium`; support triages | Resolved (documented) |
 | SC-33 | No account-deletion route (`DELETE /users/me` etc.) | **DEFERRED** as instructed: the Account screen offers a "Delete account" action that explains the gap and routes to support (no fake deletion) | **Needs decision** (add a deletion/erase endpoint; NDPA erasure request) |
 | SC-34 | Terms/Privacy had no real text (external placeholder URLs) | In-app Terms and Privacy screens with real prose (NDPA context), each marked **"Draft for legal review"**; the auth consent line now opens them in-app | Resolved (draft text; legal sign-off pending) |
+| SC-35 | KYC documents have no upload endpoint — `SubmitKycDto` takes document **URLs** | The rider app picks images with `expo-image-picker` (already installed) and submits the local URIs; a real upload/storage step is still needed | **Needs decision** (file upload endpoint or direct-to-storage) |
+| SC-36 | Rider jobs are read-only in R1 Phase 12 | `Jobs` lists `GET /dispatch/my-queue` and `Alerts` lists notifications with no accept/execute actions; job execution is Phase 13 | Resolved (scoped to Phase 12) |
 
 ---
 
@@ -126,6 +128,7 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 15. **SC-31** — real support phone/WhatsApp/email lines still needed (placeholders ship).
 16. **SC-33** — account deletion has no endpoint (UI explains and routes to support; deferred).
 17. **SC-34** — Terms/Privacy are real drafts pending legal sign-off.
+18. **SC-35** — KYC needs a document upload endpoint (the rider app submits local image URIs today).
 
 ## E. Backend issues deferred (not blocking frontend, tracked here)
 - Signup DTO validation missing (interfaces, no class-validator).

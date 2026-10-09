@@ -1,136 +1,96 @@
 import React, { useState } from 'react';
-import { Keyboard, Alert } from 'react-native';
-import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Center, Row, Avatar, Divider } from '@trustlink/shared';
-import { theme } from '@trustlink/shared';
-import { Ionicons } from '@expo/vector-icons';
-import { api } from '../../utils/api';
+import { ScrollView } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useTheme, Screen, Text, Button, Card, Column, Row, Chip, Banner, Input, Avatar, isEmail, type VehicleType } from '@trustlink/shared';
+import { useSetupProfile } from '../../hooks/useAuth';
+import { useSession } from '../../session/SessionContext';
+import type { AuthStackParamList } from '../../navigation/types';
 
-interface ProfileSetupScreenProps {
-  navigation: any;
-  route: any;
-}
+type Props = NativeStackScreenProps<AuthStackParamList, 'ProfileSetup'>;
 
-export function ProfileSetupScreen({ navigation, route }: ProfileSetupScreenProps) {
-  const { phone, role } = route.params;
+const VEHICLES: Array<{ value: VehicleType; label: string }> = [
+  { value: 'motorcycle', label: 'Motorcycle' },
+  { value: 'van', label: 'Van' },
+  { value: 'truck', label: 'Truck' },
+];
+
+export function ProfileSetupScreen({ route }: Props) {
+  const { theme } = useTheme();
+  const { phone } = route.params;
+  const setup = useSetupProfile();
+  const { signIn } = useSession();
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [vehicleType, setVehicleType] = useState('motorcycle');
+  const [vehicleType, setVehicleType] = useState<VehicleType>('motorcycle');
   const [vehiclePlate, setVehiclePlate] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | undefined>();
 
-  const vehicleTypes = [
-    { value: 'motorcycle', label: 'Motorcycle', icon: 'bicycle' },
-    { value: 'van', label: 'Van', icon: 'car' },
-    { value: 'truck', label: 'Truck', icon: 'bus' },
-  ] as const;
-
-  const handleComplete = async () => {
-    if (!firstName.trim() || !lastName.trim() || !vehiclePlate.trim()) {
-      Alert.alert('Missing Information', 'Please fill in all required fields');
+  const submit = () => {
+    setError(undefined);
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('Enter your first and last name');
       return;
     }
-
-    setIsLoading(true);
-    try {
-      const response = await api.post('/auth/profile/setup', { phone, firstName, lastName, email, role: 'rider', vehicleType, vehiclePlate });
-      console.log('Rider profile completed:', response.data);
-      
-      navigation.replace('Main');
-    } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to complete profile. Please try again.');
-    } finally {
-      setIsLoading(false);
+    if (!vehiclePlate.trim()) {
+      setError('Enter your vehicle plate number');
+      return;
     }
+    if (email.trim() && !isEmail(email)) {
+      setError('Enter a valid email address');
+      return;
+    }
+    setup.mutate(
+      { phone, firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim() || undefined, vehicleType, vehiclePlate: vehiclePlate.trim().toUpperCase() },
+      {
+        onSuccess: async (result) => {
+          await signIn({ user: result.user, token: result.token });
+        },
+        onError: (e: unknown) => setError((e as Error).message || 'Could not save your profile.'),
+      },
+    );
   };
 
   return (
-    <Screen style={{ flex: 1, padding: theme.spacing.lg }}>
-      <Column style={{ flex: 1, justifyContent: 'center' }} gap="xl">
-        <Center>
-          <Avatar size="xl" name={`${firstName} ${lastName}` || 'Rider'} />
-        </Center>
-        
-        <Column gap="sm" style={{ alignItems: 'center' }}>
-          <TextComponent variant="h2" color="textPrimary" style={{ textAlign: 'center' }}>
-            Complete your rider profile
-          </TextComponent>
-          <TextComponent variant="body" color="textSecondary" style={{ textAlign: 'center' }}>
-            This information is required for KYC verification
-          </TextComponent>
+    <Screen>
+      <ScrollView contentContainerStyle={{ padding: 24, gap: 24 }} keyboardShouldPersistTaps="handled">
+        <Column gap="sm" align="center">
+          <Avatar size="xl" name={`${firstName} ${lastName}`.trim() || 'Rider'} />
+          <Text variant="h3" color="inherit" style={{ color: theme.roles.text, textAlign: 'center' }}>Set up your rider profile</Text>
+          <Text variant="bodySmall" color="inherit" style={{ color: theme.roles.textMuted, textAlign: 'center' }}>
+            You'll complete KYC verification next — approval is required before you can go online.
+          </Text>
         </Column>
 
-        <Card style={{ padding: theme.spacing.xl }}>
+        <Card>
           <Column gap="lg">
-            <Input
-              label="First Name"
-              placeholder="John"
-              value={firstName}
-              onChangeText={setFirstName}
-              autoCapitalize="words"
-              leftIcon={<Ionicons name="person" size={24} color={theme.colors.textTertiary} />}
-            />
+            <Input label="First name" value={firstName} onChangeText={setFirstName} placeholder="Emeka" autoCapitalize="words" />
+            <Input label="Last name" value={lastName} onChangeText={setLastName} placeholder="Nwosu" autoCapitalize="words" />
+            <Input label="Email (optional)" value={email} onChangeText={setEmail} placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" />
+            <Input label="Phone number" value={phone} editable={false} />
+          </Column>
+        </Card>
 
-            <Input
-              label="Last Name"
-              placeholder="Doe"
-              value={lastName}
-              onChangeText={setLastName}
-              autoCapitalize="words"
-              leftIcon={<Ionicons name="person" size={24} color={theme.colors.textTertiary} />}
-            />
-
-            <Input
-              label="Email (optional)"
-              placeholder="john@example.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              leftIcon={<Ionicons name="mail" size={24} color={theme.colors.textTertiary} />}
-            />
-
-            <Divider label="Vehicle Information" />
-            
-            <Column gap="md">
-              <TextComponent variant="bodySmall" color="textSecondary">Vehicle Type</TextComponent>
-              <Row gap="sm">
-                {vehicleTypes.map(vt => (
-                  <Button
-                    key={vt.value}
-                    variant={vehicleType === vt.value ? 'primary' : 'outline'}
-                    size="md"
-                    onPress={() => setVehicleType(vt.value)}
-                    style={{ flex: 1 }}
-                    leftIcon={<Ionicons name={vt.icon} size={20} color={vehicleType === vt.value ? theme.colors.white : theme.colors.navy} />}
-                  >
-                    <TextComponent variant="bodySmall" color={vehicleType === vt.value ? 'white' : 'navy'}>{vt.label}</TextComponent>
-                  </Button>
+        <Card>
+          <Column gap="lg">
+            <Text variant="h4" color="inherit" style={{ color: theme.roles.text }}>Vehicle</Text>
+            <Column gap="sm">
+              <Text variant="label" color="inherit" style={{ color: theme.roles.textSecondary }}>Type</Text>
+              <Row gap="sm" style={{ flexWrap: 'wrap' }} justify="start">
+                {VEHICLES.map((vehicle) => (
+                  <Chip key={vehicle.value} label={vehicle.label} selected={vehicleType === vehicle.value} onPress={() => setVehicleType(vehicle.value)} />
                 ))}
               </Row>
             </Column>
-
-            <Input
-              label="Vehicle Plate Number"
-              placeholder="ABC 123 XY"
-              value={vehiclePlate}
-              onChangeText={setVehiclePlate}
-              autoCapitalize="characters"
-              leftIcon={<Ionicons name="card" size={24} color={theme.colors.textTertiary} />}
-            />
-
-            <Button
-              variant="primary"
-              size="lg"
-              loading={isLoading}
-              onPress={handleComplete}
-              style={{ marginTop: theme.spacing.md }}
-            >
-              Complete Setup
-            </Button>
+            <Input label="Plate number" value={vehiclePlate} onChangeText={setVehiclePlate} placeholder="ABC 123 XY" autoCapitalize="characters" />
           </Column>
         </Card>
-      </Column>
+
+        {error ? <Banner variant="error" message={error} /> : null}
+
+        <Button variant="primary" size="lg" loading={setup.isPending} onPress={submit}>Complete setup</Button>
+      </ScrollView>
     </Screen>
   );
 }

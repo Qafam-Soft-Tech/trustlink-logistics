@@ -10,6 +10,7 @@ import { ThemeProvider, useTheme } from '@trustlink/shared';
 
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { DataProvider } from './src/data/DataContext';
+import { SessionProvider } from './src/session/SessionContext';
 
 const queryClient = new QueryClient();
 
@@ -52,7 +53,9 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <DataProvider>
         <ThemeProvider storage={AsyncStorage}>
-          <Root />
+          <SessionProvider>
+            <Root />
+          </SessionProvider>
         </ThemeProvider>
       </DataProvider>
     </QueryClientProvider>

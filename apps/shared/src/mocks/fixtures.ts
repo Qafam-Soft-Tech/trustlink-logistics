@@ -136,6 +136,8 @@ export const DEMO_RIDERS: RiderFixture[] = RIDER_SEEDS.map((s, i) => {
       lastName: s.last,
       role: 'rider',
       kycStatus: s.kyc,
+      kycRejectionReason:
+        s.kyc === 'rejected' ? 'The vehicle registration photo was unreadable. Please upload a clearer photo.' : null,
       isActive: true,
       isPhoneVerified: true,
       createdAt: '2026-01-02T09:00:00.000Z',
@@ -315,6 +317,34 @@ export const DEMO_NOTIFICATIONS: Notification[] = Array.from({ length: 12 }, (_,
     createdAt: delivery.createdAt,
   };
 });
+
+/** Rider-bound alerts (assignment/reminder/completion) so the rider Alerts tab has real data. */
+export const DEMO_RIDER_NOTIFICATIONS: Notification[] = [
+  mkRiderNotification('rnotif-001', DEMO_DELIVERIES[4], 'New job assigned', 'A delivery in Garki has been assigned to you.', 'push'),
+  mkRiderNotification('rnotif-002', DEMO_DELIVERIES[7], 'Delivery reminder', 'Pickup is due soon at Wuse 2. Contact the sender if you are running late.', 'sms'),
+  mkRiderNotification('rnotif-003', DEMO_DELIVERIES[12], 'Delivery completed', 'Nice work — the package was delivered successfully.', 'push'),
+];
+
+function mkRiderNotification(
+  id: string,
+  delivery: Delivery,
+  title: string,
+  body: string,
+  channel: Notification['channel'],
+): Notification {
+  return {
+    id,
+    deliveryId: delivery.id,
+    userId: DEMO_RIDERS[0].user.id,
+    channel,
+    title,
+    body,
+    data: { deliveryId: delivery.id, status: delivery.status },
+    status: 'sent',
+    sentAt: delivery.createdAt,
+    createdAt: delivery.createdAt,
+  };
+}
 
 const ISSUE_RESOLUTIONS: Partial<Record<string, string>> = {
   'issue-003': 'The duplicate charge was refunded to your card.',

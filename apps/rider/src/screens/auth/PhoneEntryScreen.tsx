@@ -1,135 +1,82 @@
 import React, { useState } from 'react';
-import { Keyboard, Alert } from 'react-native';
-import { Screen, Text as TextComponent, Box, Button, Input, Card, Column, Center, Row } from '@trustlink/shared';
-import { theme } from '@trustlink/shared';
+import { ScrollView } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '../../utils/api';
+import { useTheme, Screen, Text, Button, Chip, Card, Column, Row, Center, Banner, PhoneInput, toCanonicalPhone, isValidNigerianPhone, DEMO_OTP } from '@trustlink/shared';
+import { useRequestOtp } from '../../hooks/useAuth';
+import { useData } from '../../data/DataContext';
+import type { AuthStackParamList } from '../../navigation/types';
 
-export function PhoneEntryScreen({ navigation }: any) {
+type Props = NativeStackScreenProps<AuthStackParamList, 'PhoneEntry'>;
+
+export function PhoneEntryScreen({ navigation }: Props) {
+  const { theme } = useTheme();
+  const data = useData();
+  const requestOtp = useRequestOtp();
   const [phone, setPhone] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLogin, setIsLogin] = useState(false);
+  const [mode, setMode] = useState<'signup' | 'login'>('login');
+  const [error, setError] = useState<string | undefined>();
 
-  const formatPhone = (text: string) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 6) return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-  };
-
-  const handlePhoneChange = (text: string) => {
-    const formatted = formatPhone(text);
-    setPhone(formatted);
-  };
-
-const handleContinue = async () => {
-    const cleanedPhone = phone.replace(/\s/g, '');
-    if (!cleanedPhone || cleanedPhone.length !== 11) {
-      Alert.alert('Invalid Phone', 'Please enter a valid 11-digit Nigerian phone number');
+  const submit = () => {
+    setError(undefined);
+    const canonical = toCanonicalPhone(phone);
+    if (!isValidNigerianPhone(canonical)) {
+      setError('Enter a valid 11-digit Nigerian phone number');
       return;
     }
-
-    setIsLoading(true);
-    try {
-      if (isLogin) {
-        const response = await api.post('/auth/login', { phone: cleanedPhone });
-        console.log('Login response:', response.data);
-        navigation.navigate('OtpVerification', { 
-          phone: cleanedPhone, 
-          role: 'rider',
-          purpose: 'login'
-        });
-      } else {
-        const response = await api.post('/auth/signup', { phone: cleanedPhone, role: 'rider' });
-        console.log('Signup response:', response.data);
-        navigation.navigate('OtpVerification', { 
-          phone: cleanedPhone, 
-          role: 'rider',
-          purpose: 'signup'
-        });
-      }
-    } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to send OTP. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    requestOtp.mutate(
+      { phone: canonical, purpose: mode },
+      {
+        onSuccess: () => navigation.navigate('OtpVerification', { phone: canonical, purpose: mode }),
+        onError: (e: unknown) => setError((e as Error).message || 'Failed to send the code. Please try again.'),
+      },
+    );
   };
 
   return (
-    <Screen style={{ flex: 1, padding: theme.spacing.lg }}>
-      <Column style={{ flex: 1, justifyContent: 'center' }} gap="xl">
+    <Screen>
+      <ScrollView contentContainerStyle={{ padding: 24, gap: 24, flexGrow: 1, justifyContent: 'center' }}>
         <Center>
-          <Box style={{ 
-            width: 100, 
-            height: 100, 
-            borderRadius: theme.borderRadius.full, 
-            backgroundColor: theme.colors.navy,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}>
-            <Ionicons name="bicycle" size={50} color={theme.colors.gold} />
-          </Box>
+          <Column gap="sm" align="center">
+            <Ionicons name="bicycle" size={56} color={theme.roles.primaryAction} />
+            <Text variant="h1" color="inherit" style={{ color: theme.roles.text }}>TrustLink Rider</Text>
+            <Text variant="body" color="inherit" style={{ color: theme.roles.textMuted }}>Earn on every delivery in Abuja</Text>
+          </Column>
         </Center>
-        
-        <Column gap="md" style={{ alignItems: 'center' }}>
-          <TextComponent variant="h2" color="textPrimary" style={{ textAlign: 'center' }}>
-            Join TrustLink as a Rider
-          </TextComponent>
-          <TextComponent variant="body" color="textSecondary" style={{ textAlign: 'center' }}>
-            Secure. Swift. Strategic.
-          </TextComponent>
-        </Column>
 
-        <Card style={{ padding: theme.spacing.xl }}>
+        <Card>
           <Column gap="lg">
-            <Column gap="sm">
-              <TextComponent variant="h4" color="textPrimary" style={{ textAlign: 'center' }}>
-                {isLogin ? 'Welcome back, Rider' : 'Join TrustLink as a Rider'}
-              </TextComponent>
-              <TextComponent variant="bodySmall" color="textSecondary" style={{ textAlign: 'center' }}>
-                {isLogin 
-                  ? 'We\'ll send a verification code to log you in' 
-                  : 'We\'ll send a verification code via SMS'}
-              </TextComponent>
+            <Column gap="xs">
+              <Text variant="h4" color="inherit" style={{ color: theme.roles.text }}>
+                {mode === 'login' ? 'Welcome back' : 'Join as a rider'}
+              </Text>
+              <Text variant="bodySmall" color="inherit" style={{ color: theme.roles.textMuted }}>
+                {mode === 'login' ? "We'll send a code to log you in." : "We'll send a code to verify your number."}
+              </Text>
             </Column>
 
-            <Input
-              label="Phone Number"
-              placeholder="080 1234 5678"
-              value={phone}
-              onChangeText={handlePhoneChange}
-              keyboardType="phone-pad"
-              maxLength={14}
-              leftIcon={<Ionicons name="call" size={24} color={theme.colors.textTertiary} />}
-            />
+            <PhoneInput value={phone} onChangeText={setPhone} error={error} />
 
-            <Button
-              variant="primary"
-              size="lg"
-              loading={isLoading}
-              onPress={handleContinue}
-              style={{ marginTop: theme.spacing.md }}
-            >
-              {isLogin ? 'Log In' : 'Continue'}
+            {data.source === 'mock' ? (
+              <Row><Chip label={`Demo OTP: ${DEMO_OTP}`} /></Row>
+            ) : null}
+
+            <Button variant="primary" size="lg" loading={requestOtp.isPending} onPress={submit}>
+              {mode === 'login' ? 'Log in' : 'Continue'}
             </Button>
 
-            <Button
-              variant="ghost"
-              size="md"
-              onPress={() => setIsLogin(!isLogin)}
-              style={{ marginTop: theme.spacing.sm }}
-            >
-              {isLogin ? 'Don\'t have an account? Sign Up' : 'Already have an account? Log In'}
+            <Button variant="ghost" size="md" onPress={() => { setError(undefined); setMode(mode === 'login' ? 'signup' : 'login'); }}>
+              {mode === 'login' ? 'New rider? Sign up' : 'Already a rider? Log in'}
             </Button>
           </Column>
         </Card>
 
-        <Center>
-          <TextComponent variant="caption" color="textTertiary">
-            By continuing, you agree to our Terms of Service and Privacy Policy
-          </TextComponent>
-        </Center>
-      </Column>
+        {error ? <Banner variant="error" message={error} /> : null}
+
+        <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted, textAlign: 'center' }}>
+          Verification codes are sent by SMS. Never share your code with anyone.
+        </Text>
+      </ScrollView>
     </Screen>
   );
 }
