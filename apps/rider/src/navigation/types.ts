@@ -12,6 +12,11 @@ export type HomeStackParamList = {
 
 export type JobsStackParamList = {
   Jobs: undefined;
+  JobDetails: { jobId: string };
+  Execution: { jobId: string };
+  Pod: { jobId: string };
+  Failure: { jobId: string };
+  ReportIssue: { deliveryId: string };
 };
 
 export type AlertsStackParamList = {

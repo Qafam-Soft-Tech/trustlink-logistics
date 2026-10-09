@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ProofInput, RiderStatus, SubmitKycInput, VehicleType } from '@trustlink/shared';
+import type { CreateIssueInput, ProofInput, RiderStatus, SubmitKycInput, VehicleType } from '@trustlink/shared';
 import { useData } from '../data/DataContext';
 
 /* ---------------- work ---------------- */
@@ -9,15 +9,74 @@ export function useMyQueue() {
   return useQuery({ queryKey: ['rider-queue'], queryFn: () => data.dispatch.myQueue(), refetchInterval: 10000 });
 }
 
+/** Every delivery assigned to this rider (active + completed history). */
+export function useMyJobs() {
+  const data = useData();
+  return useQuery({ queryKey: ['rider-jobs'], queryFn: () => data.delivery.list(), refetchInterval: 10000 });
+}
+
+export function useDeliveryJob(id?: string) {
+  const data = useData();
+  return useQuery({
+    queryKey: ['rider-job', id],
+    queryFn: () => data.delivery.get(id as string),
+    enabled: Boolean(id),
+    refetchInterval: 10000,
+  });
+}
+
+function useJobInvalidation() {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.invalidateQueries({ queryKey: ['rider-queue'] });
+    queryClient.invalidateQueries({ queryKey: ['rider-jobs'] });
+    queryClient.invalidateQueries({ queryKey: ['rider-job'] });
+  };
+}
+
+/** Acknowledge does NOT change status (SC-4) — it records that the rider accepted the job. */
+export function useAcknowledgeJob() {
+  const data = useData();
+  const invalidate = useJobInvalidation();
+  return useMutation({ mutationFn: (deliveryId: string) => data.dispatch.acknowledge(deliveryId), onSuccess: invalidate });
+}
+
+export function useConfirmPickup() {
+  const data = useData();
+  const invalidate = useJobInvalidation();
+  return useMutation({ mutationFn: (deliveryId: string) => data.execution.pickup(deliveryId), onSuccess: invalidate });
+}
+
+export function useMarkInTransit() {
+  const data = useData();
+  const invalidate = useJobInvalidation();
+  return useMutation({ mutationFn: (deliveryId: string) => data.execution.inTransit(deliveryId), onSuccess: invalidate });
+}
+
+export function useReportFailure() {
+  const data = useData();
+  const invalidate = useJobInvalidation();
+  return useMutation({
+    mutationFn: ({ deliveryId, reason }: { deliveryId: string; reason: string }) => data.execution.reportFailure(deliveryId, reason),
+    onSuccess: invalidate,
+  });
+}
+
 export function useCompleteDelivery() {
+  const data = useData();
+  const invalidate = useJobInvalidation();
+  return useMutation({
+    mutationFn: ({ id, proof }: { id: string; proof: ProofInput }) => data.execution.complete(id, proof),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCreateRiderIssue() {
   const data = useData();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, proof }: { id: string; proof: ProofInput }) => data.execution.complete(id, proof),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rider-queue'] });
-      queryClient.invalidateQueries({ queryKey: ['deliveries'] });
-    },
+    mutationFn: (input: CreateIssueInput) => data.issue.create(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rider-issues'] }),
   });
 }
 

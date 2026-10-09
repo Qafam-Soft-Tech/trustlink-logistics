@@ -10,6 +10,11 @@ import { OtpVerificationScreen } from '../screens/auth/OtpVerificationScreen';
 import { ProfileSetupScreen } from '../screens/auth/ProfileSetupScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { JobsScreen } from '../screens/JobsScreen';
+import { JobDetailsScreen } from '../screens/jobs/JobDetailsScreen';
+import { ExecutionScreen } from '../screens/jobs/ExecutionScreen';
+import { PodScreen } from '../screens/jobs/PodScreen';
+import { FailureScreen } from '../screens/jobs/FailureScreen';
+import { RiderReportIssueScreen } from '../screens/jobs/RiderReportIssueScreen';
 import { AlertsScreen } from '../screens/AlertsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { EditVehicleScreen } from '../screens/account/EditVehicleScreen';
@@ -72,6 +77,11 @@ function JobsNavigator() {
   return (
     <JobsStack.Navigator screenOptions={{ headerShown: false }}>
       <JobsStack.Screen name="Jobs" component={JobsScreen} />
+      <JobsStack.Screen name="JobDetails" component={JobDetailsScreen} />
+      <JobsStack.Screen name="Execution" component={ExecutionScreen} options={{ gestureEnabled: false }} />
+      <JobsStack.Screen name="Pod" component={PodScreen} />
+      <JobsStack.Screen name="Failure" component={FailureScreen} />
+      <JobsStack.Screen name="ReportIssue" component={RiderReportIssueScreen} />
     </JobsStack.Navigator>
   );
 }

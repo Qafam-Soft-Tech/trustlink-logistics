@@ -152,6 +152,13 @@ export function HomeScreen() {
                       </Button>
                     </Row>
                     <Button variant="ghost" size="md" onPress={() => root.navigate('Main', { screen: 'Jobs' })}>View all jobs</Button>
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onPress={() => root.navigate('Main', { screen: 'Jobs', params: { screen: 'JobDetails', params: { jobId: active.id } } })}
+                    >
+                      Open active job
+                    </Button>
                   </Column>
                 )}
               </Column>
