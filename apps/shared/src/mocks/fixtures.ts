@@ -316,30 +316,44 @@ export const DEMO_NOTIFICATIONS: Notification[] = Array.from({ length: 12 }, (_,
   };
 });
 
+const ISSUE_RESOLUTIONS: Partial<Record<string, string>> = {
+  'issue-003': 'The duplicate charge was refunded to your card.',
+  'issue-004': 'We spoke to the rider and shared feedback with the dispatch team.',
+};
+
 export const DEMO_ISSUES: Issue[] = [
-  mkIssue('issue-001', DEMO_DELIVERIES[18].id, 'delivery_issue', 'high', 'Package not received', 'Recipient says no one arrived.'),
-  mkIssue('issue-002', DEMO_DELIVERIES[13].id, 'delivery_issue', 'medium', 'Late delivery', 'Arrived over an hour late.'),
-  mkIssue('issue-003', DEMO_DELIVERIES[22].id, 'payment_issue', 'high', 'Charged after cancel', 'Fare was charged despite cancelling.'),
-  mkIssue('issue-004', DEMO_DELIVERIES[5].id, 'rider_issue', 'low', 'Rider rude', 'Rider was unhelpful on the phone.'),
-  mkIssue('issue-005', DEMO_DELIVERIES[21].id, 'other', 'medium', 'Receipt missing', 'Cannot find the receipt in history.'),
-  mkIssue('issue-006', DEMO_DELIVERIES[10].id, 'delivery_issue', 'urgent', 'Wrong address', 'Rider went to the wrong street.'),
+  mkIssue('issue-001', DEMO_DELIVERIES[18].id, 'delivery_issue', 'high', 'Package not received', 'Recipient says no one arrived.', 'open'),
+  mkIssue('issue-002', DEMO_DELIVERIES[13].id, 'delivery_issue', 'medium', 'Late delivery', 'Arrived over an hour late.', 'in_progress'),
+  mkIssue('issue-003', DEMO_DELIVERIES[22].id, 'payment_issue', 'high', 'Charged after cancel', 'Fare was charged despite cancelling.', 'resolved'),
+  mkIssue('issue-004', DEMO_DELIVERIES[5].id, 'rider_issue', 'low', 'Rider was unhelpful', 'Rider did not answer when I called.', 'closed'),
+  mkIssue('issue-005', DEMO_DELIVERIES[21].id, 'other', 'medium', 'Receipt missing', 'Cannot find the receipt in history.', 'open'),
+  mkIssue('issue-006', DEMO_DELIVERIES[10].id, 'delivery_issue', 'urgent', 'Wrong address', 'Rider went to the wrong street.', 'in_progress'),
 ];
 
-function mkIssue(id: string, deliveryId: string, type: Issue['type'], priority: Issue['priority'], title: string, description: string): Issue {
+function mkIssue(
+  id: string,
+  deliveryId: string,
+  type: Issue['type'],
+  priority: Issue['priority'],
+  title: string,
+  description: string,
+  status: Issue['status'],
+): Issue {
+  const resolved = status === 'resolved' || status === 'closed';
   return {
     id,
     deliveryId,
     reporterId: DEMO_CUSTOMER.id,
-    assignedToId: null,
+    assignedToId: resolved ? 'admin-1' : null,
     type,
-    status: 'open',
+    status,
     priority,
     title,
     description,
     attachments: [],
-    resolution: null,
-    resolvedAt: null,
+    resolution: ISSUE_RESOLUTIONS[id] ?? null,
+    resolvedAt: resolved ? '2026-10-02T12:00:00.000Z' : null,
     createdAt: '2026-10-01T10:00:00.000Z',
-    updatedAt: '2026-10-01T10:00:00.000Z',
+    updatedAt: resolved ? '2026-10-02T12:00:00.000Z' : '2026-10-01T10:00:00.000Z',
   };
 }

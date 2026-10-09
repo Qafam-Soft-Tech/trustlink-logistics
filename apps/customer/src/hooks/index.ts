@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreateDeliveryInput, DeliveryStatus, InitializePaymentInput, PackageType } from '@trustlink/shared';
+import type { CreateDeliveryInput, CreateIssueInput, DeliveryStatus, InitializePaymentInput, IssueStatus, PackageType } from '@trustlink/shared';
 import { useData } from '../data/DataContext';
+import { loadReadNotificationIds, saveReadNotificationIds } from '../storage/notificationReads';
 
 export function useDeliveries(status?: DeliveryStatus) {
   const data = useData();
@@ -154,5 +155,55 @@ export function useDeliveryProof(id?: string) {
     queryKey: ['proof', id],
     queryFn: () => data.delivery.proof(id as string),
     enabled: Boolean(id),
+  });
+}
+
+/* ---------------- support ---------------- */
+
+export function useMyIssues(status?: IssueStatus) {
+  const data = useData();
+  return useQuery({ queryKey: ['issues', status ?? 'all'], queryFn: () => data.issue.listMine(status) });
+}
+
+export function useIssue(id?: string) {
+  const data = useData();
+  return useQuery({ queryKey: ['issue', id], queryFn: () => data.issue.get(id as string), enabled: Boolean(id) });
+}
+
+export function useCreateIssue() {
+  const data = useData();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateIssueInput) => data.issue.create(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issues'] }),
+  });
+}
+
+/* ---------------- notifications ---------------- */
+
+/** Locally-recorded read ids for in-app alerts (no backend read field — SC-30). */
+export function useReadNotificationIds() {
+  return useQuery({ queryKey: ['notification-reads'], queryFn: loadReadNotificationIds, staleTime: Infinity });
+}
+
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const current = await loadReadNotificationIds();
+      if (!current.includes(id)) await saveReadNotificationIds([id, ...current]);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notification-reads'] }),
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const current = await loadReadNotificationIds();
+      await saveReadNotificationIds(Array.from(new Set([...ids, ...current])));
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notification-reads'] }),
   });
 }

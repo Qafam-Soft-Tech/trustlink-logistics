@@ -9,7 +9,7 @@ import {
   DEMO_NOTIFICATIONS,
   DEMO_RIDERS,
 } from '../../mocks/fixtures';
-import type { PricingConfig, ProofOfDelivery } from '../../domain/types';
+import type { Notification, PricingConfig, ProofOfDelivery } from '../../domain/types';
 
 export type ScenarioName =
   | 'happy'
@@ -53,7 +53,7 @@ export function buildBaseState(): MockState {
     addresses: copy(DEMO_ADDRESSES),
     deliveries: copy(DEMO_DELIVERIES),
     riders: copy(DEMO_RIDERS),
-    notifications: copy(DEMO_NOTIFICATIONS),
+    notifications: recentNotifications(),
     issues: copy(DEMO_ISSUES),
     payments: [],
     pricing: { ...DEFAULT_PRICING },
@@ -66,6 +66,19 @@ export function buildBaseState(): MockState {
     paymentShouldFail: false,
     paymentShouldHang: false,
   };
+}
+
+/**
+ * Most notifications stay historical (September fixtures) but the three newest are dated today,
+ * so the Today / Earlier grouping is visible in the demo. Times are relative, like the auth flow.
+ */
+function recentNotifications(): Notification[] {
+  const now = Date.now();
+  return copy(DEMO_NOTIFICATIONS).map((n, i) => {
+    if (i >= 3) return n;
+    const at = new Date(now - (i + 1) * 45 * 60_000).toISOString();
+    return { ...n, createdAt: at, sentAt: at };
+  });
 }
 
 /** Proof-of-delivery records for the delivered fixtures (so the POD/receipt screens have data). */

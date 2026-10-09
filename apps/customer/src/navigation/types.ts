@@ -57,5 +57,10 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   NewDelivery: NavigatorScreenParams<NewDeliveryStackParamList> | undefined;
   Tracking: NavigatorScreenParams<TrackingStackParamList> | undefined;
+  ReportIssue: undefined;
+  IssueSubmitted: { issueId: string };
+  MyIssues: undefined;
+  IssueDetail: { issueId: string };
+  Help: undefined;
   DesignGallery: undefined;
 };

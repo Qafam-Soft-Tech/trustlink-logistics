@@ -42,6 +42,9 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-27 | No refund/return endpoint. `Payment.status` includes `refunded` but nothing ever sets it, and the delivery keeps no refund record | Refund is explanatory copy only (cancel preview/result amounts are shown at cancel time) — no refund action exists | **Needs decision** (refund endpoint; requires backend work) — founder chose to keep copy-only |
 | SC-28 | PDF receipts need `expo-print` + `expo-sharing`, neither on the approved dependency list | **Approved (founder, 2026-10-07)** — installed; `Receipt` offers text share, `mailto:` email and a generated PDF (`utils/receiptPdf.ts`, `receiptHtml()` with theme colours) | Resolved |
 | SC-29 | POD `photoUrl` is a backend-provided string; there is no capture/upload endpoint in R1 | `PodCard` renders any loadable URL (http/https/file/data/content) and falls back to a labelled placeholder; demo values are not real images | Resolved (display-ready; capture is a later phase) |
+| SC-30 | `Notification` has no read/unread field and there is no read endpoint | Unread is tracked **locally** (`storage/notificationReads.ts`, AsyncStorage); "mark all read" is device-local | **Needs decision** (add `read`/`readAt` + a mark-read endpoint server-side) |
+| SC-31 | Contact-support phone/WhatsApp/email are not provided anywhere | Help screen ships clearly-marked **Placeholder** channels (`screens/support/helpContent.ts`) to be replaced before launch | **Needs decision** (real support lines) |
+| SC-32 | `CreateIssueDto` requires `priority`, but the report form only asks type + description | Reports are filed with priority `medium`; support triages | Resolved (documented) |
 
 ---
 
@@ -117,6 +120,8 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 11. **SC-26** — history pagination must move server-side (`/deliveries` returns everything); frontend "Show more" ships meanwhile.
 12. **SC-27** — refunds/returns have no endpoint (founder: keep copy-only for now).
 13. **SC-28** — *Resolved*: `expo-print` + `expo-sharing` approved and installed for PDF receipts.
+14. **SC-30** — notifications have no read state server-side (unread is device-local today).
+15. **SC-31** — real support phone/WhatsApp/email lines still needed (placeholders ship).
 
 ## E. Backend issues deferred (not blocking frontend, tracked here)
 - Signup DTO validation missing (interfaces, no class-validator).

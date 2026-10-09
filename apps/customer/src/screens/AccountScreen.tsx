@@ -36,6 +36,15 @@ export function AccountScreen() {
 
         <Card>
           <Column gap="sm">
+            <Text variant="label" color="inherit" style={{ color: theme.roles.textSecondary }}>Support</Text>
+            <Button variant="outline" size="md" onPress={() => navigation.navigate('MyIssues')}>My issues</Button>
+            <Button variant="outline" size="md" onPress={() => navigation.navigate('ReportIssue')}>Report an issue</Button>
+            <Button variant="outline" size="md" onPress={() => navigation.navigate('Help')}>Help &amp; support</Button>
+          </Column>
+        </Card>
+
+        <Card>
+          <Column gap="sm">
             <Text variant="label" color="inherit" style={{ color: theme.roles.textSecondary }}>Demo</Text>
             <Button variant="outline" size="md" onPress={demoMenu.open}>Open demo menu</Button>
             <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted }}>Tip: long-press the version text below anywhere to open it.</Text>

@@ -33,6 +33,11 @@ import { ReturnedScreen } from '../screens/tracking/ReturnedScreen';
 import { CancelledScreen } from '../screens/tracking/CancelledScreen';
 import { DetailsScreen } from '../screens/tracking/DetailsScreen';
 import { CancelFlowScreen } from '../screens/tracking/CancelFlowScreen';
+import { ReportIssueScreen } from '../screens/support/ReportIssueScreen';
+import { IssueSubmittedScreen } from '../screens/support/IssueSubmittedScreen';
+import { MyIssuesScreen } from '../screens/support/MyIssuesScreen';
+import { IssueDetailScreen } from '../screens/support/IssueDetailScreen';
+import { HelpScreen } from '../screens/support/HelpScreen';
 import { DesignGalleryScreen } from '../screens/DesignGalleryScreen';
 import { SplashScreen } from '../screens/splash/SplashScreen';
 import { SessionExpiredSheet } from '../screens/auth/SessionExpiredSheet';
@@ -162,6 +167,11 @@ function RootNavigator() {
         <RootStack.Screen name="Main" component={MainTabs} />
         <RootStack.Screen name="NewDelivery" component={NewDeliveryNavigator} options={{ presentation: 'modal' }} />
         <RootStack.Screen name="Tracking" component={TrackingNavigator} />
+        <RootStack.Screen name="ReportIssue" component={ReportIssueScreen} options={{ presentation: 'modal' }} />
+        <RootStack.Screen name="IssueSubmitted" component={IssueSubmittedScreen} options={{ gestureEnabled: false }} />
+        <RootStack.Screen name="MyIssues" component={MyIssuesScreen} />
+        <RootStack.Screen name="IssueDetail" component={IssueDetailScreen} />
+        <RootStack.Screen name="Help" component={HelpScreen} />
         {__DEV__ ? <RootStack.Screen name="DesignGallery" component={DesignGalleryScreen} /> : null}
       </RootStack.Navigator>
       <SessionExpiredSheet />
