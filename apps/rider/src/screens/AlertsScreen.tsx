@@ -1,12 +1,14 @@
 import React from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
 import { useTheme, Screen, TopBar, Text, Card, Column, Row, Banner, Skeleton, EmptyState, ErrorState, formatDate } from '@trustlink/shared';
+import { errorCopy, isOffline } from '@trustlink/shared';
 import { useMyNotifications } from '../hooks';
 
 export function AlertsScreen() {
   const { theme } = useTheme();
   const notifications = useMyNotifications(30);
   const items = notifications.data ?? [];
+  const offline = isOffline(notifications.error);
 
   return (
     <Screen>
@@ -23,8 +25,10 @@ export function AlertsScreen() {
 
         {notifications.isLoading ? (
           <Column gap="sm"><Skeleton height={72} /><Skeleton height={72} /></Column>
+        ) : notifications.isError && !offline ? (
+          <ErrorState message={errorCopy(notifications.error, 'notifications').message} onAction={() => notifications.refetch()} />
         ) : notifications.isError ? (
-          <ErrorState message="Couldn't load your alerts." onAction={() => notifications.refetch()} />
+          <Banner variant="offline" message="You're offline. Your alerts will load when you're back online." />
         ) : items.length === 0 ? (
           <EmptyState icon="🔔" title="No alerts yet" message="Dispatch and delivery updates will appear here." />
         ) : (

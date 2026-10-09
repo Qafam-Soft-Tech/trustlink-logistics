@@ -3,7 +3,8 @@ import { ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Delivery } from '@trustlink/shared';
-import { Screen, TopBar, Column, Skeleton, EmptyState, ErrorState } from '@trustlink/shared';
+import { Screen, TopBar, Column, Skeleton, EmptyState, ErrorState, Banner } from '@trustlink/shared';
+import { errorCopy, isOffline } from '@trustlink/shared';
 import { useDelivery } from '../../hooks';
 import type { RootStackParamList, TrackingStackParamList } from '../../navigation/types';
 
@@ -37,6 +38,7 @@ export function DeliveryScreen({ deliveryId, title, children, footer }: {
   }
 
   const notFound = (error as Error | null)?.name === 'NotFoundError';
+  const offline = isOffline(error);
   if (isError || !data) {
     return (
       <Screen>
@@ -45,8 +47,9 @@ export function DeliveryScreen({ deliveryId, title, children, footer }: {
           {notFound ? (
             <EmptyState icon="🔎" title="Delivery not found" message="We couldn't find that delivery." actionLabel="Go to deliveries" onAction={toDeliveries} />
           ) : (
-            <ErrorState message="Couldn't load this delivery." onAction={() => refetch()} />
+            <ErrorState message={errorCopy(error, 'tracking').message} onAction={() => refetch()} />
           )}
+          {offline ? <Banner variant="offline" message="You're offline. We'll load this as soon as you're back." /> : null}
         </Column>
       </Screen>
     );

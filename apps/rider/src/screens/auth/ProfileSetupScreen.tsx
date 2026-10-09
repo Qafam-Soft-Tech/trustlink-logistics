@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme, Screen, Text, Button, Card, Column, Row, Chip, Banner, Input, Avatar, isEmail, type VehicleType } from '@trustlink/shared';
+import { errorMessage } from '@trustlink/shared';
 import { useSetupProfile } from '../../hooks/useAuth';
 import { useSession } from '../../session/SessionContext';
 import type { AuthStackParamList } from '../../navigation/types';
@@ -47,7 +48,7 @@ export function ProfileSetupScreen({ route }: Props) {
         onSuccess: async (result) => {
           await signIn({ user: result.user, token: result.token });
         },
-        onError: (e: unknown) => setError((e as Error).message || 'Could not save your profile.'),
+        onError: (e: unknown) => setError(errorMessage(e, 'profile')),
       },
     );
   };

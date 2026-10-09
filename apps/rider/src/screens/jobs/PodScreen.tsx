@@ -3,6 +3,7 @@ import { Image, ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme, Screen, TopBar, Text, Button, Card, Column, Row, Banner, Skeleton, ErrorState, SuccessState, OtpInput, TextArea, isValidOtp } from '@trustlink/shared';
+import { errorMessage } from '@trustlink/shared';
 import { useDeliveryJob, useCompleteDelivery } from '../../hooks';
 import { ExecutionExitGuard } from './ExecutionExitGuard';
 import type { JobsStackParamList } from '../../navigation/types';
@@ -94,7 +95,7 @@ export function PodScreen({ navigation, route }: Props) {
         onSuccess: () => setDone(true),
         onError: (e: unknown) => {
           setCode('');
-          setError((e as Error).message || 'Could not complete the delivery.');
+          setError(errorMessage(e, 'jobs'));
         },
       },
     );

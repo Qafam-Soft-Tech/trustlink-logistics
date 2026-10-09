@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme, Screen, TopBar, Text, Button, Card, Column, Row, Chip, Banner, Input, Skeleton, type VehicleType } from '@trustlink/shared';
+import { errorMessage } from '@trustlink/shared';
 import { useRiderProfile, useUpdateRiderProfile } from '../../hooks';
 import type { ProfileStackParamList } from '../../navigation/types';
 
@@ -52,7 +53,7 @@ export function EditVehicleScreen({ navigation }: Props) {
       },
       {
         onSuccess: () => setSaved(true),
-        onError: (e: unknown) => setError((e as Error).message),
+        onError: (e: unknown) => setError(errorMessage(e, 'profile')),
       },
     );
   };

@@ -17,6 +17,7 @@ import {
   toCreateDeliveryInput,
   estimateEtaMinutes,
   QUOTE_TTL_SECONDS,
+  errorMessage,
 } from '@trustlink/shared';
 import { useDistanceEstimate, useFareQuote, useCreateDelivery } from '../../hooks';
 import { useCountdown } from '../../hooks/useCountdown';
@@ -85,7 +86,7 @@ export function FareScreen({ navigation }: Props) {
           </>
         )}
 
-        {create.isError ? <Banner variant="error" message={(create.error as Error).message} /> : null}
+        {create.isError ? <Banner variant="error" message={errorMessage(create.error, 'payment')} /> : null}
       </ScrollView>
 
       {created ? (

@@ -16,6 +16,7 @@ import {
   CheckoutSheet,
   formatNaira,
   type PaymentProvider,
+  errorMessage,
 } from '@trustlink/shared';
 import { useDistanceEstimate, useFareQuote, useInitializePayment, useProfile } from '../../hooks';
 import type { NewDeliveryStackParamList } from '../../navigation/types';
@@ -74,7 +75,7 @@ export function PaySummaryScreen({ navigation }: Props) {
           navigation.navigate('Processing', { deliveryId: created.id, reference: result.reference });
         },
         onError: (e) => {
-          setError((e as Error).message);
+          setError(errorMessage(e, 'payment'));
           setSheetOpen(false);
         },
       },

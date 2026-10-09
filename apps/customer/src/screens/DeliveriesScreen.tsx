@@ -22,6 +22,7 @@ import {
   type Delivery,
   type DeliveryStatus,
 } from '@trustlink/shared';
+import { isOffline } from '@trustlink/shared';
 import { useDeliveries } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -44,7 +45,7 @@ export function DeliveriesScreen() {
     setVisibleCount(PAGE_SIZE);
   }, [query]);
 
-  const offline = (error as Error | null)?.name === 'OfflineError';
+  const offline = isOffline(error);
   const all = data ?? [];
 
   const filtered = useMemo(() => {

@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, Screen, TopBar, Text, Button, Card, Column, Row, Divider, StatusBadge, Skeleton, EmptyState, ErrorState, Banner, Avatar, Input } from '@trustlink/shared';
+import { isOffline } from '@trustlink/shared';
 import { useProfile, useDeliveries } from '../hooks';
 import type { HomeStackParamList, RootStackParamList } from '../navigation/types';
 
@@ -22,7 +23,7 @@ export function HomeScreen() {
   const all = deliveries.data ?? [];
   const active = all.filter((d) => ACTIVE.includes(d.status));
   const recents = all.filter((d) => !ACTIVE.includes(d.status)).slice(0, 3);
-  const offline = (deliveries.error as Error | null)?.name === 'OfflineError';
+  const offline = isOffline(deliveries.error);
   const loading = deliveries.isLoading || profile.isLoading;
 
   const openDelivery = (id: string) => rootNav.navigate('Tracking', { screen: 'TrackingHome', params: { deliveryId: id } });

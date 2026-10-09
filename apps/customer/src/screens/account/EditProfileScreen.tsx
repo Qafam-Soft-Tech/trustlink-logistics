@@ -16,6 +16,7 @@ import {
   Skeleton,
   ErrorState,
   isEmail,
+  errorMessage,
 } from '@trustlink/shared';
 import { useProfile } from '../../hooks';
 import { useUpdateProfile } from '../../hooks/useAuth';
@@ -59,7 +60,7 @@ export function EditProfileScreen({ navigation }: Props) {
       { firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim() || undefined },
       {
         onSuccess: () => setSaved(true),
-        onError: (e: unknown) => setError((e as Error).message),
+        onError: (e: unknown) => setError(errorMessage(e, 'profile')),
       },
     );
   };

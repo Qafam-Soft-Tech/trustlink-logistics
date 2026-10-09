@@ -16,8 +16,8 @@ Box.displayName = 'Box';
 
 export type ThemedTextProps = TextProps & {
   variant?: 'h1' | 'h2' | 'h3' | 'h4' | 'body' | 'bodySmall' | 'caption' | 'button' | 'label';
-  /** a design token key, 'inherit', or any literal colour string */
-  color?: ColorKey | 'inherit' | (string & {});
+  /** a semantic colour token key, or 'inherit' — literal colours are not allowed (use theme roles) */
+  color?: ColorKey | 'inherit';
 };
 
 export const Text = React.forwardRef<RNText, ThemedTextProps>(
@@ -35,9 +35,7 @@ export const Text = React.forwardRef<RNText, ThemedTextProps>(
       button: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, fontFamily: fontFamily.medium, lineHeight: Math.round(fontSize.md * lineHeight.normal) },
       label: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, fontFamily: fontFamily.medium, lineHeight: Math.round(fontSize.sm * lineHeight.normal) },
     } as const;
-    // Accept token keys AND literal colour strings (existing screens pass hex colours).
-    const isToken = color !== 'inherit' && Object.prototype.hasOwnProperty.call(theme.colors, color);
-    const resolved = color === 'inherit' ? undefined : isToken ? theme.colors[color as ColorKey] : color;
+    const resolved = color === 'inherit' ? undefined : theme.colors[color as ColorKey];
     return (
       <RNText ref={ref} style={[variants[variant] as any, resolved ? { color: resolved } : null, style]} {...props}>
         {children}

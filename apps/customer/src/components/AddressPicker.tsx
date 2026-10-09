@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme, Text, Button, Card, Column, ListItem, Badge, EmptyState, ErrorState, Skeleton, Banner, isValidAddress } from '@trustlink/shared';
+import { errorMessage } from '@trustlink/shared';
 import type { Address, DraftAddress } from '@trustlink/shared';
 import { useAddresses, useCreateAddress } from '../hooks';
 import { AddressFields } from './AddressFields';
@@ -42,7 +43,7 @@ export function AddressPicker({ title, value, onChange }: {
           setAdding(false);
           setDraft({ label: 'Home', street: '', landmark: '', area: '', city: 'Abuja' });
         },
-        onError: (e: unknown) => setError((e as Error).message),
+        onError: (e: unknown) => setError(errorMessage(e, 'addresses')),
       },
     );
   };

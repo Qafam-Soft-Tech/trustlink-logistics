@@ -22,6 +22,7 @@ import {
   formatNaira,
   type RiderStatus,
 } from '@trustlink/shared';
+import { isOffline } from '@trustlink/shared';
 import { useMyProfile, useRiderProfile, useKycStatus, useMyQueue, useSetRiderStatus } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -41,7 +42,7 @@ export function HomeScreen() {
   const online = status === 'online' || status === 'on_trip';
   const jobs = queue.data ?? [];
   const active = jobs[0];
-  const offline = (queue.error as Error | null)?.name === 'OfflineError';
+  const offline = isOffline(queue.error);
   const loading = riderProfile.isLoading || kyc.isLoading || profile.isLoading;
   const name = profile.data?.firstName ?? 'Rider';
 

@@ -23,6 +23,7 @@ import {
   notificationSmsFallback,
   type Notification,
 } from '@trustlink/shared';
+import { isOffline } from '@trustlink/shared';
 import { useNotifications, useReadNotificationIds, useMarkNotificationRead, useMarkAllNotificationsRead } from '../hooks';
 import { alertIconFor } from './support/helpContent';
 import type { RootStackParamList } from '../navigation/types';
@@ -38,6 +39,7 @@ export function AlertsScreen() {
   const markAll = useMarkAllNotificationsRead();
 
   const all = notifications.data ?? [];
+  const offline = isOffline(notifications.error);
   const readIds = new Set(reads.data ?? []);
   const unreadCount = all.filter((n) => !readIds.has(n.id)).length;
   const { today, earlier } = groupNotificationsByDay(all);
@@ -119,10 +121,11 @@ export function AlertsScreen() {
           title="In-app alerts"
           message="Push is off in R1 — status updates appear here, and important ones are also sent to your phone by SMS."
         />
+        {offline ? <Banner variant="offline" message="You're offline. Showing the alerts we last loaded." /> : null}
 
         {notifications.isLoading ? (
           <Column gap="sm"><Skeleton height={72} /><Skeleton height={72} /><Skeleton height={72} /></Column>
-        ) : notifications.isError ? (
+        ) : notifications.isError && !offline ? (
           <ErrorState message="Couldn't load notifications." onAction={() => notifications.refetch()} />
         ) : all.length === 0 ? (
           <EmptyState icon="🔔" title="No alerts yet" message="Status updates for your deliveries will appear here." />

@@ -34,6 +34,7 @@ import {
   REDELIVERY_NOTICE,
   type VehicleType,
 } from '@trustlink/shared';
+import { isOffline } from '@trustlink/shared';
 import { useDelivery, useCancelPreview } from '../../hooks';
 import { useLastUpdated } from '../../hooks/useLastUpdated';
 import type { RootStackParamList, TrackingStackParamList } from '../../navigation/types';
@@ -94,7 +95,7 @@ export function TrackingHomeScreen({ navigation, route }: Props) {
   }
 
   const headline = trackingHeadline(data.status);
-  const offline = (error as Error | null)?.name === 'OfflineError';
+  const offline = isOffline(error);
   const stale = secondsAgo > STALE_SECONDS;
   const delayed = isAssigningDelayed(data);
   const reassigned = wasReassigned(data);

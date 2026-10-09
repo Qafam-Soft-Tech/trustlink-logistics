@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme, Screen, TopBar, Text, Button, Card, Column, Row, Chip, Banner, Dialog, Skeleton, ErrorState, TextArea } from '@trustlink/shared';
+import { errorMessage } from '@trustlink/shared';
 import { useDeliveryJob, useReportFailure } from '../../hooks';
 import { ExecutionExitGuard } from './ExecutionExitGuard';
 import type { JobsStackParamList } from '../../navigation/types';
@@ -77,7 +78,7 @@ export function FailureScreen({ navigation, route }: Props) {
       { deliveryId: jobId, reason },
       {
         onSuccess: (result) => setOutcome(result.status === 'returned' ? 'returned' : 'failed'),
-        onError: (e: unknown) => setError((e as Error).message || 'Could not record the problem.'),
+        onError: (e: unknown) => setError(errorMessage(e, 'jobs')),
       },
     );
   };

@@ -7,3 +7,4 @@ export * from './newDelivery';
 export * from './tracking';
 export * from './receipt';
 export * from './support';
+export * from './errorCopy';

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme, Screen, Text, Button, Card, Column, Center, Banner, Row, OtpInput, OTP_EXPIRY_SECONDS, DEMO_OTP, isValidOtp } from '@trustlink/shared';
+import { errorMessage } from '@trustlink/shared';
 import { useVerifyOtp, useResendOtp } from '../../hooks/useAuth';
 import { useCountdown } from '../../hooks/useCountdown';
 import { useSession } from '../../session/SessionContext';
@@ -38,7 +39,7 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
         },
         onError: (e: unknown) => {
           setCode('');
-          setError((e as Error).message || 'That code is incorrect or expired.');
+          setError(errorMessage(e, 'auth'));
         },
       },
     );
@@ -53,7 +54,7 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
           setCode('');
           setResendKey((k) => k + 1);
         },
-        onError: (e: unknown) => setError((e as Error).message || 'Could not resend the code.'),
+        onError: (e: unknown) => setError(errorMessage(e, 'auth')),
       },
     );
   };

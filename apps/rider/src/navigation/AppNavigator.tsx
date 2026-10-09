@@ -21,6 +21,7 @@ import { EditVehicleScreen } from '../screens/account/EditVehicleScreen';
 import { KycOverviewScreen } from '../screens/kyc/KycOverviewScreen';
 import { KycFormScreen } from '../screens/kyc/KycFormScreen';
 import { DesignGalleryScreen } from '../screens/DesignGalleryScreen';
+import { RiderSessionExpiredSheet } from '../screens/auth/SessionExpiredSheet';
 import { useSession } from '../session/SessionContext';
 import type { AuthStackParamList, AlertsStackParamList, HomeStackParamList, JobsStackParamList, MainTabParamList, ProfileStackParamList, RootStackParamList } from './types';
 
@@ -131,13 +132,16 @@ export function AppNavigator() {
   }
 
   return (
-    <RootStack.Navigator screenOptions={{ headerShown: false }}>
-      {session ? (
-        <RootStack.Screen name="Main" component={MainTabs} />
-      ) : (
-        <RootStack.Screen name="Auth" component={AuthNavigator} />
-      )}
-      {__DEV__ ? <RootStack.Screen name="DesignGallery" component={DesignGalleryScreen} /> : null}
-    </RootStack.Navigator>
+    <>
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        {session ? (
+          <RootStack.Screen name="Main" component={MainTabs} />
+        ) : (
+          <RootStack.Screen name="Auth" component={AuthNavigator} />
+        )}
+        {__DEV__ ? <RootStack.Screen name="DesignGallery" component={DesignGalleryScreen} /> : null}
+      </RootStack.Navigator>
+      <RiderSessionExpiredSheet />
+    </>
   );
 }

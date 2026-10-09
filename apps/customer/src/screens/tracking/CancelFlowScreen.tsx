@@ -20,6 +20,7 @@ import {
   ErrorState,
   SuccessState,
   formatNaira,
+  errorMessage,
 } from '@trustlink/shared';
 import { useCancelPreview, useCancelDelivery } from '../../hooks';
 import type { RootStackParamList, TrackingStackParamList } from '../../navigation/types';
@@ -131,7 +132,7 @@ export function CancelFlowScreen({ navigation, route }: Props) {
           setError(undefined);
           cancel.mutate(deliveryId, {
             onSuccess: (r) => setResult({ fee: r.fee, refundAmount: r.refundAmount }),
-            onError: (e: unknown) => setError((e as Error).message),
+            onError: (e: unknown) => setError(errorMessage(e, 'deliveries')),
           });
         }}
       />

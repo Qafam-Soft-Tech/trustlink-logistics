@@ -22,6 +22,7 @@ import {
   ISSUE_TYPES,
   issueTypeLabel,
   type IssueType,
+  errorMessage,
 } from '@trustlink/shared';
 import { useDeliveries, useCreateIssue } from '../../hooks';
 import type { RootStackParamList } from '../../navigation/types';
@@ -51,7 +52,7 @@ export function ReportIssueScreen({ navigation }: Props) {
       { deliveryId: deliveryId as string, type, priority: 'medium', title: title.trim(), description: description.trim() },
       {
         onSuccess: (issue) => navigation.replace('IssueSubmitted', { issueId: issue.id }),
-        onError: (e: unknown) => setErrors({ submit: (e as Error).message }),
+        onError: (e: unknown) => setErrors({ submit: errorMessage(e, 'issues') }),
       },
     );
   };

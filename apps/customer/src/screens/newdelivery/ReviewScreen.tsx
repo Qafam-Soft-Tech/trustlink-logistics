@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme, Button, Banner, Card, Column, Row, Text, toCreateDeliveryInput } from '@trustlink/shared';
+import { isOffline } from '@trustlink/shared';
 import { useDeliveries } from '../../hooks';
 import type { NewDeliveryStackParamList } from '../../navigation/types';
 import { useNewDeliveryDraft } from './DraftContext';
@@ -24,7 +25,7 @@ export function ReviewScreen({ navigation }: Props) {
   const deliveries = useDeliveries();
   const [showOffline, setShowOffline] = useState(false);
 
-  const offline = (deliveries.error as Error | null)?.name === 'OfflineError';
+  const offline = isOffline(deliveries.error);
   const payload = toCreateDeliveryInput(draft);
 
   const onContinue = () => {

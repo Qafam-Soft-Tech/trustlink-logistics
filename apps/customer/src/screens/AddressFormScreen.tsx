@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme, Screen, TopBar, Text, Button, Card, Column, Banner, Dialog, isValidAddress } from '@trustlink/shared';
+import { errorMessage } from '@trustlink/shared';
 import type { Address, DraftAddress } from '@trustlink/shared';
 import { useAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress, useSetDefaultAddress } from '../hooks';
 import { AddressFields } from '../components/AddressFields';
@@ -41,9 +42,9 @@ export function AddressFormScreen({ navigation, route }: Props) {
       return;
     }
     if (id) {
-      update.mutate({ id, patch: payload }, { onSuccess: () => navigation.goBack(), onError: (e: unknown) => setError((e as Error).message) });
+      update.mutate({ id, patch: payload }, { onSuccess: () => navigation.goBack(), onError: (e: unknown) => setError(errorMessage(e, 'addresses')) });
     } else {
-      create.mutate(payload, { onSuccess: () => navigation.goBack(), onError: (e: unknown) => setError((e as Error).message) });
+      create.mutate(payload, { onSuccess: () => navigation.goBack(), onError: (e: unknown) => setError(errorMessage(e, 'addresses')) });
     }
   };
 
@@ -80,7 +81,7 @@ export function AddressFormScreen({ navigation, route }: Props) {
         onCancel={() => setConfirmDelete(false)}
         onConfirm={() => {
           setConfirmDelete(false);
-          if (id) remove.mutate(id, { onSuccess: () => navigation.goBack(), onError: (e: unknown) => setError((e as Error).message) });
+          if (id) remove.mutate(id, { onSuccess: () => navigation.goBack(), onError: (e: unknown) => setError(errorMessage(e, 'addresses')) });
         }}
       />
     </Screen>

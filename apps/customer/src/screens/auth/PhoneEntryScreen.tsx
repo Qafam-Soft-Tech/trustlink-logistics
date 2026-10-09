@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme, Screen, Text, Button, PhoneInput, Card, Column, Center, Row, Chip, Banner, toCanonicalPhone, isValidNigerianPhone, DEMO_OTP } from '@trustlink/shared';
+import { errorMessage } from '@trustlink/shared';
 import { useRequestOtp } from '../../hooks/useAuth';
 import { useData } from '../../data/DataContext';
 import type { AuthStackParamList, RootStackParamList } from '../../navigation/types';
@@ -31,7 +32,7 @@ export function PhoneEntryScreen({ navigation }: Props) {
       {
         onSuccess: () => navigation.navigate('OtpVerification', { phone: canonical, role: 'customer', purpose: mode }),
         onError: (e: unknown) =>
-          setError((e as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ?? (e as Error).message ?? 'Failed to send OTP. Please try again.'),
+          setError(errorMessage(e, 'auth')),
       },
     );
   };

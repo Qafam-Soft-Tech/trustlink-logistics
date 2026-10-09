@@ -3,6 +3,7 @@ import { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, Screen, Text, Button, Chip, Card, Column, Row, Center, Banner, PhoneInput, toCanonicalPhone, isValidNigerianPhone, DEMO_OTP } from '@trustlink/shared';
+import { errorMessage } from '@trustlink/shared';
 import { useRequestOtp } from '../../hooks/useAuth';
 import { useData } from '../../data/DataContext';
 import type { AuthStackParamList } from '../../navigation/types';
@@ -28,7 +29,7 @@ export function PhoneEntryScreen({ navigation }: Props) {
       { phone: canonical, purpose: mode },
       {
         onSuccess: () => navigation.navigate('OtpVerification', { phone: canonical, purpose: mode }),
-        onError: (e: unknown) => setError((e as Error).message || 'Failed to send the code. Please try again.'),
+        onError: (e: unknown) => setError(errorMessage(e, 'auth')),
       },
     );
   };

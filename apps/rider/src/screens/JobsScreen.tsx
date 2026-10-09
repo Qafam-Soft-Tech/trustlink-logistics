@@ -3,6 +3,7 @@ import { RefreshControl, ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, Screen, TopBar, Text, Card, Column, Row, Chip, Badge, Banner, Skeleton, EmptyState, ErrorState, StatusBadge, formatNaira, type Delivery } from '@trustlink/shared';
+import { isOffline } from '@trustlink/shared';
 import { useMyJobs } from '../hooks';
 import type { JobsStackParamList } from '../navigation/types';
 
@@ -18,7 +19,7 @@ export function JobsScreen({ navigation }: Props) {
   const [filter, setFilter] = useState<Filter>('queue');
 
   const all = jobs.data ?? [];
-  const offline = (jobs.error as Error | null)?.name === 'OfflineError';
+  const offline = isOffline(jobs.error);
 
   const grouped = {
     queue: all.filter((job) => job.status === 'assigned'),

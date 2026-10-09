@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme, Screen, TopBar, Text, Button, Card, Column, Row, Chip, Banner, Input, TextArea, SuccessState, ISSUE_TYPES, issueTypeLabel, type IssueType } from '@trustlink/shared';
+import { errorMessage } from '@trustlink/shared';
 import { useCreateRiderIssue } from '../../hooks';
 import type { JobsStackParamList } from '../../navigation/types';
 
@@ -44,7 +45,7 @@ export function RiderReportIssueScreen({ navigation, route }: Props) {
       { deliveryId, type, priority: 'medium', title: title.trim(), description: description.trim() },
       {
         onSuccess: () => setDone(true),
-        onError: (e: unknown) => setError((e as Error).message || 'Could not submit the report.'),
+        onError: (e: unknown) => setError(errorMessage(e, 'issues')),
       },
     );
   };
