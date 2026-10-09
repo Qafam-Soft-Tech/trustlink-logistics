@@ -1,6 +1,22 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import type { AdminState, Delivery, DeliveryEvent, DeliveryStatus, IssueStatus } from './types';
+import type { AdminState, Delivery, DeliveryEvent, DeliveryStatus, IssueStatus, RiderProfile } from './types';
 import { createInitialState } from './mock';
+
+/**
+ * Intended behaviour the backend does not implement (SC-43): a rider returns ONLINE when their job
+ * ends, unless they still have another active delivery. Mirrored from the shared mock.
+ */
+function releaseRider(state: AdminState, riderId?: string | null, exceptDeliveryId?: string): RiderProfile[] {
+  if (!riderId) return state.riders;
+  const stillBusy = state.deliveries.some(
+    (delivery) =>
+      delivery.riderId === riderId &&
+      delivery.id !== exceptDeliveryId &&
+      ['assigned', 'picked_up', 'in_transit'].includes(delivery.status),
+  );
+  if (stillBusy) return state.riders;
+  return state.riders.map((rider) => (rider.id === riderId && rider.status === 'on_trip' ? { ...rider, status: 'online' } : rider));
+}
 
 /** In-memory admin mock data + the actions the console can perform (SC-40: admin-local mock). */
 export interface AdminDataApi {
@@ -81,14 +97,20 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
 
   const scheduleRedelivery = useCallback(
     (deliveryId: string) => {
-      setState((prev) => ({
-        ...prev,
-        deliveries: prev.deliveries.map((d) =>
-          d.id === deliveryId && d.status === 'failed' && d.redeliveryAttempts < 2
-            ? { ...d, status: 'searching', riderId: null, updatedAt: nowIso(), events: pushEvent(d, 'searching', 'Redelivery scheduled by dispatch') }
-            : d,
-        ),
-      }));
+      setState((prev) => {
+        const target = prev.deliveries.find((d) => d.id === deliveryId);
+        if (!target || target.status !== 'failed' || target.redeliveryAttempts >= 2) return prev;
+        const previousRiderId = target.riderId;
+        return {
+          ...prev,
+          deliveries: prev.deliveries.map((d) =>
+            d.id === deliveryId
+              ? { ...d, status: 'searching', riderId: null, updatedAt: nowIso(), events: pushEvent(d, 'searching', 'Redelivery scheduled by dispatch') }
+              : d,
+          ),
+          riders: releaseRider(prev, previousRiderId, deliveryId),
+        };
+      });
     },
     [],
   );

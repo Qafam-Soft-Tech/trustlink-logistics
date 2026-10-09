@@ -5,8 +5,10 @@ import { RECIPIENT_CODE_FALLBACK } from './demoConstants';
 
 /**
  * The scripted investor demo, executed against the mock data layer.
- * This is the automated half of the Phase 17 script run: it proves the exact
- * customer → dispatch → rider sequence the presenter will perform by hand.
+ *
+ * NOTE: this runs in a **single process** against one mock store. It proves the business rules and
+ * the app-level call order — it does NOT prove cross-app data sharing. The three apps each hold
+ * their own independent in-memory mock and never share live data (see DEMO.md §8).
  */
 const CUSTOMER_PHONE = '08031234567';
 const RIDER_PHONE = '08050000001';
@@ -104,7 +106,8 @@ describe('scripted demo (automated half)', () => {
   });
 
   it('failure path: fail → admin schedules redelivery → delivered', async () => {
-    const ports = createMockAdapters({ latencyMs: 0 });
+    // emptyAccount: the rider has no other active seeded jobs, so the release rule (SC-43) applies.
+    const ports = createMockAdapters({ latencyMs: 0, scenario: 'emptyAccount' });
     await login(ports, CUSTOMER_PHONE);
     const delivery = await ports.delivery.create(requestBody());
     const payment = await ports.payment.initialize({ deliveryId: delivery.id, amountNaira: delivery.fare ?? 0, provider: 'flutterwave' });
@@ -126,9 +129,9 @@ describe('scripted demo (automated half)', () => {
     expect(redelivered.status).toBe('searching');
     expect(redelivered.riderId).toBeNull();
 
-    // Reassign to another online rider (the failed rider stays on_trip in the mock) and deliver.
-    await ports.dispatch.assign(delivery.id, 'rider-3');
-    await login(ports, '08050000003');
+    // The rider is freed when the job ends (the mock's intended behaviour — SC-43), so the SAME
+    // rider can be assigned again without any workaround.
+    await ports.dispatch.assign(delivery.id, RIDER_ID);
     await ports.dispatch.acknowledge(delivery.id);
     await ports.execution.pickup(delivery.id);
     await ports.execution.inTransit(delivery.id);
@@ -142,7 +145,7 @@ describe('scripted demo (automated half)', () => {
   });
 
   it('two failures return the package to the sender', async () => {
-    const ports = createMockAdapters({ latencyMs: 0 });
+    const ports = createMockAdapters({ latencyMs: 0, scenario: 'emptyAccount' });
     await login(ports, CUSTOMER_PHONE);
     const delivery = await ports.delivery.create(requestBody());
     // Payment first: the transition map only allows dispatch to assign a SEARCHING delivery (SC-42).
@@ -156,10 +159,74 @@ describe('scripted demo (automated half)', () => {
     expect((await ports.execution.reportFailure(delivery.id, 'wrong_address')).status).toBe('failed');
 
     await ports.execution.scheduleRedelivery(delivery.id);
-    await ports.dispatch.assign(delivery.id, 'rider-3');
-    await login(ports, '08050000003');
+    await ports.dispatch.assign(delivery.id, RIDER_ID);
     await ports.execution.pickup(delivery.id);
     await ports.execution.inTransit(delivery.id);
     expect((await ports.execution.reportFailure(delivery.id, 'refused')).status).toBe('returned');
+  });
+});
+
+/**
+ * SC-43 (mock-side fix): the backend never returns a rider from ON_TRIP to ONLINE when a job ends,
+ * which locks the rider out of setStatus/toggle and any future assignment. The mock implements the
+ * intended behaviour; these tests pin it.
+ */
+describe('rider release when a job ends', () => {
+  const RIDER_2_PHONE = '08050000002';
+
+  async function readyDelivery(ports: Ports) {
+    const delivery = await ports.delivery.create(requestBody());
+    const payment = await ports.payment.initialize({ deliveryId: delivery.id, amountNaira: delivery.fare ?? 0, provider: 'paystack' });
+    await ports.payment.verify(payment.reference);
+    await ports.dispatch.assign(delivery.id, RIDER_ID);
+    return delivery;
+  }
+
+  it('frees the rider when their delivery is completed (and they can be assigned again)', async () => {
+    // emptyAccount: no other seeded jobs, so the rider is free the moment this one ends.
+    const ports = createMockAdapters({ latencyMs: 0, scenario: 'emptyAccount' });
+    await login(ports, CUSTOMER_PHONE);
+    const delivery = await readyDelivery(ports);
+
+    await login(ports, RIDER_PHONE);
+    await ports.execution.pickup(delivery.id);
+    await ports.execution.inTransit(delivery.id);
+    await ports.execution.complete(delivery.id, {
+      photoUrl: 'file://pod.jpg',
+      recipientOtp: RECIPIENT_CODE_FALLBACK,
+      recipientName: 'Chinedu Obi',
+      recipientPhone: '08060000001',
+    });
+    expect((await ports.rider.getProfile()).status).toBe('online');
+
+    // …and dispatch can hand them the next job immediately.
+    await login(ports, CUSTOMER_PHONE);
+    const next = await readyDelivery(ports);
+    expect((await ports.delivery.get(next.id)).riderId).toBe(RIDER_ID);
+  });
+
+  it('frees the rider when a job fails', async () => {
+    const ports = createMockAdapters({ latencyMs: 0, scenario: 'emptyAccount' });
+    await login(ports, CUSTOMER_PHONE);
+    const delivery = await readyDelivery(ports);
+
+    await login(ports, RIDER_PHONE);
+    await ports.execution.pickup(delivery.id);
+    await ports.execution.inTransit(delivery.id);
+    await ports.execution.reportFailure(delivery.id, 'recipient_unavailable');
+    expect((await ports.rider.getProfile()).status).toBe('online');
+  });
+
+  it('keeps a rider on a trip while another of their jobs is still active', async () => {
+    // rider-2 has several active seeded jobs; ending one must not free them.
+    const ports = createMockAdapters({ latencyMs: 0 });
+    await login(ports, RIDER_2_PHONE);
+
+    const mine = await ports.delivery.list();
+    const failed = mine.find((d) => d.status === 'failed');
+    expect(failed).toBeTruthy();
+
+    await ports.execution.scheduleRedelivery(failed!.id);
+    expect((await ports.rider.getProfile()).status).toBe('on_trip');
   });
 });

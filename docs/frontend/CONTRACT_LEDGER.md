@@ -28,7 +28,7 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 
 | ID | Conflict / observation | UI behaviour chosen | Status |
 |---|---|---|---|
-| SC-16 | `InitializePaymentDto.amount` documented "in kobo", but fares are **naira decimals** (`DEFAULT_PRICING_CONFIG`); payment entity comment also says kobo | Frontend sends **amount in kobo** (`ndaFare × 100`) pending backend confirmation — do **not** hardcode until decided | **Needs decision** |
+| SC-16 | `InitializePaymentDto.amount` documented "in kobo", but fares are **naira decimals** (`DEFAULT_PRICING_CONFIG`); payment entity comment also says kobo | Frontend sends **amount in kobo** exactly once, at the api boundary (`Math.round(amountNaira * 100)`); UI and mock stay in naira | **Resolved — verified kobo** (backend DTO documents kobo; Paystack consumes kobo, Flutterwave divides by 100 in its service) |
 | SC-17 | `@Roles(...)` is enforced only where `RolesGuard` is present (only `UsersController`). All other controllers use `JwtAuthGuard` alone, so declared roles (admin/rider/customer) are **not enforced** at the guard | Frontend still restricts by declared role; treat backend enforcement as untrusted for now | **Needs decision** (security) |
 | SC-18 | Deep links in **Expo Go** need the runtime `exp://…` prefix from `expo-linking` (`Linking.createURL('/')`), which is **not** in the approved dependency list | `scheme: trustlink` + `trustlink://` prefix configured (dev builds work); Expo-Go `exp://` prefix deferred | **Resolved (Phase 5)** — `expo-linking` installed (customer); prefixes `[createURL('/'), 'trustlink://']`; see `DEMO.md` §4 |
 | SC-19 | Payment retry: backend §12 blocks a new `payments/initialize` while a payment is `SUCCESS` **or `PROCESSING`**; a declined/cancelled/timed-out attempt would therefore stay blocked | Mock + UI block only when a payment is **SUCCESS** (or the delivery has left REQUESTED); retry after decline/cancel/timeout is allowed | **Needs decision** (retry-after-processing) |
@@ -55,6 +55,7 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-40 | The admin app cannot import `@trustlink/shared` (separate npm project, no workspace; BASELINE.md blessed no Vite alias) | The admin keeps its own brand CSS and **copies** the minimal domain types + a compatible Abuja mock world (`apps/admin/src/data/`) | Resolved (documented duplication; revisit if a workspace/alias is approved) |
 | SC-41 | Admin auth: no `/auth/admin/login` route exists (SC-14) | The console signs in locally against a documented demo credential (`apps/admin/src/data/adminCredentials.ts`, `DEMO.md` §7) and runs on mock data | **Needs decision** (seed an admin user + endpoint, or accept the demo-only login) |
 | SC-42 | Dispatch assignment: the mock's `assignRider` admits a `REQUESTED` delivery, but the state machine only allows `requested → searching`, so the transition throws (`Cannot transition from requested to assigned`). The admin console's own mock *does* assign from REQUESTED | Follow the state machine: the demo pays first, then dispatches (pay → SEARCHING → assign). The console still lists requested deliveries as assignable | **Needs decision** (can dispatch assign an unpaid REQUESTED delivery? align backend + both mocks) |
+| SC-43 | **Backend bug (high priority):** nothing sets a rider from `ON_TRIP` back to `ONLINE` when their delivery becomes `DELIVERED`/`FAILED`/`RETURNED`, so `PUT /dispatch/status` and `/rider/profile/status` then reject the rider and no further job can be assigned | The shared mock **and** the admin's copy free the rider on job end (mock-only; the frontend cannot fix the backend) | **Needs decision** (backend fix required; documented in `HANDOFF.md` §1 and §3, flagged in `DEMO.md` §11) |
 
 ---
 
@@ -120,7 +121,7 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 1. **SC-2 / D14** — confirm cancellation fee tiers (50/75/full vs FR-C11 wording).
 2. **SC-5 / D4** — confirm UI shows 5-min OTP countdown while backend expires at 10 min.
 3. **SC-8 / SC-6** — source of `distanceKm` for fare without maps (fixture table acceptable for demo?). **Phase 7 implements SC-20 (client estimate)** — confirm acceptable.
-4. **SC-16** — payment `amount` units (kobo vs naira).
+4. ~~**SC-16**~~ — *Resolved (verified kobo)*: the adapter converts naira→kobo exactly once at the api boundary; the backend DTO documents kobo, Paystack consumes kobo, Flutterwave divides by 100 in its service.
 5. **SC-17** — backend role enforcement gap (`@Roles` decorative outside `UsersController`); accept as-is or require backend fix.
 6. **Admin login** — backend endpoint + seed credentials, or interim frontend mock (Phase 4).
 7. **SC-19** — retry after a declined/cancelled/timed-out payment (backend §12 would block on `PROCESSING`; UI allows retry).
@@ -138,6 +139,7 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 19. **SC-37** — the dispatch phone line is a placeholder (used by "Call dispatch").
 20. **SC-39** — the delivery-failure route accepts no note (the rider note is local only).
 21. **SC-41** — the admin console signs in locally (no `/auth/admin/login`); decide whether to seed a real admin.
+22. **SC-43** — *High priority:* the backend must free a rider (`ON_TRIP → ONLINE`) when their delivery ends; until then a rider is unusable after one job.
 
 ## E. Backend issues deferred (not blocking frontend, tracked here)
 - Signup DTO validation missing (interfaces, no class-validator).

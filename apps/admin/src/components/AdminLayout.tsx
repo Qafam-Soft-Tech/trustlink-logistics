@@ -2,6 +2,27 @@ import { useEffect, useRef, useState } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAdminData } from '../data/AdminDataContext';
+import { readAdminDataSource } from '../data/dataSource';
+
+/** Visible "this is sample data" indicator while the console runs on its mock world. */
+function DemoBanner() {
+  if (readAdminDataSource() !== 'mock') return null;
+  return (
+    <div
+      role="alert"
+      style={{
+        background: 'var(--color-gold)',
+        color: 'var(--color-navy)',
+        textAlign: 'center',
+        padding: '6px 12px',
+        fontWeight: 700,
+        fontSize: 'var(--font-size-xs)',
+      }}
+    >
+      Demo data · sample deliveries, riders, payments and pricing. Nothing is charged and no messages are sent.
+    </div>
+  );
+}
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
@@ -197,6 +218,7 @@ export function AdminLayout() {
     <div className="admin-layout">
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       <div className="admin-main">
+        <DemoBanner />
         <Header
           user={user}
           onReset={resetData}

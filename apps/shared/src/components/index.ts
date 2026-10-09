@@ -5,4 +5,5 @@ export * from './forms';
 export * from './list';
 export * from './domain';
 export * from './StepIndicator';
+export * from './DemoModeBanner';
 export * from './DesignGallery';

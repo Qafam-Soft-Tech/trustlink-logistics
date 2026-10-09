@@ -265,6 +265,25 @@ export class MockStore {
     return d;
   }
 
+  /**
+   * Intended behaviour the real backend does NOT implement (SC-43 / ledger): when a job ends
+   * (delivered / failed / returned / cancelled) the rider goes back ONLINE, unless they still
+   * have another active delivery. Without this a rider stays ON_TRIP forever and can never be
+   * assigned again — which also made the demo script need a second rider.
+   */
+  private releaseRiderById(riderId?: string | null, exceptDeliveryId?: string): void {
+    if (!riderId) return;
+    const stillBusy = this.state.deliveries.some(
+      (other) =>
+        other.riderId === riderId &&
+        other.id !== exceptDeliveryId &&
+        ['assigned', 'picked_up', 'in_transit'].includes(other.status),
+    );
+    if (stillBusy) return;
+    const fixture = this.state.riders.find((r) => r.user.id === riderId);
+    if (fixture && fixture.profile.status === 'on_trip') fixture.profile.status = 'online';
+  }
+
   track(trackingNumber: string): Delivery {
     this.getSession(); // requires a session, as the real API does
     const d = this.state.deliveries.find((x) => x.trackingNumber === trackingNumber);
@@ -293,6 +312,7 @@ export class MockStore {
     d.cancelledAt = nowIso();
     this.pushEvent(d, 'cancelled', s.user.id, 'customer', 'Cancelled by customer');
     this.notify(d, 'Delivery Cancelled', 'Your delivery has been cancelled.', 'sms');
+    this.releaseRiderById(d.riderId, d.id);
     return { cancelled: true, fee: preview.fee, refundAmount: preview.refundAmount };
   }
 
@@ -675,7 +695,9 @@ export class MockStore {
       notes: proof.notes ?? null,
       createdAt: nowIso(),
     };
-    return this.transition(d, 'delivered', s.user.id, 'rider', 'Delivered with proof');
+    const delivered = this.transition(d, 'delivered', s.user.id, 'rider', 'Delivered with proof');
+    this.releaseRiderById(d.riderId, d.id);
+    return delivered;
   }
   reportFailure(deliveryId: string, reason: string): Delivery {
     const s = this.getSession();
@@ -690,16 +712,19 @@ export class MockStore {
     d.status = next;
     this.pushEvent(d, next, s.user.id, 'rider', `Failed: ${reason}`);
     this.notify(d, next === 'returned' ? 'Returned to Sender' : 'Delivery Issue', `Delivery ${next}.`, 'sms');
+    this.releaseRiderById(d.riderId, d.id);
     return d;
   }
   scheduleRedelivery(deliveryId: string): Delivery {
     const d = this.getDelivery(deliveryId);
     if (d.status !== 'failed') throw new ConflictError('Can only schedule redelivery for FAILED deliveries');
     if (d.redeliveryAttempts >= 2) throw new ConflictError('Maximum redelivery attempts reached');
+    const previousRiderId = d.riderId;
     d.status = 'searching';
     d.riderId = null;
     d.rider = null;
     this.pushEvent(d, 'searching', null, 'admin', 'Redelivery scheduled');
+    this.releaseRiderById(previousRiderId);
     return d;
   }
 

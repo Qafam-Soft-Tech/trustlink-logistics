@@ -6,11 +6,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
-import { ThemeProvider, useTheme } from '@trustlink/shared';
+import { ThemeProvider, useTheme, DemoModeBanner } from '@trustlink/shared';
 
 import { AppNavigator, linking } from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
-import { DataProvider } from './src/data/DataContext';
+import { DataProvider, useData } from './src/data/DataContext';
 import { SessionProvider } from './src/session/SessionContext';
 import { DemoMenuProvider } from './src/demo/DemoMenuContext';
 
@@ -18,6 +18,7 @@ const queryClient = new QueryClient();
 
 function Root() {
   const { theme, resolvedMode } = useTheme();
+  const { source } = useData();
   const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_700Bold });
 
   const navigationTheme = useMemo(() => {
@@ -43,6 +44,7 @@ function Root() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <NavigationContainer ref={navigationRef} theme={navigationTheme} linking={linking as never}>
+          <DemoModeBanner source={source} />
           <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
           <AppNavigator />
         </NavigationContainer>

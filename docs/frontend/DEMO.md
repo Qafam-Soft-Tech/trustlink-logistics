@@ -91,28 +91,57 @@ The backend has no `/auth/admin/login` route (SC-14), so the console authenticat
 
 Try: **Dispatch** → assign a rider to an unassigned delivery, reassign an active one, or **Schedule redelivery** on a failed job; **Riders** → open the KYC queue, view documents, approve or reject with a reason; **Users** → suspend/activate; **Issues** → assign and change status; **Pricing** → edit values and watch the fare preview; **Reports** → toggle per day/week.
 
-## 8. The scripted demo (12–15 minutes)
+## 8. The demo script
 
-Run it in this order; the automated half of the same script runs in `apps/shared` (`npm test` → `demoScript.test.ts`).
+> **The three apps do not share live data.** Each app runs its **own in-memory mock**, so a delivery created in the customer app does **not** appear in the admin console or the rider app. The script is therefore **three independent chapters**, each starting from the seeded data of its own app. The seed tracking numbers line up (`TLK-2026-003/005/008/011`) so the story still reads as one platform. For a single-process, joined-up run of the same rules, use `cd apps/shared && npm test` (`demoScript.test.ts`) — that test is single-process and does **not** prove cross-app sync either.
 
-| # | Where | Do | Should see |
-|---|---|---|---|
-| 1 | Customer | Sign in `08031234567` / `482913` | Splash → Home greeting “Amina” |
-| 2 | Customer | **Send a package** → pick **Home** → **Office** (recipient “Chinedu Obi”, `08060000001`) → **Parcel ≤5 kg** → sender prefilled → Review | Fare screen with the breakdown (base ₦500, distance, weight, minimum ₦1,000) |
-| 3 | Customer | **Accept fare** → **Pay** → **Card** → **Pay** | Processing (back blocked) → **Request confirmed** with a tracking number |
-| 4 | Customer | **Track this delivery** (or Deliveries → the new tracking number) | “Assigning your rider” + a live timeline |
-| 5 | Admin | **Dispatch** → the new delivery under **Unassigned** → **Assign** the nearest approved rider | The job moves to *Active jobs*; the rider turns `on_trip` |
-| 6 | Rider | Sign in `08050000001` / `482913` → **Jobs → Queue** → the job → **Accept job** → confirm | Execution stepper; the status becomes *Assigned* |
-| 7 | Rider | **Navigate with maps** (opens the device maps app) → **Confirm pickup** → **Start trip (in transit)** → **Arrived at drop-off** | Steps advance; the customer’s timeline follows in real time |
-| 8 | Rider | **Complete delivery** → photo → type `000000` → then the real code from the customer Demo menu | `000000` is rejected (“Recipient code does not match”); the real code delivers |
-| 9 | Customer | Deliveries → the delivery | **Delivered** with the POD card, receipt (share / email / PDF) |
-| 10 | Rider | **Jobs** → a job in **Active** → **Report a problem** → *Recipient unavailable* | “Delivery unsuccessful” + the redelivery notice |
-| 11 | Admin | **Dispatch** → **Failed** → **Schedule redelivery** | Back in *Unassigned* at “1 of 2” |
-| 12 | Admin | Assign a rider again → rider delivers it | **Delivered**; the customer sees the POD |
-| 13 | Admin | **Riders** → KYC queue → **Review documents** → **Approve** one (and **Reject** another with a reason) | Badges update; the approved rider becomes assignable |
-| 14 | Admin | **Reports** → toggle **Per day / Per week** | Completion + cancellation rate and revenue (mock) |
+### Chapter A — Customer (≈5 min)
 
-**Optional beats:** wrong OTP at step 8; second failure → **Returned to sender**; Demo menu → **emptyAccount** for the empty states; **offline** for the offline banners.
+Seeded start: Home has an active *Searching* delivery; Deliveries has one of every status.
+
+| # | Do | Should see |
+|---|---|---|
+| 1 | `cd apps/customer && npx expo start -c`, Expo Go, sign in `08031234567` / `482913` | Splash → Home greeting “Amina” + the yellow **Demo data** strip |
+| 2 | **Send a package** → **Home** (Wuse 2) → **Office** (CBD), recipient “Chinedu Obi” `08060000001` → **Parcel ≤5 kg** → sender prefilled → Review | Fare breakdown (base ₦500, distance, weight, minimum ₦1,000) + ETA |
+| 3 | **Accept fare** → **Pay** → **Card** → **Pay** | Processing (Back blocked) → **Request confirmed** with a `TLK-…` number → **Track this delivery** |
+| 4 | Watch the tracking screen | “Assigning your rider”, timeline, recipient-code card, route + ETA |
+| 5 | Demo menu (long-press the version text) → **Advance** repeatedly | Rider assigned → picked up → in transit → delivered; headline, badge and timeline change each time |
+| 6 | Deliveries → the delivery | **Delivered** screen: POD card, receipt (**Share**, **Email receipt**, **Get PDF receipt**), **Send again** |
+| 7 | Optional | **Cancel delivery** on a *Searching* delivery (fee ₦0, full refund); Demo menu → **offline** to show the offline banner |
+
+### Chapter B — Rider (≈4 min)
+
+Seeded start for the approved rider `08050000001`: **`TLK-2026-005` is *assigned*** and **`TLK-2026-008` is *picked up*** (plus delivered history).
+
+| # | Do | Should see |
+|---|---|---|
+| 1 | `cd apps/rider && npx expo start -c`, sign in `08050000001` / `482913` | Home: online toggle, queue count, the yellow **Demo data** strip |
+| 2 | **Jobs → Active** → `TLK-2026-008` → **Continue delivery** → **Start trip** → **Arrived** → **Report a problem** → *Recipient unavailable* | “Delivery unsuccessful” with the redelivery notice (attempt 1 of 2) |
+| 3 | **Jobs → Queue** → `TLK-2026-005` → **Accept job** → confirm → **Navigate with maps** → **Confirm pickup** → **Start trip** → **Arrived** | Stepper advances; the maps link opens the device maps app |
+| 4 | **Complete delivery** → photo → type `000000` → then `482913` | `000000` is rejected (“Recipient code does not match”); `482913` delivers; the rider returns to **Online** |
+| 5 | Optional (KYC chapter) | Sign out → `08050000005` = pending (intro flow) · `08050000007` = rejected (reason + resubmit) |
+
+### Chapter C — Admin (≈4 min)
+
+Seeded start in the console's own world: **`TLK-2026-003` is *searching* (unassigned)** and **`TLK-2026-011` is *failed***.
+
+| # | Do | Should see |
+|---|---|---|
+| 1 | `cd apps/admin && npm run dev` → `http://localhost:5173` → sign in `admin@trustlink.ng` / `trustlink-demo` | Dashboard KPIs + the yellow **Demo data** strip |
+| 2 | **Dispatch** → `TLK-2026-003` → **Assign** the nearest eligible rider | Moves to *Active jobs*; the rider turns `on_trip`; the “Awaiting dispatch” KPI drops |
+| 3 | **Dispatch → Failed** → `TLK-2026-011` → **Schedule redelivery** | Back in *Unassigned* at “1 of 2” |
+| 4 | **Deliveries** → filter/search → open a delivered row | Timeline, payment panel, POD; reassign from the detail page |
+| 5 | **Riders** → KYC queue → **Review documents** → **Approve** one, **Reject** another with a reason | Badges update; the approved rider becomes assignable |
+| 6 | **Users** (suspend/activate) · **Issues** (assign, resolve) · **Pricing** (edit → fare preview → save) · **Reports** (per day / per week) | Each action changes visible state and shows a confirmation |
+| 7 | Avatar menu → **Reset demo data** | The seeded world returns |
+
+### 5-minute cut-down (one screen per app)
+
+- **Customer:** sign in → Home → **Send a package** (Home → Office, Parcel ≤5 kg) → Review → **Accept fare** → **Pay** → Request confirmed → **Track**.
+- **Admin:** sign in → **Dispatch** → assign the unassigned job → **Riders** → approve the pending rider → **Reports**.
+- **Rider:** sign in `08050000001` → **Jobs → Queue** → **Accept job** → **Confirm pickup** → **Start trip** → **Arrived** → **Complete delivery** with `482913`.
+
+**Optional beats:** wrong POD code (Chapter B step 4); a second failure → **Returned to sender**; customer Demo menu → **emptyAccount** for the empty states and **offline** for the offline banners.
 
 ## 9. What is real vs mocked
 
@@ -129,11 +158,14 @@ See `docs/frontend/HANDOFF.md` §2 for the full table. In one line: the **flows,
 
 ## 11. Known limits (say these out loud if asked)
 
+- **The apps do not share live data.** Each app has its own in-memory mock; the three chapters in §8 are independent (the tracking numbers are chosen to match so the story reads as one platform).
+- **A demo build says so**: a gold **Demo data** strip is visible on every screen while the source is mock, and a production build refuses to start without an explicit `EXPO_PUBLIC_DATA_SOURCE` / `VITE_DATA_SOURCE` (no silent default).
 - No real payment, SMS or push: payments are simulated, OTPs are `482913`, and alerts are in-app only.
 - Recipient codes are fixture values (the backend never issues them — SC-38).
 - No maps/GPS: “Navigate” opens the device maps app with the address text.
 - KYC documents are local file paths; no verification provider is wired (SC-35).
 - Refunds are copy only — there is no refund action (SC-27).
+- Riders are freed when a job ends **in the mock only** — the real backend never moves a rider from `on_trip` back to `online` (SC-43, high priority).
 - The console is a mock control tower; nothing persists across a page reload.
 - Legal text is a draft pending counsel (SC-34); support contact details are placeholders (SC-31).
 

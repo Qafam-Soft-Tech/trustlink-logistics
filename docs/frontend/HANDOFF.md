@@ -9,9 +9,9 @@ below is what the backend / platform team needs to close before a real pilot.
 
 | ID | Decision needed | Frontend behaviour today | Impact if unresolved |
 |---|---|---|---|
+| **SC-43** | **Backend must free the rider** (`ON_TRIP → ONLINE`) when their delivery becomes delivered/failed/returned | The mock does this; the backend does not, so `setStatus`/`toggleStatus` reject the rider and no further job can be assigned | **High priority** — riders get stuck after their first job (see §3 item 11) |
 | **SC-41** | Seed a real admin user + `POST /auth/admin/login` | Console signs in against a local demo credential | Admin cannot be used outside demo mode |
 | **SC-17** | Enforce `@Roles` outside `UsersController` | UI restricts by role; backend trusts any valid JWT | Any authenticated user could call admin/rider routes |
-| **SC-16** | Payment `amount` units (kobo vs naira) | Adapter sends **kobo** (`naira × 100`) | Wrong charge amount if the backend expects naira |
 | **SC-19** | Retry after a declined/cancelled/timed-out payment | UI allows a retry; backend §12 blocks while a payment is `PROCESSING` | A user who abandons checkout may be unable to pay again |
 | **SC-2** | Cancellation fee tiers (FR-C11 text vs the 50/75/full table) | UI follows the fee table via the preview endpoint | Customer-facing fee wording may differ from policy |
 | **SC-5** | OTP validity 5 min (UI) vs 10 min (code/SMS) | UI shows a 5-minute countdown | Users may be told a code expired while it still works |
@@ -52,6 +52,7 @@ below is what the backend / platform team needs to close before a real pilot.
 8. Distance/geocoding source for `/pricing/calculate` — SC-8/SC-20.
 9. `DELETE /users/me` or an erasure request flow — SC-33.
 10. Revisit the `PROCESSING` payment block so a retry is possible — SC-19.
+11. **Free the rider on job end** (`ON_TRIP → ONLINE` on delivered/failed/returned) — **SC-43, highest priority**: without it a rider is unusable after their first completed job. The mock and the admin's copy already do this so the demo works; the backend must match.
 
 ## 4. Demo-day prerequisites
 
@@ -63,7 +64,22 @@ below is what the backend / platform team needs to close before a real pilot.
 ## 5. Suggested next steps after the demo
 
 1. Close the SC-41/SC-17 pair (admin auth + role enforcement) — nothing else can go live without it.
-2. Decide SC-16 and SC-19 (money units and payment retry) with the payment provider's constraints in hand.
+2. Decide SC-19 (payment retry) with the payment provider's constraints in hand — money units are closed (SC-16, verified kobo).
 3. Add the KYC upload endpoint (SC-35) and a real verification provider.
 4. Move history and notifications to server-side pagination/read-state (SC-26, SC-30).
 5. Legal sign-off (SC-34) and the real support lines (SC-31) before any public build.
+
+## 6. Frontend dependencies (installed — nothing new is needed)
+
+| App | Dependencies |
+|---|---|
+| `apps/shared` | none at runtime (pure TS + Reanimated/gesture-handler/safe-area-context as peers of the apps); `vitest` as a devDependency |
+| `apps/customer` | `@tanstack/react-query`, `expo-linking`, `@react-native-async-storage/async-storage`, `expo-secure-store`, `@expo-google-fonts/inter`, `expo-print`, `expo-sharing`, plus the Expo/RN runtime |
+| `apps/rider` | `@tanstack/react-query`, `@react-native-async-storage/async-storage`, `expo-secure-store`, `@expo-google-fonts/inter`, `expo-image-picker` (KYC capture), plus the Expo/RN runtime |
+| `apps/admin` | `react`, `react-dom`, `react-router-dom`, `@tanstack/react-query` (installed), `axios`, Vite + oxlint as devDependencies |
+
+Notes: `expo-print` + `expo-sharing` were approved for PDF receipts (SC-28); `expo-image-picker` is the rider's KYC capture tool. Deliberately **not** used: any map/GPS, push, chart or state library, `zod`, `react-native-svg`.
+
+## 7. Data-source rule (no silent default)
+
+Both mobile apps read `EXPO_PUBLIC_DATA_SOURCE` and the console reads `VITE_DATA_SOURCE`. In **non-development builds the value is required** (`"mock"` or `"api"`); a missing value throws at startup instead of silently defaulting to mock. While the source is `mock`, a gold **Demo data** strip is visible on every screen in all three apps (`DemoModeBanner` for mobile, the console's `DemoBanner`).
