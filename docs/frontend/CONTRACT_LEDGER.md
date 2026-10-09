@@ -45,6 +45,8 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-30 | `Notification` has no read/unread field and there is no read endpoint | Unread is tracked **locally** (`storage/notificationReads.ts`, AsyncStorage); "mark all read" is device-local | **Needs decision** (add `read`/`readAt` + a mark-read endpoint server-side) |
 | SC-31 | Contact-support phone/WhatsApp/email are not provided anywhere | Help screen ships clearly-marked **Placeholder** channels (`screens/support/helpContent.ts`) to be replaced before launch | **Needs decision** (real support lines) |
 | SC-32 | `CreateIssueDto` requires `priority`, but the report form only asks type + description | Reports are filed with priority `medium`; support triages | Resolved (documented) |
+| SC-33 | No account-deletion route (`DELETE /users/me` etc.) | **DEFERRED** as instructed: the Account screen offers a "Delete account" action that explains the gap and routes to support (no fake deletion) | **Needs decision** (add a deletion/erase endpoint; NDPA erasure request) |
+| SC-34 | Terms/Privacy had no real text (external placeholder URLs) | In-app Terms and Privacy screens with real prose (NDPA context), each marked **"Draft for legal review"**; the auth consent line now opens them in-app | Resolved (draft text; legal sign-off pending) |
 
 ---
 
@@ -122,6 +124,8 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 13. **SC-28** — *Resolved*: `expo-print` + `expo-sharing` approved and installed for PDF receipts.
 14. **SC-30** — notifications have no read state server-side (unread is device-local today).
 15. **SC-31** — real support phone/WhatsApp/email lines still needed (placeholders ship).
+16. **SC-33** — account deletion has no endpoint (UI explains and routes to support; deferred).
+17. **SC-34** — Terms/Privacy are real drafts pending legal sign-off.
 
 ## E. Backend issues deferred (not blocking frontend, tracked here)
 - Signup DTO validation missing (interfaces, no class-validator).

@@ -38,6 +38,11 @@ import { IssueSubmittedScreen } from '../screens/support/IssueSubmittedScreen';
 import { MyIssuesScreen } from '../screens/support/MyIssuesScreen';
 import { IssueDetailScreen } from '../screens/support/IssueDetailScreen';
 import { HelpScreen } from '../screens/support/HelpScreen';
+import { EditProfileScreen } from '../screens/account/EditProfileScreen';
+import { AppearanceScreen } from '../screens/account/AppearanceScreen';
+import { TermsScreen } from '../screens/account/TermsScreen';
+import { PrivacyScreen } from '../screens/account/PrivacyScreen';
+import { AboutScreen } from '../screens/account/AboutScreen';
 import { DesignGalleryScreen } from '../screens/DesignGalleryScreen';
 import { SplashScreen } from '../screens/splash/SplashScreen';
 import { SessionExpiredSheet } from '../screens/auth/SessionExpiredSheet';
@@ -172,6 +177,11 @@ function RootNavigator() {
         <RootStack.Screen name="MyIssues" component={MyIssuesScreen} />
         <RootStack.Screen name="IssueDetail" component={IssueDetailScreen} />
         <RootStack.Screen name="Help" component={HelpScreen} />
+        <RootStack.Screen name="EditProfile" component={EditProfileScreen} />
+        <RootStack.Screen name="Appearance" component={AppearanceScreen} />
+        <RootStack.Screen name="Terms" component={TermsScreen} />
+        <RootStack.Screen name="Privacy" component={PrivacyScreen} />
+        <RootStack.Screen name="About" component={AboutScreen} />
         {__DEV__ ? <RootStack.Screen name="DesignGallery" component={DesignGalleryScreen} /> : null}
       </RootStack.Navigator>
       <SessionExpiredSheet />

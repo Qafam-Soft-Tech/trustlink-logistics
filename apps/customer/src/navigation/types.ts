@@ -62,5 +62,10 @@ export type RootStackParamList = {
   MyIssues: undefined;
   IssueDetail: { issueId: string };
   Help: undefined;
+  EditProfile: undefined;
+  Appearance: undefined;
+  Terms: undefined;
+  Privacy: undefined;
+  About: undefined;
   DesignGallery: undefined;
 };

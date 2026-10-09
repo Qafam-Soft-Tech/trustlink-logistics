@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { Linking, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme, Screen, Text, Button, PhoneInput, Card, Column, Center, Row, Chip, Banner, toCanonicalPhone, isValidNigerianPhone, DEMO_OTP } from '@trustlink/shared';
 import { useRequestOtp } from '../../hooks/useAuth';
 import { useData } from '../../data/DataContext';
-import type { AuthStackParamList } from '../../navigation/types';
+import type { AuthStackParamList, RootStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'PhoneEntry'>;
 
 export function PhoneEntryScreen({ navigation }: Props) {
   const { theme } = useTheme();
+  const rootNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const data = useData();
   const requestOtp = useRequestOtp();
   const [phone, setPhone] = useState('');
@@ -68,9 +71,9 @@ export function PhoneEntryScreen({ navigation }: Props) {
 
         <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted, textAlign: 'center' }}>
           By continuing you agree to our{' '}
-          <Text variant="caption" color="inherit" onPress={() => Linking.openURL('https://trustlink.ng/terms')} style={{ color: theme.roles.primaryAction, textDecorationLine: 'underline' }}>Terms of Service</Text>
+          <Text variant="caption" color="inherit" onPress={() => rootNav.navigate('Terms')} style={{ color: theme.roles.primaryAction, textDecorationLine: 'underline' }}>Terms of Service</Text>
           {' '}and{' '}
-          <Text variant="caption" color="inherit" onPress={() => Linking.openURL('https://trustlink.ng/privacy')} style={{ color: theme.roles.primaryAction, textDecorationLine: 'underline' }}>Privacy Policy</Text>.
+          <Text variant="caption" color="inherit" onPress={() => rootNav.navigate('Privacy')} style={{ color: theme.roles.primaryAction, textDecorationLine: 'underline' }}>Privacy Policy</Text>.
         </Text>
 
         {error ? <Banner variant="error" message={error} /> : null}
