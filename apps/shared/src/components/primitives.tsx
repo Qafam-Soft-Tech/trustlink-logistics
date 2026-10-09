@@ -1,4 +1,6 @@
 import React from 'react';
+import Animated from 'react-native-reanimated';
+import { usePressScale } from '../motion';
 import { View, Text as RNText, StyleSheet, TouchableOpacity, TextInput, Image, ActivityIndicator, ViewProps, TextProps, TouchableOpacityProps, TextInputProps, ImageProps } from 'react-native';
 import { colors } from '../theme';
 import { useTheme } from '../theme/ThemeProvider';
@@ -21,7 +23,7 @@ export type ThemedTextProps = TextProps & {
 };
 
 export const Text = React.forwardRef<RNText, ThemedTextProps>(
-  ({ children, style, variant = 'body', color = 'textPrimary', ...props }, ref) => {
+  ({ children, style, variant = 'body', color = 'textPrimary', maxFontSizeMultiplier = 1.3, ...props }, ref) => {
     const { theme } = useTheme();
     const { fontSize, fontWeight, lineHeight, fontFamily } = theme.typography;
     const variants = {
@@ -37,7 +39,7 @@ export const Text = React.forwardRef<RNText, ThemedTextProps>(
     } as const;
     const resolved = color === 'inherit' ? undefined : theme.colors[color as ColorKey];
     return (
-      <RNText ref={ref} style={[variants[variant] as any, resolved ? { color: resolved } : null, style]} {...props}>
+      <RNText ref={ref} maxFontSizeMultiplier={maxFontSizeMultiplier} style={[variants[variant] as any, resolved ? { color: resolved } : null, style]} {...props}>
         {children}
       </RNText>
     );
@@ -75,10 +77,17 @@ export const Button = React.forwardRef<View, TouchableOpacityProps & {
     const v = variants[variant];
     const s = sizes[size];
     const isDisabled = disabled || loading;
+    const press = usePressScale();
 
     return (
+      <Animated.View style={press.animatedStyle}>
       <TouchableOpacity
         ref={ref}
+        accessibilityRole="button"
+        accessibilityLabel={typeof children === 'string' ? children : props.accessibilityLabel}
+        accessibilityState={{ disabled: isDisabled, busy: loading }}
+        onPressIn={press.onPressIn}
+        onPressOut={press.onPressOut}
         style={[
           styles.button,
           {
@@ -109,6 +118,7 @@ export const Button = React.forwardRef<View, TouchableOpacityProps & {
           </>
         )}
       </TouchableOpacity>
+      </Animated.View>
     );
   },
 );
@@ -138,6 +148,9 @@ export const Input = React.forwardRef<TextInput, TextInputProps & {
           {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
           <TextInput
             ref={ref}
+            accessibilityLabel={label ?? props.accessibilityLabel}
+            accessibilityState={{ disabled: props.editable === false }}
+            maxFontSizeMultiplier={1.3}
             style={[
               styles.input,
               { color: roles.text, backgroundColor: roles.surface, borderColor, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: HIT_TARGET },
@@ -277,6 +290,9 @@ export const Chip = React.forwardRef<View, TouchableOpacityProps & {
         ref={ref}
         onPress={onPress}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ selected }}
         style={[
           styles.chip,
           {

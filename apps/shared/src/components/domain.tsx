@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useSuccessPop } from '../motion';
 import type { DeliveryEvent, DeliveryStatus, FareBreakdown as FareBreakdownType, PaymentProvider, ProofOfDelivery } from '../domain/types';
 import { deliveryStatusLabel } from '../domain/tracking';
 import { formatNaira, formatDate, formatDateTime } from '../formatters';
@@ -19,13 +21,41 @@ export function StatusBadge({ status }: { status: DeliveryStatus }) {
   const { theme } = useTheme();
   const fill = theme.roles.status[status];
   const text = theme.roles.statusText[status];
+  const scale = useSuccessPop();
   return (
-    <View style={[styles.statusBadge, { backgroundColor: fill + '22' }]}>
+    <Animated.View
+      style={[styles.statusBadge, { backgroundColor: fill + '22' }, scale]}
+      accessibilityRole="text"
+      accessibilityLabel={`Status: ${statusLabel(status)}`}
+    >
       <View style={[styles.dot, { backgroundColor: fill }]} />
       <Text variant="caption" color="inherit" style={{ color: text, fontWeight: '600' }}>
         {statusLabel(status)}
       </Text>
-    </View>
+    </Animated.View>
+  );
+}
+
+/**
+ * Naira amount with a screen-reader-friendly label.
+ * `useSystemFont` falls back to the device font if a build's Inter cut is missing the ₦ glyph.
+ */
+export function AmountText({ amount, variant = 'body', useSystemFont = false, style }: {
+  amount: number;
+  variant?: 'h1' | 'h2' | 'h3' | 'h4' | 'body' | 'bodySmall' | 'caption';
+  useSystemFont?: boolean;
+  style?: any;
+}) {
+  const { theme } = useTheme();
+  return (
+    <Text
+      variant={variant}
+      color="inherit"
+      accessibilityLabel={`${Math.round(amount).toLocaleString('en-NG')} naira`}
+      style={[{ color: theme.roles.text }, useSystemFont ? { fontFamily: undefined } : null, style]}
+    >
+      {formatNaira(amount)}
+    </Text>
   );
 }
 

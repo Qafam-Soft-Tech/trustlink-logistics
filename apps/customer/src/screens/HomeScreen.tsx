@@ -32,6 +32,7 @@ export function HomeScreen() {
     <Screen>
       <TopBar
         title="Home"
+        rightActionLabel="View alerts"
         rightAction={<Ionicons name="notifications-outline" size={24} color={theme.roles.primaryAction} />}
         onRightPress={() => rootNav.navigate('Main', { screen: 'Alerts' })}
       />

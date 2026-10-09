@@ -119,6 +119,7 @@ export function TrackingHomeScreen({ navigation, route }: Props) {
         title="Tracking"
         showBack
         onBack={() => navigation.goBack()}
+        rightActionLabel="Share tracking number"
         rightAction={<Ionicons name="share-social-outline" size={22} color={theme.roles.primaryAction} />}
         onRightPress={share}
       />

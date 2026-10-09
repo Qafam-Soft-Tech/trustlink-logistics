@@ -1,5 +1,6 @@
 export * from './theme';
 export * from './theme/ThemeProvider';
+export * from './motion';
 export * from './components';
 export * from './domain';
 export * from './data';

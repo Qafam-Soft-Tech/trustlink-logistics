@@ -49,10 +49,12 @@ export const Header = React.forwardRef<View, ViewProps & {
   leftAction?: React.ReactNode;
   rightAction?: React.ReactNode;
   onRightPress?: () => void;
+  /** screen-reader label for the right action icon (icons carry no text) */
+  rightActionLabel?: string;
   showBack?: boolean;
   onBack?: () => void;
 }>(
-  ({ title, leftAction, rightAction, onRightPress, showBack = false, onBack, style, ...props }, ref) => {
+  ({ title, leftAction, rightAction, onRightPress, rightActionLabel = 'More options', showBack = false, onBack, style, ...props }, ref) => {
     const { theme } = useTheme();
     const { roles, spacing } = theme;
     return (
@@ -71,7 +73,7 @@ export const Header = React.forwardRef<View, ViewProps & {
               )}
             </TouchableOpacity>
           )}
-          <TextComponent variant="h3" color="inherit" style={[styles.headerTitle, { color: roles.text }]} numberOfLines={1}>
+          <TextComponent variant="h3" color="inherit" accessibilityRole="header" style={[styles.headerTitle, { color: roles.text }]} numberOfLines={1}>
             {title}
           </TextComponent>
           <TouchableOpacity
@@ -80,6 +82,8 @@ export const Header = React.forwardRef<View, ViewProps & {
             disabled={!onRightPress}
             activeOpacity={0.7}
             accessibilityRole="button"
+            accessibilityLabel={rightActionLabel}
+            accessibilityState={{ disabled: !onRightPress }}
           >
             {rightAction}
           </TouchableOpacity>
