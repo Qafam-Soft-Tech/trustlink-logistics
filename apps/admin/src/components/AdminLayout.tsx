@@ -1,15 +1,33 @@
-import { useState } from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
+  { name: 'Dispatch', href: '/dispatch', icon: 'navigation' },
   { name: 'Deliveries', href: '/deliveries', icon: 'package' },
-  { name: 'Users', href: '/users', icon: 'users' },
   { name: 'Riders', href: '/riders', icon: 'truck' },
-  { name: 'Analytics', href: '/analytics', icon: 'bar-chart' },
-  { name: 'Settings', href: '/settings', icon: 'settings' },
+  { name: 'Users', href: '/users', icon: 'users' },
+  { name: 'Issues', href: '/issues', icon: 'alert' },
+  { name: 'Pricing', href: '/pricing', icon: 'tag' },
+  { name: 'Reports', href: '/reports', icon: 'bar-chart' },
 ];
+
+const TITLES: Array<[RegExp, string]> = [
+  [/^\/dispatch/, 'Dispatch board'],
+  [/^\/deliveries\/[^/]+/, 'Delivery details'],
+  [/^\/deliveries/, 'Deliveries'],
+  [/^\/riders/, 'Riders & KYC'],
+  [/^\/users/, 'Users'],
+  [/^\/issues/, 'Issues'],
+  [/^\/pricing/, 'Pricing'],
+  [/^\/reports/, 'Reports'],
+  [/^\/(dashboard)?$/, 'Dashboard'],
+];
+
+function titleFor(pathname: string): string {
+  return TITLES.find(([pattern]) => pattern.test(pathname))?.[1] ?? 'Dashboard';
+}
 
 function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   return (
@@ -23,11 +41,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
         )}
         <button className="sidebar-toggle" onClick={onToggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {collapsed ? (
-              <polyline points="9 18 15 12 9 6"></polyline>
-            ) : (
-              <polyline points="15 18 9 12 15 6"></polyline>
-            )}
+            {collapsed ? <polyline points="9 18 15 12 9 6" /> : <polyline points="15 18 9 12 15 6" />}
           </svg>
         </button>
       </div>
@@ -35,11 +49,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
         <ul>
           {navigation.map((item) => (
             <li key={item.name}>
-              <NavLink
-                to={item.href}
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                title={collapsed ? item.name : undefined}
-              >
+              <NavLink to={item.href} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} title={collapsed ? item.name : undefined}>
                 <span className="nav-icon">
                   <Icon name={item.icon} />
                 </span>
@@ -54,88 +64,119 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
 }
 
 function Icon({ name }: { name: string }) {
-  const icons: Record<string, React.ReactNode> = {
+  const paths: Record<string, React.ReactNode> = {
     home: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-      </svg>
+      <>
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </>
+    ),
+    navigation: (
+      <>
+        <polygon points="3 11 22 2 13 21 11 13 3 11" />
+      </>
     ),
     package: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-        <line x1="12" y1="22.08" x2="12" y2="12"></line>
-      </svg>
+      <>
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+        <line x1="12" y1="22.08" x2="12" y2="12" />
+      </>
     ),
     users: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-        <circle cx="9" cy="7" r="4"></circle>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-      </svg>
+      <>
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </>
     ),
     truck: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C22.7 10.6 20.6 9 18 9h-1.5V4c0-1-.7-1.7-1.5-1.9C14.7 1.6 12.6 0 10 0H9c-2.6 0-4.7 1.6-5.5 4.1C2.7 5.3 2 6 2 7v11c0 .6.4 1 1 1h2"></path>
-        <circle cx="7" cy="17" r="2"></circle>
-        <circle cx="17" cy="17" r="2"></circle>
-      </svg>
+      <>
+        <rect x="1" y="3" width="15" height="13" />
+        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+        <circle cx="5.5" cy="18.5" r="2.5" />
+        <circle cx="18.5" cy="18.5" r="2.5" />
+      </>
+    ),
+    alert: (
+      <>
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </>
+    ),
+    tag: (
+      <>
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+        <line x1="7" y1="7" x2="7.01" y2="7" />
+      </>
     ),
     'bar-chart': (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="18" y1="20" x2="18" y2="10"></line>
-        <line x1="12" y1="20" x2="12" y2="4"></line>
-        <line x1="6" y1="20" x2="6" y2="14"></line>
-      </svg>
-    ),
-    settings: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="3"></circle>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-      </svg>
+      <>
+        <line x1="18" y1="20" x2="18" y2="10" />
+        <line x1="12" y1="20" x2="12" y2="4" />
+        <line x1="6" y1="20" x2="6" y2="14" />
+      </>
     ),
   };
-  
-  return icons[name] || icons.home;
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {paths[name] ?? paths.home}
+    </svg>
+  );
 }
 
-function Header({ user, onLogout }: { user: any; onLogout: () => void }) {
+function Header({ user, onLogout }: { user: { firstName: string; lastName: string; email: string } | null; onLogout: () => void }) {
+  const { pathname } = useLocation();
+  const [menu, setMenu] = useState<{ open: boolean; path: string }>({ open: false, path: pathname });
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close the dropdown when the route changes (adjusted during render — no effect needed).
+  if (menu.path !== pathname) setMenu({ open: false, path: pathname });
+
+  useEffect(() => {
+    const onClick = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setMenu((prev) => ({ ...prev, open: false }));
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
   return (
     <header className="admin-header">
       <div className="header-left">
-        <h1 className="page-title">Dashboard</h1>
+        <h1 className="page-title">{titleFor(pathname)}</h1>
       </div>
       <div className="header-right">
-        <div className="user-menu dropdown">
-          <button className="user-menu-trigger" aria-expanded="false" aria-haspopup="true">
+        <div className="user-menu dropdown" ref={menuRef}>
+          <button className="user-menu-trigger" aria-expanded={menu.open} aria-haspopup="true" onClick={() => setMenu((prev) => ({ ...prev, open: !prev.open }))}>
             <div className="avatar avatar-sm" style={{ backgroundColor: 'var(--color-navy)' }}>
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
+              {user?.firstName?.[0]}
+              {user?.lastName?.[0]}
             </div>
-            {!window.matchMedia('(max-width: 768px)').matches && (
-              <span className="user-name">{user?.firstName} {user?.lastName}</span>
-            )}
+            <span className="user-name">
+              {user?.firstName} {user?.lastName}
+            </span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9"></polyline>
+              <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
-          <div className="dropdown-menu" role="menu">
-            <div className="dropdown-header" style={{ padding: 'var(--spacing-md)', borderBottom: '1px solid var(--color-border)' }}>
-              <div className="user-info">
-                <div className="user-info-name">{user?.firstName} {user?.lastName}</div>
-                <div className="user-info-email" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>{user?.email}</div>
+          {menu.open ? (
+            <div className="dropdown-menu" role="menu">
+              <div className="dropdown-header" style={{ padding: 'var(--spacing-md)', borderBottom: '1px solid var(--color-border)' }}>
+                <div className="user-info-name">
+                  {user?.firstName} {user?.lastName}
+                </div>
+                <div className="user-info-email" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
+                  {user?.email}
+                </div>
               </div>
+              <button className="dropdown-item danger" role="menuitem" onClick={onLogout}>
+                Logout
+              </button>
             </div>
-            <button className="dropdown-item danger" role="menuitem" onClick={onLogout}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-              Logout
-            </button>
-          </div>
+          ) : null}
         </div>
       </div>
     </header>
@@ -145,16 +186,19 @@ function Header({ user, onLogout }: { user: any; onLogout: () => void }) {
 export function AdminLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user, logout } = useAuth();
-  
-  const handleLogout = () => {
-    logout();
-  };
+  const navigate = useNavigate();
 
   return (
     <div className="admin-layout">
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       <div className="admin-main">
-        <Header user={user} onLogout={handleLogout} />
+        <Header
+          user={user}
+          onLogout={() => {
+            logout();
+            navigate('/login', { replace: true });
+          }}
+        />
         <main className="admin-content">
           <Outlet />
         </main>

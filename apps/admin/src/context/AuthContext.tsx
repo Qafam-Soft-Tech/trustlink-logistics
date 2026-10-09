@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { api } from '../utils/api';
+import { ADMIN_DEMO_EMAIL, ADMIN_DEMO_PASSWORD } from '../data/adminCredentials';
 
-interface User {
+interface AdminUser {
   id: string;
   email: string;
   firstName: string;
@@ -10,7 +10,7 @@ interface User {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AdminUser | null;
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -19,53 +19,46 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const NAME = 'Ilyas Adamu';
+
+/**
+ * Mock-backed admin auth.
+ * `POST /auth/admin/login` does not exist in the backend (SC-14) and the admin app runs on
+ * mock data, so the console signs in against a documented demo credential (docs/frontend/DEMO.md).
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
-    const userData = localStorage.getItem('admin_user');
-    if (token && userData) {
+    const session = localStorage.getItem('trustlink.admin.session');
+    if (session) {
       try {
-        setUser(JSON.parse(userData));
+        setUser(JSON.parse(session));
       } catch {
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('admin_user');
+        localStorage.removeItem('trustlink.admin.session');
       }
     }
     setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await api.post('/auth/admin/login', { email, password });
-    
-    const userData: User = {
-      id: response.data.user.id,
-      email: response.data.user.email,
-      firstName: response.data.user.firstName,
-      lastName: response.data.user.lastName,
-      role: 'admin',
-    };
-    setUser(userData);
-    localStorage.setItem('admin_token', response.data.token);
-    localStorage.setItem('admin_user', JSON.stringify(userData));
+    if (email.trim().toLowerCase() !== ADMIN_DEMO_EMAIL.toLowerCase() || password !== ADMIN_DEMO_PASSWORD) {
+      throw new Error('Incorrect email or password. Use the demo credentials shown below.');
+    }
+    const [firstName, lastName] = NAME.split(' ');
+    const next: AdminUser = { id: 'admin-1', email: ADMIN_DEMO_EMAIL, firstName, lastName, role: 'admin' };
+    setUser(next);
+    localStorage.setItem('trustlink.admin.session', JSON.stringify(next));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_user');
+    localStorage.removeItem('trustlink.admin.session');
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated: !!user,
-      loading,
-      login,
-      logout,
-    }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -62,9 +62,31 @@ npx uri-scheme open "trustlink://delivery/del-005" --android
 
 In-app equivalents (no URL needed): Home → **Track by number**, and Deliveries/Alerts → a delivery.
 
-## 5. Consent links (temporary)
-The PhoneEntry consent line opens these external URLs via `Linking.openURL`:
-- Terms: `https://trustlink.ng/terms`
-- Privacy: `https://trustlink.ng/privacy`
+## 5. Consent links
+The PhoneEntry consent line now opens the **in-app** Terms of Service and Privacy Policy screens (Phase 11); no external URL is used. Both are real drafts marked "Draft for legal review" (SC-34).
 
-They are placeholders → replaced by in-app Terms/Privacy screens in **Phase 11** (registered in `SCAFFOLD_REGISTER.md`).
+## 6. Rider demo (Phase 12–13)
+Sign in with a rider phone that is in the KYC state you want to demo (OTP `482913`):
+
+| Phone | Rider | KYC state |
+|---|---|---|
+| `08050000001` | Emeka Nwosu | approved → can go online and run jobs |
+| `08050000005` | Ibrahim Sani | pending / not started → KYC intro flow |
+| `08050000007` | Yusuf Musa | rejected → reason + resubmit |
+
+Job execution needs an assigned job: the rider's queue is seeded (assigned / picked up / in transit / delivered). To exercise the redelivery path, use the **customer** app's Demo menu → **Advance** on a failed delivery (it assigns the first eligible rider), then run the job as the rider and fail it a second time.
+
+**POD code:** the backend never generates a recipient OTP, so the demo code is the fixture value (`482913`) — revealed inside the customer app's Demo menu under **recipient codes**. The rider POD screen rejects a wrong code.
+
+## 7. Admin console demo (Phase 14)
+```
+cd apps/admin
+npm run dev        # http://localhost:5173
+```
+Sign in with:
+- **Email:** `admin@trustlink.ng`
+- **Password:** `trustlink-demo`
+
+The backend has no `/auth/admin/login` route (SC-14), so the console authenticates locally against these credentials (`apps/admin/src/data/adminCredentials.ts`) and runs on an admin-local mock world (same Abuja data as the apps — SC-40).
+
+Try: **Dispatch** → assign a rider to an unassigned delivery, reassign an active one, or **Schedule redelivery** on a failed job; **Riders** → open the KYC queue, view documents, approve or reject with a reason; **Users** → suspend/activate; **Issues** → assign and change status; **Pricing** → edit values and watch the fare preview; **Reports** → toggle per day/week.

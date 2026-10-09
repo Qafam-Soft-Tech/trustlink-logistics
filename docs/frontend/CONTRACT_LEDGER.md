@@ -52,6 +52,8 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-37 | The rider "Can't take this? Call dispatch" action has no published number | A clearly-labelled placeholder dispatch line (`screens/jobs/dispatch.ts`) is used; replace before launch | **Needs decision** (real dispatch number) |
 | SC-38 | The backend never generates or delivers `recipientOtp` for POD (snapshot §10); there is no rider decline route (SC-12) | The mock supplies the fixture code and the Customer Demo menu reveals it to the presenter; the rider POD rejects a wrong code and offers "Call dispatch" instead of a decline | Resolved (documented) |
 | SC-39 | `POST /deliveries/:id/failure` accepts only `{ reason }` — no note | The rider note is optional and kept locally for the rider's reference; only the selected reason is sent | **Needs decision** (accept a note server-side) |
+| SC-40 | The admin app cannot import `@trustlink/shared` (separate npm project, no workspace; BASELINE.md blessed no Vite alias) | The admin keeps its own brand CSS and **copies** the minimal domain types + a compatible Abuja mock world (`apps/admin/src/data/`) | Resolved (documented duplication; revisit if a workspace/alias is approved) |
+| SC-41 | Admin auth: no `/auth/admin/login` route exists (SC-14) | The console signs in locally against a documented demo credential (`apps/admin/src/data/adminCredentials.ts`, `DEMO.md` §7) and runs on mock data | **Needs decision** (seed an admin user + endpoint, or accept the demo-only login) |
 
 ---
 
@@ -134,6 +136,7 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 18. **SC-35** — KYC needs a document upload endpoint (the rider app submits local image URIs today).
 19. **SC-37** — the dispatch phone line is a placeholder (used by "Call dispatch").
 20. **SC-39** — the delivery-failure route accepts no note (the rider note is local only).
+21. **SC-41** — the admin console signs in locally (no `/auth/admin/login`); decide whether to seed a real admin.
 
 ## E. Backend issues deferred (not blocking frontend, tracked here)
 - Signup DTO validation missing (interfaces, no class-validator).
