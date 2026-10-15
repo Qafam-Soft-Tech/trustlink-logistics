@@ -11,7 +11,7 @@ export type HomeStackParamList = {
 };
 
 export type JobsStackParamList = {
-  Jobs: undefined;
+  JobsList: undefined;
   JobDetails: { jobId: string };
   Execution: { jobId: string };
   Pod: { jobId: string };
@@ -20,11 +20,11 @@ export type JobsStackParamList = {
 };
 
 export type AlertsStackParamList = {
-  Alerts: undefined;
+  AlertsFeed: undefined;
 };
 
 export type ProfileStackParamList = {
-  Profile: undefined;
+  ProfileHome: undefined;
   EditVehicle: undefined;
   KycOverview: undefined;
   KycForm: undefined;

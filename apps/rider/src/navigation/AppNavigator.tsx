@@ -77,7 +77,7 @@ function HomeNavigator() {
 function JobsNavigator() {
   return (
     <JobsStack.Navigator screenOptions={{ headerShown: false }}>
-      <JobsStack.Screen name="Jobs" component={JobsScreen} />
+      <JobsStack.Screen name="JobsList" component={JobsScreen} />
       <JobsStack.Screen name="JobDetails" component={JobDetailsScreen} />
       <JobsStack.Screen name="Execution" component={ExecutionScreen} options={{ gestureEnabled: false }} />
       <JobsStack.Screen name="Pod" component={PodScreen} />
@@ -90,7 +90,7 @@ function JobsNavigator() {
 function AlertsNavigator() {
   return (
     <AlertsStack.Navigator screenOptions={{ headerShown: false }}>
-      <AlertsStack.Screen name="Alerts" component={AlertsScreen} />
+      <AlertsStack.Screen name="AlertsFeed" component={AlertsScreen} />
     </AlertsStack.Navigator>
   );
 }
@@ -98,7 +98,7 @@ function AlertsNavigator() {
 function ProfileNavigator() {
   return (
     <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
-      <ProfileStack.Screen name="Profile" component={ProfileScreen} />
+      <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
       <ProfileStack.Screen name="EditVehicle" component={EditVehicleScreen} />
       <ProfileStack.Screen name="KycOverview" component={KycOverviewScreen} />
       <ProfileStack.Screen name="KycForm" component={KycFormScreen} />

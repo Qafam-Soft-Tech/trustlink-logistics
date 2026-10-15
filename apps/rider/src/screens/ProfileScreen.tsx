@@ -6,7 +6,7 @@ import { useMyProfile, useRiderProfile, useKycStatus } from '../hooks';
 import { useSession } from '../session/SessionContext';
 import type { ProfileStackParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'Profile'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, 'ProfileHome'>;
 
 const VEHICLE_LABEL: Record<VehicleType, string> = { motorcycle: 'Motorcycle', van: 'Van', truck: 'Truck' };
 

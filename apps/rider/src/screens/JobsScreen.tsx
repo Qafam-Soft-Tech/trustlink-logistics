@@ -7,7 +7,7 @@ import { isOffline } from '@trustlink/shared';
 import { useMyJobs } from '../hooks';
 import type { JobsStackParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<JobsStackParamList, 'Jobs'>;
+type Props = NativeStackScreenProps<JobsStackParamList, 'JobsList'>;
 type Filter = 'queue' | 'active' | 'completed';
 
 const ACTIVE_STATUSES = ['picked_up', 'in_transit'];

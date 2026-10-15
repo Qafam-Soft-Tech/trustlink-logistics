@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useTheme } from '../theme/ThemeProvider';
 import { motion, useEnterTransition, useReducedMotion, useSuccessPop } from '../motion';
@@ -186,24 +186,28 @@ export function BottomSheet({ visible, title, onClose, children }: { visible: bo
 
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <Animated.View style={[styles.overlay, { backgroundColor: theme.roles.overlay, justifyContent: 'flex-end' }, backdropStyle]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss sheet" />
-        <GestureDetector gesture={pan}>
-          <Animated.View
-            style={[
-              styles.sheet,
-              { backgroundColor: theme.roles.surface, borderTopLeftRadius: theme.borderRadius.xl, borderTopRightRadius: theme.borderRadius.xl },
-              sheetStyle,
-            ]}
-            accessibilityViewIsModal
-            accessibilityLabel={title}
-          >
-            <View style={[styles.grabber, { backgroundColor: theme.roles.borderStrong }]} />
-            {title ? <Text variant="h4" color="inherit" style={{ color: theme.roles.text, marginBottom: 12 }}>{title}</Text> : null}
-            {children}
-          </Animated.View>
-        </GestureDetector>
-      </Animated.View>
+      {/* A React Native Modal renders in its own native root, so the app-level GestureHandlerRootView
+          does not cover it: gestures inside the sheet need their own root (Android throws otherwise). */}
+      <GestureHandlerRootView style={styles.root}>
+        <Animated.View style={[styles.overlay, { backgroundColor: theme.roles.overlay, justifyContent: 'flex-end' }, backdropStyle]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss sheet" />
+          <GestureDetector gesture={pan}>
+            <Animated.View
+              style={[
+                styles.sheet,
+                { backgroundColor: theme.roles.surface, borderTopLeftRadius: theme.borderRadius.xl, borderTopRightRadius: theme.borderRadius.xl },
+                sheetStyle,
+              ]}
+              accessibilityViewIsModal
+              accessibilityLabel={title}
+            >
+              <View style={[styles.grabber, { backgroundColor: theme.roles.borderStrong }]} />
+              {title ? <Text variant="h4" color="inherit" style={{ color: theme.roles.text, marginBottom: 12 }}>{title}</Text> : null}
+              {children}
+            </Animated.View>
+          </GestureDetector>
+        </Animated.View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -257,6 +261,7 @@ const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
   toast: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, marginHorizontal: 16, marginBottom: 12 },
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  root: { flex: 1 },
   dialogWrap: { width: '100%', maxWidth: 420 },
   dialog: { width: '100%', maxWidth: 420 },
   dialogActions: { flexDirection: 'row', gap: 12, marginTop: 16 },
