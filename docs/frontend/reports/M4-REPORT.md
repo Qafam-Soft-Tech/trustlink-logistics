@@ -21,6 +21,7 @@
 ### 2.1 Backend
 - New `AdminRidersService` + `GET /admin/riders` (admin): rider user + profile + KYC submission (including document URLs).
 - `GET /deliveries/all` now joins `delivery.events`, so the console's detail timeline is populated.
+- Pricing defaults are seeded on boot (`FareCalculationService.initializeDefaults()`), so the console's Pricing page is populated on a fresh database.
 - No other backend behavior changed.
 
 ### 2.2 Admin app

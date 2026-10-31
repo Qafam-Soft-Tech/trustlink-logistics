@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { join } from 'path';
 import { AppModule } from './app.module';
 import { configureApp } from './app.setup';
+import { FareCalculationService } from './modules/payments/services/fare-calculation.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
@@ -24,6 +25,8 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   app.enableShutdownHooks();
+
+  await app.get(FareCalculationService).initializeDefaults();
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
