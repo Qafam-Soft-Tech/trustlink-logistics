@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
-import { Delivery, DeliveryStatus } from '../../deliveries/entities/delivery.entity';
+import { Delivery } from '../../deliveries/entities/delivery.entity';
 
 export enum NotificationChannel {
   PUSH = 'push',

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Delivery, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
+import { Delivery, DeliveryEvent, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
 import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-delivery.entity';
 import { User, KycStatus } from '../src/modules/auth/entities/user.entity';
 import { RiderProfile, VehicleType, RiderStatus } from '../src/modules/deliveries/entities/rider-profile.entity';
@@ -13,7 +13,6 @@ describe('Phase 7: Dispatch, Assignment & Rider Job Flow', () => {
   let module: TestingModule;
   let db: MockDb;
   let dispatchService: DispatchService;
-  let deliveryService: DeliveryService;
   let deliveryRepository: any;
   let riderProfileRepository: any;
   let userRepository: any;
@@ -32,13 +31,12 @@ describe('Phase 7: Dispatch, Assignment & Rider Job Flow', () => {
         DispatchService,
         DeliveryService,
         FareCalculationService,
-        ...db.providers([Delivery, Address, ProofOfDelivery, User, RiderProfile, PricingConfig]),
+        ...db.providers([Delivery, Address, DeliveryEvent, ProofOfDelivery, User, RiderProfile, PricingConfig]),
         notificationServiceMock,
       ],
     }).compile();
 
     dispatchService = module.get<DispatchService>(DispatchService);
-    deliveryService = module.get<DeliveryService>(DeliveryService);
   });
 
   afterAll(async () => {

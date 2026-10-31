@@ -9,7 +9,6 @@ jest.mock('@nestjs/typeorm', () => ({
 import { KycService } from '../src/modules/users/services/kyc.service';
 import { KycSubmission, KycStatus, KycDocumentType } from '../src/modules/users/entities/kyc-submission.entity';
 import { User, UserRole } from '../src/modules/auth/entities/user.entity';
-import { Repository } from 'typeorm';
 import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 
 class MockRepository<T> {

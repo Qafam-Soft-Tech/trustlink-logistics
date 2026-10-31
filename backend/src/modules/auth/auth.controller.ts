@@ -1,7 +1,8 @@
-import { Controller, Post, Body, Get, UseGuards, Request, Put } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Put } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
-import { AuthService, SignupDto, VerifyOtpDto, LoginDto, ProfileSetupDto } from './auth.service';
+import { AuthService } from './auth.service';
+import { AdminLoginDto, LoginDto, ProfileSetupDto, ResendOtpDto, SignupDto, UpdateProfileDto, VerifyOtpDto } from './dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from './entities/user.entity';
@@ -37,8 +38,14 @@ export class AuthController {
 
   @Post('resend-otp')
   @ApiOperation({ summary: 'Resend OTP' })
-  async resendOtp(@Body() dto: { phone: string; purpose?: 'signup' | 'login' | 'reset' }) {
+  async resendOtp(@Body() dto: ResendOtpDto) {
     return this.authService.resendOtp(dto.phone, dto.purpose || 'signup');
+  }
+
+  @Post('admin/login')
+  @ApiOperation({ summary: 'Sign in to the admin console with email and password' })
+  async adminLogin(@Body() dto: AdminLoginDto) {
+    return this.authService.adminLogin(dto);
   }
 
   @Get('profile')
@@ -53,13 +60,15 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update user profile' })
-  async updateProfile(@CurrentUser() user: User, @Body() data: Partial<User>) {
-    return this.authService.updateProfile(user.id, data);
+  async updateProfile(@CurrentUser() user: User, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(user.id, dto);
   }
 
   @Post('profile/setup')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Complete profile setup after OTP verification' })
-  async setupProfile(@Body() dto: ProfileSetupDto) {
-    return this.authService.setupProfile(dto);
+  async setupProfile(@CurrentUser() user: User, @Body() dto: ProfileSetupDto) {
+    return this.authService.setupProfile(user.id, dto);
   }
 }

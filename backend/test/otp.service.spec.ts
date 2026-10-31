@@ -3,7 +3,6 @@ jest.mock('@nestjs/typeorm', () => ({
   InjectRepository: () => jest.fn(),
 }));
 
-import { Repository } from 'typeorm';
 import { OtpService } from '../src/modules/auth/services/otp.service';
 import { OtpCode } from '../src/modules/auth/entities/otp-code.entity';
 import { TermiiSmsService } from '../src/modules/auth/services/termii-sms.service';

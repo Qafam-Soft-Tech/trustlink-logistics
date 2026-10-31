@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Issue, IssueStatus, IssueType, IssuePriority } from '../entities/issue.entity';
-import { Delivery, DeliveryStatus } from '../entities/delivery.entity';
+import { Delivery } from '../entities/delivery.entity';
 import { ProofOfDelivery } from '../entities/proof-of-delivery.entity';
-import { User, UserRole } from '../../auth/entities/user.entity';
+import { User } from '../../auth/entities/user.entity';
 
 @Injectable()
 export class IssueService {
@@ -162,12 +162,6 @@ export class IssueService {
     }
 
     await this.issueRepository.save(issue);
-    return this.getIssueById(issueId);
-  }
-
-  async addComment(issueId: string, userId: string, comment: string): Promise<any> {
-    // In a real implementation, you'd have a separate comments table
-    // For now, we'll just return the issue
     return this.getIssueById(issueId);
   }
 }

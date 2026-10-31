@@ -1,41 +1,26 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 import { DispatchService } from './services/dispatch.service';
-import { Delivery, DeliveryStatus } from './entities/delivery.entity';
-import { RiderProfile, RiderStatus, VehicleType } from './entities/rider-profile.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User, UserRole } from '../auth/entities/user.entity';
-
-interface AssignRiderDto {
-  riderId: string;
-}
-
-interface ReassignRiderDto {
-  newRiderId: string;
-  reason: string;
-}
-
-interface UpdateLocationDto {
-  latitude: number;
-  longitude: number;
-}
-
-interface SetStatusDto {
-  status: RiderStatus;
-}
+import {
+  AssignRiderDto,
+  LocationDto,
+  ReassignRiderDto,
+  SetRiderStatusDto,
+} from './dto';
 
 @ApiTags('Dispatch')
 @Controller('dispatch')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class DispatchController {
   constructor(private dispatchService: DispatchService) {}
 
-  // Admin endpoints
   @Get('board')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get live delivery board (admin)' })
@@ -72,10 +57,9 @@ export class DispatchController {
     return this.dispatchService.reassignRider(deliveryId, dto.newRiderId, user.id, dto.reason);
   }
 
-  // Rider endpoints
   @Get('my-queue')
   @Roles(UserRole.RIDER)
-  @ApiOperation({ summary: 'Get rider\'s assigned deliveries queue' })
+  @ApiOperation({ summary: 'Get rider assigned deliveries queue' })
   async getMyQueue(@CurrentUser() user: User) {
     return this.dispatchService.getRiderQueue(user.id);
   }
@@ -90,14 +74,14 @@ export class DispatchController {
   @Put('location')
   @Roles(UserRole.RIDER)
   @ApiOperation({ summary: 'Update rider location (rider)' })
-  async updateLocation(@CurrentUser() user: User, @Body() dto: UpdateLocationDto) {
+  async updateLocation(@CurrentUser() user: User, @Body() dto: LocationDto) {
     return this.dispatchService.updateRiderLocation(user.id, dto.latitude, dto.longitude);
   }
 
   @Put('status')
   @Roles(UserRole.RIDER)
   @ApiOperation({ summary: 'Update rider status (rider)' })
-  async setStatus(@CurrentUser() user: User, @Body() dto: SetStatusDto) {
+  async setStatus(@CurrentUser() user: User, @Body() dto: SetRiderStatusDto) {
     return this.dispatchService.setRiderStatus(user.id, dto.status);
   }
 
@@ -105,8 +89,6 @@ export class DispatchController {
   @Roles(UserRole.RIDER)
   @ApiOperation({ summary: 'Get current rider status and profile' })
   async getStatus(@CurrentUser() user: User) {
-    // This would typically return the rider profile with status
-    // For now, we'll use the dispatch service to get it
-    return { message: 'Use rider profile endpoint for full profile' };
+    return this.dispatchService.getRiderStatus(user.id);
   }
 }

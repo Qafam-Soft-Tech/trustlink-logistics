@@ -30,7 +30,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = exception.message;
     }
 
-    this.logger.error(`${request.method} ${request.url} - ${status} - ${message}`, exception instanceof Error ? exception.stack : '');
+    const context = `${request.method} ${request.url} - ${status} - ${message}`;
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.logger.error(context, exception instanceof Error ? exception.stack : '');
+    } else {
+      this.logger.warn(context);
+    }
 
     response.status(status).json({
       statusCode: status,

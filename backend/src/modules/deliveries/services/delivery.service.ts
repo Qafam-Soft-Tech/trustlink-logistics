@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { Delivery, DeliveryStatus, Address, PackageType } from '../entities/delivery.entity';
+import { Delivery, DeliveryEvent, DeliveryStatus, Address, PackageType } from '../entities/delivery.entity';
 import { ProofOfDelivery } from '../entities/proof-of-delivery.entity';
-import { User, UserRole } from '../../auth/entities/user.entity';
+import { RiderProfile, RiderStatus, VehicleType } from '../entities/rider-profile.entity';
+import { User, UserRole, KycStatus } from '../../auth/entities/user.entity';
 import { NotificationService } from '../../notifications/services/notification.service';
+import { CreateDeliveryDto } from '../dto';
+
+type ActorRole = 'customer' | 'rider' | 'admin';
 
 @Injectable()
 export class DeliveryService {
@@ -16,35 +20,16 @@ export class DeliveryService {
     private addressRepository: Repository<Address>,
     @InjectRepository(ProofOfDelivery)
     private proofOfDeliveryRepository: Repository<ProofOfDelivery>,
+    @InjectRepository(DeliveryEvent)
+    private deliveryEventRepository: Repository<DeliveryEvent>,
+    @InjectRepository(RiderProfile)
+    private riderProfileRepository: Repository<RiderProfile>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private notificationService: NotificationService,
   ) {}
 
-  async createDelivery(customerId: string, data: {
-    // Pickup
-    pickupStreet: string;
-    pickupLandmark?: string;
-    pickupArea?: string;
-    pickupLatitude?: number;
-    pickupLongitude?: number;
-    // Dropoff
-    dropoffStreet: string;
-    dropoffLandmark?: string;
-    dropoffArea?: string;
-    dropoffLatitude?: number;
-    dropoffLongitude?: number;
-    // Package
-    packageType: PackageType;
-    packageWeight: number;
-    packageDescription?: string;
-    // Sender
-    senderName: string;
-    senderPhone: string;
-    // Recipient
-    recipientName: string;
-    recipientPhone: string;
-  }): Promise<Delivery> {
+  async createDelivery(customerId: string, data: CreateDeliveryDto): Promise<Delivery> {
     const customer = await this.userRepository.findOne({ where: { id: customerId } });
     if (!customer) {
       throw new NotFoundException('Customer not found');
@@ -56,30 +41,26 @@ export class DeliveryService {
       throw new NotFoundException('Customer not found');
     }
 
-    // Validate recipient is distinct from sender (FR-C07)
     if (data.senderPhone === data.recipientPhone) {
       throw new BadRequestException('Recipient must be different from sender');
     }
 
-    const trackingNumber = this.generateTrackingNumber();
-
     const delivery = this.deliveryRepository.create({
-      trackingNumber,
+      trackingNumber: this.generateTrackingNumber(),
       customerId,
       ...data,
       status: DeliveryStatus.REQUESTED,
     });
 
-    // Create timeline event
-    delivery.events = [{
-      deliveryId: delivery.id,
+    const saved = await this.deliveryRepository.save(delivery);
+    saved.events = [];
+    await this.appendEvent(saved, {
       status: DeliveryStatus.REQUESTED,
       actorId: customerId,
       actorRole: 'customer',
       notes: 'Delivery requested',
-    }] as any;
-
-    return this.deliveryRepository.save(delivery);
+    });
+    return saved;
   }
 
   async getDeliveryById(deliveryId: string): Promise<Delivery> {
@@ -149,22 +130,20 @@ export class DeliveryService {
     deliveryId: string,
     newStatus: DeliveryStatus,
     actorId: string,
-    actorRole: 'customer' | 'rider' | 'admin',
+    actorRole: ActorRole,
     notes?: string,
     latitude?: number,
     longitude?: number,
   ): Promise<Delivery> {
     const delivery = await this.getDeliveryById(deliveryId);
-    
-    // Validate status transitions
     this.validateStatusTransition(delivery.status, newStatus, actorRole);
 
     delivery.status = newStatus;
-    
-    // Update timestamps based on status
+
     switch (newStatus) {
       case DeliveryStatus.ASSIGNED:
         delivery.assignedAt = new Date();
+        delivery.acknowledgedAt = null;
         break;
       case DeliveryStatus.PICKED_UP:
         delivery.pickedUpAt = new Date();
@@ -177,52 +156,64 @@ export class DeliveryService {
         break;
     }
 
-    // Create timeline event
-    const event = {
-      deliveryId: delivery.id,
+    await this.deliveryRepository.save(delivery);
+    await this.appendEvent(delivery, {
       status: newStatus,
       actorId,
       actorRole,
       notes,
       latitude,
       longitude,
-    };
-    
-    delivery.events = [...(delivery.events || []), event] as any;
+    });
 
-    const savedDelivery = await this.deliveryRepository.save(delivery);
-
-    // Notify about status change
     await this.notificationService.notifyDeliveryStatusChange(deliveryId, newStatus, actorRole);
+    await this.releaseRiderIfIdle(delivery.riderId);
 
-    return savedDelivery;
+    return delivery;
   }
 
   async assignRider(deliveryId: string, riderId: string, adminId: string): Promise<Delivery> {
-    const rider = await this.userRepository.findOne({ where: { id: riderId } });
-    if (!rider || rider.role !== UserRole.RIDER) {
-      throw new BadRequestException('Invalid rider');
+    const delivery = await this.getDeliveryById(deliveryId);
+    if (delivery.status !== DeliveryStatus.SEARCHING) {
+      throw new BadRequestException('Delivery cannot be assigned in current status');
     }
 
-    const delivery = await this.getDeliveryById(deliveryId);
-    if (delivery.status !== DeliveryStatus.SEARCHING && delivery.status !== DeliveryStatus.REQUESTED) {
-      throw new BadRequestException('Delivery cannot be assigned in current status');
+    const riderProfile = await this.riderProfileRepository.findOne({
+      where: { userId: riderId },
+      relations: { user: true },
+    });
+    if (!riderProfile) {
+      throw new NotFoundException('Rider profile not found');
+    }
+
+    if (riderProfile.user.kycStatus !== KycStatus.APPROVED) {
+      throw new BadRequestException('Rider KYC not approved');
+    }
+    if (riderProfile.status !== RiderStatus.ONLINE) {
+      throw new BadRequestException('Rider is not online');
+    }
+    if (!this.isVehicleCompatible(riderProfile.vehicleType, delivery.packageType, Number(delivery.packageWeight))) {
+      throw new BadRequestException('Rider vehicle type not compatible with package');
     }
 
     delivery.riderId = riderId;
     delivery.status = DeliveryStatus.ASSIGNED;
     delivery.assignedAt = new Date();
+    delivery.acknowledgedAt = null;
+    await this.deliveryRepository.save(delivery);
 
-    const event = {
-      deliveryId: delivery.id,
+    riderProfile.status = RiderStatus.ON_TRIP;
+    await this.riderProfileRepository.save(riderProfile);
+
+    await this.appendEvent(delivery, {
       status: DeliveryStatus.ASSIGNED,
       actorId: adminId,
       actorRole: 'admin',
-      notes: `Assigned to rider ${rider.firstName} ${rider.lastName}`,
-    };
-    delivery.events = [...(delivery.events || []), event] as any;
+      notes: `Assigned to rider ${riderProfile.user.firstName} ${riderProfile.user.lastName}`,
+    });
+    await this.notificationService.notifyDeliveryStatusChange(deliveryId, DeliveryStatus.ASSIGNED, 'admin');
 
-    return this.deliveryRepository.save(delivery);
+    return delivery;
   }
 
   async setFare(deliveryId: string, fare: number): Promise<Delivery> {
@@ -251,7 +242,7 @@ export class DeliveryService {
   private validateStatusTransition(
     currentStatus: DeliveryStatus,
     newStatus: DeliveryStatus,
-    actorRole: 'customer' | 'rider' | 'admin',
+    actorRole: ActorRole,
   ): void {
     const allowedTransitions: Record<DeliveryStatus, DeliveryStatus[]> = {
       [DeliveryStatus.REQUESTED]: [DeliveryStatus.SEARCHING, DeliveryStatus.CANCELLED],
@@ -269,11 +260,13 @@ export class DeliveryService {
       throw new BadRequestException(`Cannot transition from ${currentStatus} to ${newStatus}`);
     }
 
-    // Role-based restrictions
-    if (actorRole === 'customer' && ![DeliveryStatus.CANCELLED].includes(newStatus)) {
+    if (actorRole === 'customer' && newStatus !== DeliveryStatus.CANCELLED) {
       throw new ForbiddenException('Customers can only cancel deliveries');
     }
-    if (actorRole === 'rider' && ![DeliveryStatus.PICKED_UP, DeliveryStatus.IN_TRANSIT, DeliveryStatus.DELIVERED, DeliveryStatus.FAILED].includes(newStatus)) {
+    if (
+      actorRole === 'rider' &&
+      ![DeliveryStatus.PICKED_UP, DeliveryStatus.IN_TRANSIT, DeliveryStatus.DELIVERED, DeliveryStatus.FAILED].includes(newStatus)
+    ) {
       throw new ForbiddenException('Riders can only update delivery progress');
     }
   }
@@ -285,7 +278,6 @@ export class DeliveryService {
     return `TLK-${year}-${random}`;
   }
 
-  // Address management
   async createAddress(userId: string, data: Partial<Address>): Promise<Address> {
     const address = this.addressRepository.create({ userId, ...data });
     return this.addressRepository.save(address);
@@ -316,8 +308,6 @@ export class DeliveryService {
     await this.addressRepository.update({ userId, isDefault: true }, { isDefault: false });
     await this.addressRepository.update({ id: addressId, userId }, { isDefault: true });
   }
-
-  // Phase 8: Delivery Execution & Proof of Delivery
 
   async markPickedUp(deliveryId: string, riderId: string, latitude?: number, longitude?: number): Promise<Delivery> {
     return this.updateDeliveryStatus(
@@ -357,26 +347,20 @@ export class DeliveryService {
     },
   ): Promise<Delivery> {
     const delivery = await this.getDeliveryById(deliveryId);
-    
+
     if (delivery.riderId !== riderId) {
       throw new ForbiddenException('Not assigned to this delivery');
     }
-
     if (delivery.status !== DeliveryStatus.IN_TRANSIT) {
       throw new BadRequestException('Delivery must be IN_TRANSIT to complete');
     }
-
-    // Photo proof required per FR-R09
     if (!proofData.photoUrl || proofData.photoUrl.trim().length === 0) {
       throw new BadRequestException('Photo proof is required');
     }
-
-    // Verify OTP (in real implementation, this would check against sent OTP)
     if (!proofData.recipientOtp || proofData.recipientOtp.length !== 6) {
       throw new BadRequestException('Valid 6-digit recipient OTP required');
     }
 
-    // Create proof of delivery
     const proof = this.proofOfDeliveryRepository.create({
       deliveryId,
       photoUrl: proofData.photoUrl,
@@ -389,22 +373,20 @@ export class DeliveryService {
     });
     await this.proofOfDeliveryRepository.save(proof);
 
-    // Update delivery status to DELIVERED
     delivery.status = DeliveryStatus.DELIVERED;
     delivery.deliveredAt = new Date();
     await this.deliveryRepository.save(delivery);
 
-    // Create timeline event
-    const event = {
-      deliveryId: delivery.id,
+    await this.appendEvent(delivery, {
       status: DeliveryStatus.DELIVERED,
       actorId: riderId,
       actorRole: 'rider',
       notes: 'Delivered with proof',
       latitude: proofData.latitude,
       longitude: proofData.longitude,
-    };
-    delivery.events = [...(delivery.events || []), event] as any;
+    });
+    await this.notificationService.notifyDeliveryStatusChange(deliveryId, DeliveryStatus.DELIVERED, 'rider');
+    await this.releaseRiderIfIdle(delivery.riderId);
 
     return delivery;
   }
@@ -417,81 +399,60 @@ export class DeliveryService {
     longitude?: number,
   ): Promise<Delivery> {
     const delivery = await this.getDeliveryById(deliveryId);
-    
+
     if (delivery.riderId !== riderId) {
       throw new ForbiddenException('Not assigned to this delivery');
     }
-
     if (![DeliveryStatus.PICKED_UP, DeliveryStatus.IN_TRANSIT].includes(delivery.status)) {
       throw new BadRequestException('Can only report failure from PICKED_UP or IN_TRANSIT status');
     }
-
     if (!reason || reason.trim().length === 0) {
       throw new BadRequestException('Failure reason is required');
     }
 
     delivery.failureReason = reason;
     delivery.redeliveryAttempts += 1;
+    delivery.status = delivery.redeliveryAttempts >= 2 ? DeliveryStatus.RETURNED : DeliveryStatus.FAILED;
+    await this.deliveryRepository.save(delivery);
 
-    if (delivery.redeliveryAttempts >= 2) {
-      // Second failure - mark as RETURNED
-      delivery.status = DeliveryStatus.RETURNED;
-      await this.deliveryRepository.save(delivery);
-
-      const event = {
-        deliveryId: delivery.id,
-        status: DeliveryStatus.RETURNED,
-        actorId: riderId,
-        actorRole: 'rider',
-        notes: `Returned after ${delivery.redeliveryAttempts} failed attempts: ${reason}`,
-        latitude,
-        longitude,
-      };
-      delivery.events = [...(delivery.events || []), event] as any;
-    } else {
-      // First failure - mark as FAILED for redelivery
-      delivery.status = DeliveryStatus.FAILED;
-      await this.deliveryRepository.save(delivery);
-
-      const event = {
-        deliveryId: delivery.id,
-        status: DeliveryStatus.FAILED,
-        actorId: riderId,
-        actorRole: 'rider',
-        notes: `Failed: ${reason}. Redelivery attempt ${delivery.redeliveryAttempts}`,
-        latitude,
-        longitude,
-      };
-      delivery.events = [...(delivery.events || []), event] as any;
-    }
+    await this.appendEvent(delivery, {
+      status: delivery.status,
+      actorId: riderId,
+      actorRole: 'rider',
+      notes: delivery.status === DeliveryStatus.RETURNED
+        ? `Returned after ${delivery.redeliveryAttempts} failed attempts: ${reason}`
+        : `Failed: ${reason}. Redelivery attempt ${delivery.redeliveryAttempts}`,
+      latitude,
+      longitude,
+    });
+    await this.notificationService.notifyDeliveryStatusChange(deliveryId, delivery.status, 'rider');
+    await this.releaseRiderIfIdle(delivery.riderId);
 
     return delivery;
   }
 
   async scheduleRedelivery(deliveryId: string, adminId: string): Promise<Delivery> {
     const delivery = await this.getDeliveryById(deliveryId);
-    
+
     if (delivery.status !== DeliveryStatus.FAILED) {
       throw new BadRequestException('Can only schedule redelivery for FAILED deliveries');
     }
-
     if (delivery.redeliveryAttempts >= 2) {
       throw new BadRequestException('Maximum redelivery attempts reached');
     }
 
-    // Reset to SEARCHING for reassignment
+    const previousRiderId = delivery.riderId;
     delivery.status = DeliveryStatus.SEARCHING;
     delivery.riderId = null;
     await this.deliveryRepository.save(delivery);
 
-    const event = {
-      deliveryId: delivery.id,
+    await this.appendEvent(delivery, {
       status: DeliveryStatus.SEARCHING,
       actorId: adminId,
       actorRole: 'admin',
       notes: 'Redelivery scheduled',
-    };
-    delivery.events = [...(delivery.events || []), event] as any;
+    });
+    await this.releaseRiderIfIdle(previousRiderId);
 
     return delivery;
   }
@@ -502,5 +463,53 @@ export class DeliveryService {
       return null;
     }
     return this.proofOfDeliveryRepository.findOne({ where: { deliveryId } });
+  }
+
+  async releaseRiderIfIdle(riderId: string | null): Promise<void> {
+    if (!riderId) return;
+
+    const riderProfile = await this.riderProfileRepository.findOne({ where: { userId: riderId } });
+    if (!riderProfile || riderProfile.status !== RiderStatus.ON_TRIP) return;
+
+    const activeDeliveries = await this.deliveryRepository
+      .createQueryBuilder('delivery')
+      .where('delivery.riderId = :riderId', { riderId })
+      .andWhere('delivery.status IN (:...statuses)', {
+        statuses: [DeliveryStatus.ASSIGNED, DeliveryStatus.PICKED_UP, DeliveryStatus.IN_TRANSIT],
+      })
+      .getMany();
+
+    if (activeDeliveries.length === 0) {
+      riderProfile.status = RiderStatus.ONLINE;
+      await this.riderProfileRepository.save(riderProfile);
+    }
+  }
+
+  private async appendEvent(
+    delivery: Delivery,
+    event: {
+      status: DeliveryStatus;
+      actorId: string;
+      actorRole: ActorRole;
+      notes?: string;
+      latitude?: number;
+      longitude?: number;
+    },
+  ): Promise<DeliveryEvent> {
+    const saved = await this.deliveryEventRepository.save(
+      this.deliveryEventRepository.create({
+        deliveryId: delivery.id,
+        ...event,
+      }),
+    );
+    delivery.events = [...(delivery.events || []), saved];
+    return saved;
+  }
+
+  private isVehicleCompatible(vehicleType: VehicleType, packageType: PackageType, weightKg: number): boolean {
+    if (vehicleType === VehicleType.MOTORCYCLE) return weightKg <= 10;
+    if (vehicleType === VehicleType.VAN) return weightKg <= 50;
+    if (vehicleType === VehicleType.TRUCK) return weightKg <= 200;
+    return false;
   }
 }

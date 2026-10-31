@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { RiderProfile, VehicleType, RiderStatus } from '../entities/rider-profile.entity';
-import { User, UserRole } from '../../auth/entities/user.entity';
+import { KycStatus, User } from '../../auth/entities/user.entity';
 
 @Injectable()
 export class RiderProfileService {
@@ -47,7 +47,12 @@ export class RiderProfileService {
       throw new ForbiddenException('Cannot change status while on a trip');
     }
 
-    profile.status = profile.status === RiderStatus.ONLINE ? RiderStatus.OFFLINE : RiderStatus.ONLINE;
+    const nextStatus = profile.status === RiderStatus.ONLINE ? RiderStatus.OFFLINE : RiderStatus.ONLINE;
+    if (nextStatus === RiderStatus.ONLINE) {
+      await this.assertKycApproved(userId);
+    }
+
+    profile.status = nextStatus;
     return this.riderProfileRepository.save(profile);
   }
 
@@ -57,9 +62,19 @@ export class RiderProfileService {
     if (profile.status === RiderStatus.ON_TRIP && status !== RiderStatus.ON_TRIP) {
       throw new ForbiddenException('Cannot change status while on a trip');
     }
+    if (status === RiderStatus.ONLINE) {
+      await this.assertKycApproved(userId);
+    }
 
     profile.status = status;
     return this.riderProfileRepository.save(profile);
+  }
+
+  private async assertKycApproved(userId: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user || user.kycStatus !== KycStatus.APPROVED) {
+      throw new ForbiddenException('Rider KYC not approved');
+    }
   }
 
   async updateLocation(userId: string, latitude: number, longitude: number): Promise<RiderProfile> {

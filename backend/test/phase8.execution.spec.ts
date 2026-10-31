@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Delivery, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
+import { Delivery, DeliveryEvent, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
 import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-delivery.entity';
+import { RiderProfile } from '../src/modules/deliveries/entities/rider-profile.entity';
 import { User } from '../src/modules/auth/entities/user.entity';
 import { DeliveryService } from '../src/modules/deliveries/services/delivery.service';
 import { MockDb, TestFactory, seedBaseData, notificationServiceMock } from './mock-db';
@@ -23,7 +24,7 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
     module = await Test.createTestingModule({
       providers: [
         DeliveryService,
-        ...db.providers([Delivery, Address, ProofOfDelivery, User]),
+        ...db.providers([Delivery, Address, DeliveryEvent, ProofOfDelivery, RiderProfile, User]),
         notificationServiceMock,
       ],
     }).compile();
@@ -49,7 +50,7 @@ describe('Phase 8: Delivery Execution & Proof of Delivery', () => {
 
       // Transition to SEARCHING (after payment)
       let updated = await deliveryService.updateDeliveryStatus(
-        delivery.id, DeliveryStatus.SEARCHING, 'system', 'system',
+        delivery.id, DeliveryStatus.SEARCHING, 'system', 'admin',
       );
       expect(updated.status).toBe(DeliveryStatus.SEARCHING);
 

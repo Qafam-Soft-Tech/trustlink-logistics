@@ -1,11 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 
-import { Delivery, DeliveryStatus } from '../../deliveries/entities/delivery.entity';
+import { Delivery, DeliveryEvent, DeliveryStatus } from '../../deliveries/entities/delivery.entity';
+import { RiderProfile, RiderStatus } from '../../deliveries/entities/rider-profile.entity';
 import { Notification, NotificationChannel, NotificationStatus, SendNotificationDto } from '../entities/notification.entity';
-import { User } from '../../auth/entities/user.entity';
 
 @Injectable()
 export class NotificationService {
@@ -14,9 +13,10 @@ export class NotificationService {
     private notificationRepository: Repository<Notification>,
     @InjectRepository(Delivery)
     private deliveryRepository: Repository<Delivery>,
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
-    private configService: ConfigService,
+    @InjectRepository(DeliveryEvent)
+    private deliveryEventRepository: Repository<DeliveryEvent>,
+    @InjectRepository(RiderProfile)
+    private riderProfileRepository: Repository<RiderProfile>,
   ) {}
 
   // Cancellation fee tiers based on delivery status
@@ -24,7 +24,7 @@ export class NotificationService {
     [DeliveryStatus.REQUESTED]: { type: 'free' },
     [DeliveryStatus.SEARCHING]: { type: 'free' },
     [DeliveryStatus.ASSIGNED]: { type: 'partial', percentage: 50 },
-    [DeliveryStatus.PICKED_UP]: { type: 'partial', percentage: 75 },
+    [DeliveryStatus.PICKED_UP]: { type: 'full' },
     [DeliveryStatus.IN_TRANSIT]: { type: 'full' },
     [DeliveryStatus.DELIVERED]: { type: 'full' },
     [DeliveryStatus.FAILED]: { type: 'full' },
@@ -88,7 +88,7 @@ export class NotificationService {
   async notifyDeliveryStatusChange(
     deliveryId: string,
     newStatus: DeliveryStatus,
-    actorRole: 'customer' | 'rider' | 'admin',
+    _actorRole: 'customer' | 'rider' | 'admin',
   ): Promise<void> {
     const delivery = await this.deliveryRepository.findOne({
       where: { id: deliveryId },
@@ -203,24 +203,22 @@ export class NotificationService {
       refundAmount = 0;
     }
 
-    // Update delivery status
     delivery.status = DeliveryStatus.CANCELLED;
     delivery.cancelledAt = new Date();
     await this.deliveryRepository.save(delivery);
 
-    // Create timeline event
-    const event = {
-      deliveryId: delivery.id,
-      status: DeliveryStatus.CANCELLED,
-      actorId: delivery.customerId,
-      actorRole: 'customer',
-      notes: `Cancelled by customer. Fee: ₦${fee}, Refund: ₦${refundAmount}`,
-    };
-    delivery.events = [...(delivery.events || []), event] as any;
-    await this.deliveryRepository.save(delivery);
+    await this.deliveryEventRepository.save(
+      this.deliveryEventRepository.create({
+        deliveryId: delivery.id,
+        status: DeliveryStatus.CANCELLED,
+        actorId: delivery.customerId,
+        actorRole: 'customer',
+        notes: `Cancelled by customer. Fee: ₦${fee}, Refund: ₦${refundAmount}`,
+      }),
+    );
 
-    // Notify about cancellation
     await this.notifyDeliveryStatusChange(deliveryId, DeliveryStatus.CANCELLED, 'customer');
+    await this.releaseRiderIfIdle(delivery.riderId);
 
     return { cancelled: true, fee, refundAmount };
   }
@@ -285,7 +283,26 @@ export class NotificationService {
     if (!notification) {
       throw new NotFoundException('Notification not found');
     }
-    // In real implementation, you might have a readAt field
     return notification;
+  }
+
+  private async releaseRiderIfIdle(riderId: string | null): Promise<void> {
+    if (!riderId) return;
+
+    const riderProfile = await this.riderProfileRepository.findOne({ where: { userId: riderId } });
+    if (!riderProfile || riderProfile.status !== RiderStatus.ON_TRIP) return;
+
+    const activeDeliveries = await this.deliveryRepository
+      .createQueryBuilder('delivery')
+      .where('delivery.riderId = :riderId', { riderId })
+      .andWhere('delivery.status IN (:...statuses)', {
+        statuses: [DeliveryStatus.ASSIGNED, DeliveryStatus.PICKED_UP, DeliveryStatus.IN_TRANSIT],
+      })
+      .getMany();
+
+    if (activeDeliveries.length === 0) {
+      riderProfile.status = RiderStatus.ONLINE;
+      await this.riderProfileRepository.save(riderProfile);
+    }
   }
 }

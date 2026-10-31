@@ -7,6 +7,7 @@ import { useVerifyOtp, useResendOtp } from '../../hooks/useAuth';
 import { useCountdown } from '../../hooks/useCountdown';
 import { useData } from '../../data/DataContext';
 import { useSession } from '../../session/SessionContext';
+import { authStorage } from '../../storage/authStorage';
 import type { AuthStackParamList, RootStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'OtpVerification'>;
@@ -53,6 +54,7 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
       {
         onSuccess: async (r) => {
           if (purpose === 'signup') {
+            await authStorage.setToken(r.token);
             navigation.navigate('ProfileSetup', { phone, role: 'customer' });
           } else {
             await signIn({ user: r.user, token: r.token });

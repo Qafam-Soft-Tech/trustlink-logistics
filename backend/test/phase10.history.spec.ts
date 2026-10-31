@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Delivery, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
+import { Delivery, DeliveryEvent, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
 import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-delivery.entity';
+import { RiderProfile } from '../src/modules/deliveries/entities/rider-profile.entity';
 import { User } from '../src/modules/auth/entities/user.entity';
 import { Issue, IssueType, IssuePriority } from '../src/modules/deliveries/entities/issue.entity';
 import { DeliveryService } from '../src/modules/deliveries/services/delivery.service';
@@ -12,7 +13,6 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
   let db: MockDb;
   let issueService: IssueService;
   let deliveryService: DeliveryService;
-  let issueRepository: any;
   let deliveryRepository: any;
   let userRepository: any;
   let proofOfDeliveryRepository: any;
@@ -22,7 +22,6 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
     db = new MockDb();
     testData = seedBaseData(db);
 
-    issueRepository = db.repo('Issue');
     deliveryRepository = db.repo('Delivery');
     userRepository = db.repo('User');
     proofOfDeliveryRepository = db.repo('ProofOfDelivery');
@@ -31,7 +30,7 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
       providers: [
         IssueService,
         DeliveryService,
-        ...db.providers([Issue, Delivery, ProofOfDelivery, Address, User]),
+        ...db.providers([Issue, Delivery, DeliveryEvent, ProofOfDelivery, Address, RiderProfile, User]),
         notificationServiceMock,
       ],
     }).compile();

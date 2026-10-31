@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { User, UserRole, KycStatus } from '../src/modules/auth/entities/user.entity';
-import { Delivery, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
+import { Delivery, DeliveryEvent, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
 import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-delivery.entity';
 import { RiderProfile, RiderStatus } from '../src/modules/deliveries/entities/rider-profile.entity';
 import { KycSubmission } from '../src/modules/users/entities/kyc-submission.entity';
@@ -41,7 +41,7 @@ describe('Phase 11: Admin Account Management & Reporting', () => {
         DispatchService,
         DeliveryService,
         FareCalculationService,
-        ...db.providers([User, Delivery, RiderProfile, KycSubmission, PricingConfig, Address, ProofOfDelivery]),
+        ...db.providers([User, Delivery, DeliveryEvent, RiderProfile, KycSubmission, PricingConfig, Address, ProofOfDelivery]),
         notificationServiceMock,
       ],
     }).compile();

@@ -71,10 +71,7 @@ jobs:
       - run: npm run lint
       - run: npm run test:unit
       - run: npm run test:integration
-      # Known failure until the M1 DTO/validation work lands: signup accepts a
-      # body with only { phone }. Remove `continue-on-error` as soon as M1 is merged.
       - run: npm run test:e2e
-        continue-on-error: true
 
   shared:
     name: Shared (typecheck, unit tests, contrast)

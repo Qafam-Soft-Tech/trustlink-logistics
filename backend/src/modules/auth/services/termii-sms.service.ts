@@ -31,7 +31,7 @@ export class TermiiSmsService {
       return false;
     }
 
-    const message = `Your TrustLink verification code is ${code}. Valid for 10 minutes. Do not share.`;
+    const message = `Your TrustLink verification code is ${code}. Valid for 5 minutes. Do not share.`;
 
     try {
       const response = await axios.post<TermiiSmsResponse>(

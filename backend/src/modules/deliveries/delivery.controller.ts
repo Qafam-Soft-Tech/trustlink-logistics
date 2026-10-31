@@ -1,49 +1,39 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 import { DeliveryService } from './services/delivery.service';
-import { Delivery, DeliveryStatus, PackageType, Address } from './entities/delivery.entity';
-import { ProofOfDelivery } from './entities/proof-of-delivery.entity';
+import { Delivery, DeliveryStatus } from './entities/delivery.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User, UserRole } from '../auth/entities/user.entity';
-
-interface CreateDeliveryDto {
-  pickupStreet: string;
-  pickupLandmark?: string;
-  pickupArea?: string;
-  pickupLatitude?: number;
-  pickupLongitude?: number;
-  dropoffStreet: string;
-  dropoffLandmark?: string;
-  dropoffArea?: string;
-  dropoffLatitude?: number;
-  dropoffLongitude?: number;
-  packageType: PackageType;
-  packageWeight: number;
-  packageDescription?: string;
-  senderName: string;
-  senderPhone: string;
-  recipientName: string;
-  recipientPhone: string;
-}
-
-interface UpdateStatusDto {
-  status: DeliveryStatus;
-  notes?: string;
-  latitude?: number;
-  longitude?: number;
-}
-
-interface AssignRiderDto {
-  riderId: string;
-}
+import {
+  AssignRiderDto,
+  CompleteDeliveryDto,
+  CreateAddressDto,
+  CreateDeliveryDto,
+  OptionalLocationDto,
+  ReportFailureDto,
+  SetFareDto,
+  UpdateAddressDto,
+  UpdateDeliveryStatusDto,
+} from './dto';
 
 @ApiTags('Deliveries')
 @Controller('deliveries')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class DeliveryController {
   constructor(private deliveryService: DeliveryService) {}
@@ -57,13 +47,11 @@ export class DeliveryController {
 
   @Get()
   @ApiOperation({ summary: 'Get deliveries for current user (customer/rider)' })
-  async getMyDeliveries(
-    @CurrentUser() user: User,
-    @Query('status') status?: DeliveryStatus,
-  ) {
+  async getMyDeliveries(@CurrentUser() user: User, @Query('status') status?: DeliveryStatus) {
     if (user.role === UserRole.CUSTOMER) {
       return this.deliveryService.getCustomerDeliveries(user.id, status);
-    } else if (user.role === UserRole.RIDER) {
+    }
+    if (user.role === UserRole.RIDER) {
       return this.deliveryService.getRiderDeliveries(user.id, status);
     }
     return this.deliveryService.getAllDeliveries(status);
@@ -76,6 +64,53 @@ export class DeliveryController {
     return this.deliveryService.getAllDeliveries(status);
   }
 
+  // Saved addresses are declared before `:id` so they are not shadowed by it.
+  @Post('addresses')
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Create a saved address' })
+  async createAddress(@CurrentUser() user: User, @Body() dto: CreateAddressDto) {
+    return this.deliveryService.createAddress(user.id, dto);
+  }
+
+  @Get('addresses')
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Get user saved addresses' })
+  async getAddresses(@CurrentUser() user: User) {
+    return this.deliveryService.getUserAddresses(user.id);
+  }
+
+  @Put('addresses/:id')
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Update saved address' })
+  async updateAddress(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() dto: UpdateAddressDto,
+  ) {
+    return this.deliveryService.updateAddress(id, user.id, dto);
+  }
+
+  @Post('addresses/:id/default')
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Set default address' })
+  async setDefaultAddress(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.deliveryService.setDefaultAddress(id, user.id);
+  }
+
+  @Delete('addresses/:id')
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Delete saved address' })
+  async deleteAddress(@CurrentUser() user: User, @Param('id') id: string) {
+    await this.deliveryService.deleteAddress(id, user.id);
+    return { deleted: true };
+  }
+
+  @Get('track/:trackingNumber')
+  @ApiOperation({ summary: 'Track delivery by tracking number' })
+  async trackDelivery(@Param('trackingNumber') trackingNumber: string) {
+    return this.deliveryService.getDeliveryByTrackingNumber(trackingNumber);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get delivery by ID' })
   async getDelivery(@CurrentUser() user: User, @Param('id') id: string) {
@@ -84,18 +119,12 @@ export class DeliveryController {
     return delivery;
   }
 
-  @Get('track/:trackingNumber')
-  @ApiOperation({ summary: 'Track delivery by tracking number (public)' })
-  async trackDelivery(@Param('trackingNumber') trackingNumber: string) {
-    return this.deliveryService.getDeliveryByTrackingNumber(trackingNumber);
-  }
-
   @Put(':id/status')
   @ApiOperation({ summary: 'Update delivery status' })
   async updateStatus(
     @CurrentUser() user: User,
     @Param('id') id: string,
-    @Body() dto: UpdateStatusDto,
+    @Body() dto: UpdateDeliveryStatusDto,
   ) {
     const delivery = await this.deliveryService.getDeliveryById(id);
     this.checkAccess(user, delivery);
@@ -103,7 +132,7 @@ export class DeliveryController {
       id,
       dto.status,
       user.id,
-      user.role.toLowerCase() as 'customer' | 'rider' | 'admin',
+      user.role as 'customer' | 'rider' | 'admin',
       dto.notes,
       dto.latitude,
       dto.longitude,
@@ -120,8 +149,8 @@ export class DeliveryController {
   @Put(':id/fare')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Set delivery fare (admin)' })
-  async setFare(@Param('id') id: string, @Body() body: { fare: number }) {
-    return this.deliveryService.setFare(id, body.fare);
+  async setFare(@Param('id') id: string, @Body() dto: SetFareDto) {
+    return this.deliveryService.setFare(id, dto.fare);
   }
 
   @Post(':id/cancel')
@@ -129,42 +158,9 @@ export class DeliveryController {
   @ApiOperation({ summary: 'Cancel delivery (customer)' })
   async cancelDelivery(@CurrentUser() user: User, @Param('id') id: string) {
     const delivery = await this.deliveryService.getDeliveryById(id);
-    if (delivery.customerId !== user.id) {
-      throw new Error('Not authorized');
-    }
+    this.checkAccess(user, delivery);
     return this.deliveryService.cancelDelivery(id, user.id);
   }
-
-  // Address endpoints
-  @Post('addresses')
-  @Roles(UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Create a saved address' })
-  async createAddress(@CurrentUser() user: User, @Body() data: Partial<Address>) {
-    return this.deliveryService.createAddress(user.id, data);
-  }
-
-  @Get('addresses')
-  @Roles(UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Get user saved addresses' })
-  async getAddresses(@CurrentUser() user: User) {
-    return this.deliveryService.getUserAddresses(user.id);
-  }
-
-  @Put('addresses/:id')
-  @Roles(UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Update saved address' })
-  async updateAddress(@CurrentUser() user: User, @Param('id') id: string, @Body() data: Partial<Address>) {
-    return this.deliveryService.updateAddress(id, user.id, data);
-  }
-
-  @Post('addresses/:id/default')
-  @Roles(UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Set default address' })
-  async setDefaultAddress(@CurrentUser() user: User, @Param('id') id: string) {
-    return this.deliveryService.setDefaultAddress(id, user.id);
-  }
-
-  // Phase 8: Delivery Execution & Proof of Delivery endpoints
 
   @Put(':id/pickup')
   @Roles(UserRole.RIDER)
@@ -172,11 +168,11 @@ export class DeliveryController {
   async markPickedUp(
     @CurrentUser() user: User,
     @Param('id') id: string,
-    @Body() body: { latitude?: number; longitude?: number },
+    @Body() dto: OptionalLocationDto,
   ) {
     const delivery = await this.deliveryService.getDeliveryById(id);
     this.checkAccess(user, delivery);
-    return this.deliveryService.markPickedUp(id, user.id, body.latitude, body.longitude);
+    return this.deliveryService.markPickedUp(id, user.id, dto.latitude, dto.longitude);
   }
 
   @Put(':id/in-transit')
@@ -185,11 +181,11 @@ export class DeliveryController {
   async markInTransit(
     @CurrentUser() user: User,
     @Param('id') id: string,
-    @Body() body: { latitude?: number; longitude?: number },
+    @Body() dto: OptionalLocationDto,
   ) {
     const delivery = await this.deliveryService.getDeliveryById(id);
     this.checkAccess(user, delivery);
-    return this.deliveryService.markInTransit(id, user.id, body.latitude, body.longitude);
+    return this.deliveryService.markInTransit(id, user.id, dto.latitude, dto.longitude);
   }
 
   @Post(':id/complete')
@@ -198,19 +194,11 @@ export class DeliveryController {
   async completeDelivery(
     @CurrentUser() user: User,
     @Param('id') id: string,
-    @Body() body: {
-      photoUrl: string;
-      recipientOtp: string;
-      recipientName: string;
-      recipientPhone: string;
-      latitude?: number;
-      longitude?: number;
-      notes?: string;
-    },
+    @Body() dto: CompleteDeliveryDto,
   ) {
     const delivery = await this.deliveryService.getDeliveryById(id);
     this.checkAccess(user, delivery);
-    return this.deliveryService.completeDelivery(id, user.id, body);
+    return this.deliveryService.completeDelivery(id, user.id, dto);
   }
 
   @Post(':id/failure')
@@ -219,36 +207,32 @@ export class DeliveryController {
   async reportFailure(
     @CurrentUser() user: User,
     @Param('id') id: string,
-    @Body() body: { reason: string; latitude?: number; longitude?: number },
+    @Body() dto: ReportFailureDto,
   ) {
     const delivery = await this.deliveryService.getDeliveryById(id);
     this.checkAccess(user, delivery);
-    return this.deliveryService.reportFailure(id, user.id, body.reason, body.latitude, body.longitude);
+    return this.deliveryService.reportFailure(id, user.id, dto.reason, dto.latitude, dto.longitude);
   }
 
   @Post(':id/redelivery')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Schedule redelivery for failed delivery (admin)' })
-  async scheduleRedelivery(
-    @CurrentUser() user: User,
-    @Param('id') id: string,
-  ) {
+  async scheduleRedelivery(@CurrentUser() user: User, @Param('id') id: string) {
     return this.deliveryService.scheduleRedelivery(id, user.id);
   }
 
   @Get(':id/proof')
   @ApiOperation({ summary: 'Get proof of delivery' })
-  async getProofOfDelivery(@Param('id') id: string) {
+  async getProofOfDelivery(@CurrentUser() user: User, @Param('id') id: string) {
+    const delivery = await this.deliveryService.getDeliveryById(id);
+    this.checkAccess(user, delivery);
     return this.deliveryService.getProofOfDelivery(id);
   }
 
   private checkAccess(user: User, delivery: Delivery): void {
     if (user.role === UserRole.ADMIN) return;
-    if (user.role === UserRole.CUSTOMER && delivery.customerId !== user.id) {
-      throw new Error('Not authorized');
-    }
-    if (user.role === UserRole.RIDER && delivery.riderId !== user.id) {
-      throw new Error('Not authorized');
-    }
+    if (user.role === UserRole.CUSTOMER && delivery.customerId === user.id) return;
+    if (user.role === UserRole.RIDER && delivery.riderId === user.id) return;
+    throw new ForbiddenException('Not authorized');
   }
 }

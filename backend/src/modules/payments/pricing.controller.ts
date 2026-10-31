@@ -1,28 +1,27 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  UseGuards,
+  ParseEnumPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 import { FareCalculationService } from './services/fare-calculation.service';
-import { PricingConfig, PricingConfigKey, DEFAULT_PRICING_CONFIG } from './entities/pricing-config.entity';
+import { PricingConfigKey, DEFAULT_PRICING_CONFIG } from './entities/pricing-config.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User, UserRole } from '../auth/entities/user.entity';
-
-interface CalculateFareDto {
-  distanceKm: number;
-  weightKg: number;
-  packageType: string;
-}
-
-interface UpdatePricingDto {
-  value: number;
-  description?: string;
-}
+import { CalculateFareDto, UpdatePricingDto } from './dto';
 
 @ApiTags('Pricing')
 @Controller('pricing')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class PricingController {
   constructor(private fareCalculationService: FareCalculationService) {}
@@ -44,7 +43,7 @@ export class PricingController {
   @Get('config/:key')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get specific pricing config (admin)' })
-  async getConfig(@Param('key') key: PricingConfigKey) {
+  async getConfig(@Param('key', new ParseEnumPipe(PricingConfigKey)) key: PricingConfigKey) {
     const value = await this.fareCalculationService.getConfig(key);
     return { key, value, defaultValue: DEFAULT_PRICING_CONFIG[key].value };
   }
@@ -54,7 +53,7 @@ export class PricingController {
   @ApiOperation({ summary: 'Update pricing configuration (admin)' })
   async updateConfig(
     @CurrentUser() user: User,
-    @Param('key') key: PricingConfigKey,
+    @Param('key', new ParseEnumPipe(PricingConfigKey)) key: PricingConfigKey,
     @Body() dto: UpdatePricingDto,
   ) {
     return this.fareCalculationService.setConfig(key, dto.value, user.id, dto.description);

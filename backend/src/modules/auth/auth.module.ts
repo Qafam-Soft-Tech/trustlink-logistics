@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { User } from '../auth/entities/user.entity';
 import { OtpCode } from '../auth/entities/otp-code.entity';
+import { RiderProfile } from '../deliveries/entities/rider-profile.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -14,7 +15,7 @@ import { TermiiSmsService } from './services/termii-sms.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, OtpCode]),
+    TypeOrmModule.forFeature([User, OtpCode, RiderProfile]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

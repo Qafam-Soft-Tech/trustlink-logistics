@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Delivery, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
+import { Delivery, DeliveryEvent, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
 import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-delivery.entity';
 import { User } from '../src/modules/auth/entities/user.entity';
 import { RiderProfile } from '../src/modules/deliveries/entities/rider-profile.entity';
@@ -29,7 +29,7 @@ describe('Phase 4: Address & Delivery Request Creation', () => {
         DeliveryService,
         DispatchService,
         FareCalculationService,
-        ...db.providers([Delivery, Address, ProofOfDelivery, User, RiderProfile, PricingConfig]),
+        ...db.providers([Delivery, Address, DeliveryEvent, ProofOfDelivery, User, RiderProfile, PricingConfig]),
         notificationServiceMock,
       ],
     }).compile();

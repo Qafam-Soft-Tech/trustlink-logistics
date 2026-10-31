@@ -10,7 +10,7 @@ import { TermiiSmsService } from './termii-sms.service';
 export class OtpService {
   private readonly logger = new Logger(OtpService.name);
   private readonly OTP_LENGTH = 6;
-  private readonly OTP_EXPIRY_MINUTES = 10;
+  private readonly OTP_EXPIRY_MINUTES = 5;
   private readonly MAX_ATTEMPTS = 3;
 
   constructor(

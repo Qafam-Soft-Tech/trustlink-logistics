@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Delivery, DeliveryStatus, Address } from '../src/modules/deliveries/entities/delivery.entity';
+import { Delivery, DeliveryEvent, DeliveryStatus, Address } from '../src/modules/deliveries/entities/delivery.entity';
 import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-delivery.entity';
+import { RiderProfile } from '../src/modules/deliveries/entities/rider-profile.entity';
 import { User } from '../src/modules/auth/entities/user.entity';
 import { Notification, NotificationChannel } from '../src/modules/notifications/entities/notification.entity';
 import { DeliveryService } from '../src/modules/deliveries/services/delivery.service';
@@ -27,7 +28,7 @@ describe('Phase 9: Customer Tracking, Notifications & Cancellation', () => {
       providers: [
         DeliveryService,
         NotificationService,
-        ...db.providers([Delivery, Address, ProofOfDelivery, User, Notification]),
+        ...db.providers([Delivery, Address, DeliveryEvent, ProofOfDelivery, RiderProfile, User, Notification]),
         configServiceMock,
       ],
     }).compile();
@@ -58,7 +59,7 @@ describe('Phase 9: Customer Tracking, Notifications & Cancellation', () => {
       ];
 
       for (const status of transitions) {
-        await deliveryService.updateDeliveryStatus(delivery.id, status, 'system', 'system');
+        await deliveryService.updateDeliveryStatus(delivery.id, status, 'system', 'admin');
       }
 
       const notifications = await notificationRepository.find({ where: { deliveryId: delivery.id } });
@@ -76,7 +77,7 @@ describe('Phase 9: Customer Tracking, Notifications & Cancellation', () => {
         ...TestFactory.createDelivery({ customerId: testData.customer.id }),
       });
 
-      await deliveryService.updateDeliveryStatus(delivery.id, DeliveryStatus.SEARCHING, 'system', 'system');
+      await deliveryService.updateDeliveryStatus(delivery.id, DeliveryStatus.SEARCHING, 'system', 'admin');
 
       const pushNotifications = await notificationRepository.find({
         where: { deliveryId: delivery.id, channel: NotificationChannel.PUSH },
@@ -103,7 +104,7 @@ describe('Phase 9: Customer Tracking, Notifications & Cancellation', () => {
             status: criticalPriorState[target],
           }),
         });
-        await deliveryService.updateDeliveryStatus(delivery.id, target as DeliveryStatus, 'system', 'system');
+        await deliveryService.updateDeliveryStatus(delivery.id, target as DeliveryStatus, 'system', 'admin');
 
         const smsNotifications = await notificationRepository.find({
           where: { deliveryId: delivery.id, channel: NotificationChannel.SMS },
@@ -151,11 +152,11 @@ describe('Phase 9: Customer Tracking, Notifications & Cancellation', () => {
       { status: DeliveryStatus.REQUESTED, type: 'free', fee: 0, refund: 100 },
       { status: DeliveryStatus.SEARCHING, type: 'free', fee: 0, refund: 100 },
       { status: DeliveryStatus.ASSIGNED, type: 'partial', percentage: 50, fee: 50, refund: 50 },
-      { status: DeliveryStatus.PICKED_UP, type: 'partial', percentage: 75, fee: 75, refund: 25 },
+      { status: DeliveryStatus.PICKED_UP, type: 'full', fee: 100, refund: 0 },
       { status: DeliveryStatus.IN_TRANSIT, type: 'full', fee: 100, refund: 0 },
     ];
 
-    feeTests.forEach(({ status, type, fee, refund, percentage }: any) => {
+    feeTests.forEach(({ status, type, refund, percentage }: any) => {
       it(`should apply ${type} fee for ${status}`, async () => {
         const delivery = await deliveryRepository.save({
           ...TestFactory.createDelivery({

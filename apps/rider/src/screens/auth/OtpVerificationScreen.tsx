@@ -6,6 +6,7 @@ import { errorMessage } from '@trustlink/shared';
 import { useVerifyOtp, useResendOtp } from '../../hooks/useAuth';
 import { useCountdown } from '../../hooks/useCountdown';
 import { useSession } from '../../session/SessionContext';
+import { authStorage } from '../../storage/authStorage';
 import type { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'OtpVerification'>;
@@ -32,6 +33,7 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
       {
         onSuccess: async (result) => {
           if (purpose === 'signup') {
+            await authStorage.setToken(result.token);
             navigation.navigate('ProfileSetup', { phone });
             return;
           }

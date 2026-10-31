@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { Exclude } from 'class-transformer';
 
 export enum UserRole {
   CUSTOMER = 'customer',
@@ -33,6 +34,7 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.CUSTOMER })
   role!: UserRole;
 
+  @Exclude()
   @Column({ nullable: true })
   passwordHash!: string;
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request, Put, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Put, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 import { KycService } from './services/kyc.service';
@@ -6,23 +6,12 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { User, UserRole, KycStatus } from '../auth/entities/user.entity';
-import { KycDocumentType } from './entities/kyc-submission.entity';
-
-interface SubmitKycDto {
-  nin: string;
-  idType: KycDocumentType;
-  idFrontUrl: string;
-  idBackUrl: string;
-  selfieUrl: string;
-  vehicleRegistrationUrl: string;
-  vehicleType: string;
-  vehiclePlate: string;
-}
+import { User, UserRole } from '../auth/entities/user.entity';
+import { RejectKycDto, SubmitKycDto } from './dto';
 
 @ApiTags('KYC')
 @Controller('kyc')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class KycController {
   constructor(private kycService: KycService) {}
@@ -40,7 +29,7 @@ export class KycController {
   async getKycStatus(@CurrentUser() user: User) {
     const submission = await this.kycService.getKycStatus(user.id);
     return {
-      status: submission?.status || KycStatus.PENDING,
+      status: submission?.status || 'pending',
       rejectionReason: submission?.rejectionReason || null,
       submittedAt: submission?.createdAt || null,
       reviewedAt: submission?.reviewedAt || null,
@@ -73,7 +62,7 @@ export class KycController {
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reject KYC submission (admin)' })
-  async rejectKyc(@CurrentUser() admin: User, @Param('userId') userId: string, @Body() body: { reason: string }) {
-    return this.kycService.rejectKyc(admin.id, userId, body.reason);
+  async rejectKyc(@CurrentUser() admin: User, @Param('userId') userId: string, @Body() dto: RejectKycDto) {
+    return this.kycService.rejectKyc(admin.id, userId, dto.reason);
   }
 }

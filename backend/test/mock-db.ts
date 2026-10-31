@@ -2,15 +2,10 @@ import * as crypto from 'crypto';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 
-import { User, UserRole, KycStatus } from '../src/modules/auth/entities/user.entity';
-import { OtpCode } from '../src/modules/auth/entities/otp-code.entity';
-import { Delivery, DeliveryStatus, PackageType, Address, DeliveryEvent, ProofOfDelivery } from '../src/modules/deliveries/entities/delivery.entity';
-import { RiderProfile, VehicleType, RiderStatus } from '../src/modules/deliveries/entities/rider-profile.entity';
-import { KycSubmission } from '../src/modules/users/entities/kyc-submission.entity';
-import { PricingConfig, PricingConfigKey, DEFAULT_PRICING_CONFIG } from '../src/modules/payments/entities/pricing-config.entity';
-import { Payment } from '../src/modules/payments/entities/payment.entity';
-import { Notification } from '../src/modules/notifications/entities/notification.entity';
-import { Issue } from '../src/modules/deliveries/entities/issue.entity';
+import { UserRole, KycStatus } from '../src/modules/auth/entities/user.entity';
+import { DeliveryStatus, PackageType } from '../src/modules/deliveries/entities/delivery.entity';
+import { VehicleType, RiderStatus } from '../src/modules/deliveries/entities/rider-profile.entity';
+import { PricingConfigKey, DEFAULT_PRICING_CONFIG } from '../src/modules/payments/entities/pricing-config.entity';
 import { NotificationService } from '../src/modules/notifications/services/notification.service';
 
 const ENTITY_NAMES = [
@@ -446,7 +441,7 @@ export const TestFactory = {
 };
 
 export function seedPricingConfigs(db: MockDb): void {
-  Object.entries(DEFAULT_PRICING_CONFIG).forEach(([key, config]) => {
+  Object.keys(DEFAULT_PRICING_CONFIG).forEach(key => {
     db.add('PricingConfig', TestFactory.createPricingConfig(key as PricingConfigKey));
   });
 }

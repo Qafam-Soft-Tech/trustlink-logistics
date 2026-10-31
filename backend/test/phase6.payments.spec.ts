@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import * as crypto from 'crypto';
-import { Delivery, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
+import { Delivery, DeliveryEvent, DeliveryStatus, PackageType, Address } from '../src/modules/deliveries/entities/delivery.entity';
 import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-delivery.entity';
 import { User } from '../src/modules/auth/entities/user.entity';
 import { RiderProfile } from '../src/modules/deliveries/entities/rider-profile.entity';
@@ -33,7 +33,7 @@ describe('Phase 6: Payments Integration', () => {
         PaymentService,
         DeliveryService,
         FareCalculationService,
-        ...db.providers([Payment, Delivery, Address, ProofOfDelivery, User, RiderProfile, PricingConfig]),
+        ...db.providers([Payment, Delivery, Address, DeliveryEvent, ProofOfDelivery, User, RiderProfile, PricingConfig]),
         configServiceMock,
         notificationServiceMock,
       ],
@@ -73,7 +73,7 @@ describe('Phase 6: Payments Integration', () => {
 
       await deliveryRepository.update(delivery.id, { fare: fare.totalFare });
 
-      const result = await paymentService.initializePayment({
+      const result = await paymentService.initializePayment(testData.customer.id, {
         deliveryId: delivery.id,
         amount: Math.round(fare.totalFare * 100),
         email: testData.customer.email,
@@ -99,7 +99,7 @@ describe('Phase 6: Payments Integration', () => {
 
       await deliveryRepository.update(delivery.id, { status: DeliveryStatus.ASSIGNED });
 
-      await expect(paymentService.initializePayment({
+      await expect(paymentService.initializePayment(testData.customer.id, {
         deliveryId: delivery.id,
         amount: 150000,
         email: 'test@test.com',
@@ -119,7 +119,7 @@ describe('Phase 6: Payments Integration', () => {
 
       await deliveryRepository.update(delivery.id, { fare: fare.totalFare });
 
-      const result = await paymentService.initializePayment({
+      const result = await paymentService.initializePayment(testData.customer.id, {
         deliveryId: delivery.id,
         amount: Math.round(fare.totalFare * 100),
         email: testData.customer.email,
@@ -150,7 +150,7 @@ describe('Phase 6: Payments Integration', () => {
 
       await deliveryRepository.update(delivery.id, { fare: fare.totalFare });
 
-      const initResult = await paymentService.initializePayment({
+      const initResult = await paymentService.initializePayment(testData.customer.id, {
         deliveryId: delivery.id,
         amount: Math.round(fare.totalFare * 100),
         email: testData.customer.email,
@@ -182,7 +182,7 @@ describe('Phase 6: Payments Integration', () => {
 
       await deliveryRepository.update(delivery.id, { fare: fare.totalFare });
 
-      const initResult = await paymentService.initializePayment({
+      const initResult = await paymentService.initializePayment(testData.customer.id, {
         deliveryId: delivery.id,
         amount: Math.round(fare.totalFare * 100),
         email: testData.customer.email,
@@ -221,7 +221,7 @@ describe('Phase 6: Payments Integration', () => {
     it('should process charge.success webhook idempotently', async () => {
       const delivery = await createRequestedDelivery();
 
-      const initResult = await paymentService.initializePayment({
+      const initResult = await paymentService.initializePayment(testData.customer.id, {
         deliveryId: delivery.id,
         amount: 150000,
         email: testData.customer.email,
@@ -269,7 +269,7 @@ describe('Phase 6: Payments Integration', () => {
       expect(updatedDelivery.status).toBe(DeliveryStatus.REQUESTED);
 
       // Initialize first payment
-      const initResult = await paymentService.initializePayment({
+      const initResult = await paymentService.initializePayment(testData.customer.id, {
         deliveryId: delivery.id,
         amount: 150000,
         email: testData.customer.email,
@@ -284,7 +284,7 @@ describe('Phase 6: Payments Integration', () => {
       await paymentRepository.update(payment.id, { status: PaymentStatus.SUCCESS });
 
       // A second payment attempt must be rejected
-      await expect(paymentService.initializePayment({
+      await expect(paymentService.initializePayment(testData.customer.id, {
         deliveryId: delivery.id,
         amount: 150000,
         email: testData.customer.email,

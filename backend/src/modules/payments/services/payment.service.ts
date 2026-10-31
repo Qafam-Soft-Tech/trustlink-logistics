@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -18,14 +18,21 @@ export class PaymentService {
     private configService: ConfigService,
   ) {}
 
-  async initializePayment(dto: InitializePaymentDto): Promise<PaymentInitializationResponse> {
+  async initializePayment(customerId: string, dto: InitializePaymentDto): Promise<PaymentInitializationResponse> {
     const delivery = await this.deliveryRepository.findOne({ where: { id: dto.deliveryId } });
     if (!delivery) {
       throw new NotFoundException('Delivery not found');
     }
+    if (delivery.customerId !== customerId) {
+      throw new ForbiddenException('Not authorized');
+    }
 
     if (delivery.status !== DeliveryStatus.REQUESTED) {
       throw new BadRequestException('Payment can only be initiated for REQUESTED deliveries');
+    }
+
+    if (delivery.fare != null && dto.amount !== Math.round(Number(delivery.fare) * 100)) {
+      throw new BadRequestException('Payment amount does not match the delivery fare');
     }
 
     // Check if payment already exists
@@ -237,6 +244,13 @@ export class PaymentService {
     return this.paymentRepository.findOne({
       where: { deliveryId },
       relations: { delivery: true },
+    });
+  }
+
+  async getAllPayments(): Promise<Payment[]> {
+    return this.paymentRepository.find({
+      relations: { delivery: true },
+      order: { createdAt: 'DESC' },
     });
   }
 

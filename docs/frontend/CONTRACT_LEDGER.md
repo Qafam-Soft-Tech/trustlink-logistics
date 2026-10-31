@@ -9,10 +9,10 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | ID | Conflict | UI behaviour chosen | Decision | Status |
 |---|---|---|---|---|
 | SC-1 | Roadmap mentions live tracking/map autocomplete; REQUIREMENTS §9 defers live GPS | Status-based tracking, static route card, no maps | D6 | Resolved (no maps in R1) |
-| SC-2 | Cancellation: FR-C11 (partial ASSIGNED→PICKED_UP, full after) vs §6 (cancel only from REQUESTED/SEARCHING/ASSIGNED) vs notification fee table (through IN_TRANSIT; 50/75/full) | Follow the **preview endpoint / fee table** (50/75/full) | D14 | **Needs decision** (fee tiers differ from FR-C11) |
+| SC-2 | Cancellation: FR-C11 (partial ASSIGNED→PICKED_UP, full after) vs §6 (cancel only from REQUESTED/SEARCHING/ASSIGNED) vs notification fee table (through IN_TRANSIT; 50/75/full) | **FR-C11 adopted:** free through SEARCHING, 50% at ASSIGNED, full from PICKED_UP onward | D14 | **Resolved (M1)** |
 | SC-3 | Redelivery: spec FAILED→ASSIGNED "automatic"; code resets to SEARCHING, admin-only; transition map allows only FAILED→RETURNED | Follow code (admin schedules redelivery → SEARCHING) | D15 | Resolved (follow code) |
 | SC-4 | FR-R07: ASSIGNED only after rider acknowledgement; code sets ASSIGNED on admin assign, acknowledge is a no-op | Follow code; mock stores `acknowledgedAt` | D15 | Resolved (follow code) |
-| SC-5 | OTP expiry 5 min (spec) vs 10 min (code + SMS text) | UI uses **5 min** (`OTP_EXPIRY_SECONDS = 300`) | D4 | **Needs decision** (code change backend-side deferred) |
+| SC-5 | OTP expiry 5 min (spec) vs 10 min (code + SMS text) | UI and backend both use **5 min**; SMS copy updated | D4 | **Resolved (M1)** |
 | SC-6 | Weight "bracket" (spec) vs numeric kg with tiers to 25 kg (code) | Chips ≤1/≤5/≤10/≤25 kg → send upper-bound numeric `packageWeight` | D16 | Resolved (chips → kg) |
 | SC-7 | Phone not normalised on backend (raw-string lookup; only Termii converts to 234) | One `toCanonicalPhone()`; canonical = `080xxxxxxxx` (what screens send today) | D17 | Resolved |
 | SC-8 | FR-C05 "no request until fare accepted" vs backend create-then-fare; fare needs `distanceKm` the client can't get without maps | Flow: quote → accept → create → pay; mock distance from a fixture table | — | **Needs decision** (distance source) |
@@ -29,7 +29,7 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | ID | Conflict / observation | UI behaviour chosen | Status |
 |---|---|---|---|
 | SC-16 | `InitializePaymentDto.amount` documented "in kobo", but fares are **naira decimals** (`DEFAULT_PRICING_CONFIG`); payment entity comment also says kobo | Frontend sends **amount in kobo** exactly once, at the api boundary (`Math.round(amountNaira * 100)`); UI and mock stay in naira | **Resolved — verified kobo** (backend DTO documents kobo; Paystack consumes kobo, Flutterwave divides by 100 in its service) |
-| SC-17 | `@Roles(...)` is enforced only where `RolesGuard` is present (only `UsersController`). All other controllers use `JwtAuthGuard` alone, so declared roles (admin/rider/customer) are **not enforced** at the guard | Frontend still restricts by declared role; treat backend enforcement as untrusted for now | **Needs decision** (security) |
+| SC-17 | `@Roles(...)` is enforced only where `RolesGuard` is present (only `UsersController`). All other controllers use `JwtAuthGuard` alone, so declared roles (admin/rider/customer) are **not enforced** at the guard | `RolesGuard` is wired on every controller and a cross-role e2e matrix passes | **Resolved (M1)** |
 | SC-18 | Deep links in **Expo Go** need the runtime `exp://…` prefix from `expo-linking` (`Linking.createURL('/')`), which is **not** in the approved dependency list | `scheme: trustlink` + `trustlink://` prefix configured (dev builds work); Expo-Go `exp://` prefix deferred | **Resolved (Phase 5)** — `expo-linking` installed (customer); prefixes `[createURL('/'), 'trustlink://']`; see `DEMO.md` §4 |
 | SC-19 | Payment retry: backend §12 blocks a new `payments/initialize` while a payment is `SUCCESS` **or `PROCESSING`**; a declined/cancelled/timed-out attempt would therefore stay blocked | Mock + UI block only when a payment is **SUCCESS** (or the delivery has left REQUESTED); retry after decline/cancel/timeout is allowed | **Needs decision** (retry-after-processing) |
 | SC-20 | No backend distance source (`POST /pricing/calculate` needs `distanceKm`; no maps in R1) | Client-side estimate `pricing.estimateDistance` from launch-area coordinates (domain-owned table) → sent to `calculate` | **Needs decision** (restates SC-8; confirm fixture-table estimate is acceptable) |
@@ -53,9 +53,9 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-38 | The backend never generates or delivers `recipientOtp` for POD (snapshot §10); there is no rider decline route (SC-12) | The mock supplies the fixture code and the Customer Demo menu reveals it to the presenter; the rider POD rejects a wrong code and offers "Call dispatch" instead of a decline | Resolved (documented) |
 | SC-39 | `POST /deliveries/:id/failure` accepts only `{ reason }` — no note | The rider note is optional and kept locally for the rider's reference; only the selected reason is sent | **Needs decision** (accept a note server-side) |
 | SC-40 | The admin app cannot import `@trustlink/shared` (separate npm project, no workspace; BASELINE.md blessed no Vite alias) | The admin keeps its own brand CSS and **copies** the minimal domain types + a compatible Abuja mock world (`apps/admin/src/data/`) | Resolved (documented duplication; revisit if a workspace/alias is approved) |
-| SC-41 | Admin auth: no `/auth/admin/login` route exists (SC-14) | The console signs in locally against a documented demo credential (`apps/admin/src/data/adminCredentials.ts`, `DEMO.md` §7) and runs on mock data | **Needs decision** (seed an admin user + endpoint, or accept the demo-only login) |
-| SC-42 | Dispatch assignment: the mock's `assignRider` admits a `REQUESTED` delivery, but the state machine only allows `requested → searching`, so the transition throws (`Cannot transition from requested to assigned`). The admin console's own mock *does* assign from REQUESTED | Follow the state machine: the demo pays first, then dispatches (pay → SEARCHING → assign). The console still lists requested deliveries as assignable | **Needs decision** (can dispatch assign an unpaid REQUESTED delivery? align backend + both mocks) |
-| SC-43 | **Backend bug (high priority):** nothing sets a rider from `ON_TRIP` back to `ONLINE` when their delivery becomes `DELIVERED`/`FAILED`/`RETURNED`, so `PUT /dispatch/status` and `/rider/profile/status` then reject the rider and no further job can be assigned | The shared mock **and** the admin's copy free the rider on job end (mock-only; the frontend cannot fix the backend) | **Needs decision** (backend fix required; documented in `HANDOFF.md` §1 and §3, flagged in `DEMO.md` §11) |
+| SC-41 | Admin auth: no `/auth/admin/login` route exists (SC-14) | `POST /auth/admin/login` (email + password, bcrypt) and `npm run seed:admin` now exist; the console still uses its local demo credential until M4 wires it | **Resolved backend (M1)**; console wiring is M4 |
+| SC-42 | Dispatch assignment: the mock's `assignRider` admits a `REQUESTED` delivery, but the state machine only allows `requested → searching`, so the transition throws (`Cannot transition from requested to assigned`). The admin console's own mock *does* assign from REQUESTED | Backend now requires `SEARCHING` for eligibility and assignment (pay first, then dispatch); mocks should match in M3/M4 | **Resolved backend (M1)** |
+| SC-43 | **Backend bug (high priority):** nothing sets a rider from `ON_TRIP` back to `ONLINE` when their delivery becomes `DELIVERED`/`FAILED`/`RETURNED`, so `PUT /dispatch/status` and `/rider/profile/status` then reject the rider and no further job can be assigned | The backend now releases the rider on DELIVERED/FAILED/RETURNED/CANCELLED and on redelivery, only when no other active delivery remains | **Resolved (M1)** with regression tests |
 | SC-44 | The committed icon/adaptive-icon/splash assets are the Expo template placeholders **and their content is JPEG with a `.png` extension** — expo-doctor fails the config-schema check on both apps and a release build may reject or render them wrong | Kept as-is because the phase instructs "until then keep the current ones"; they are registered in `SCAFFOLD_REGISTER.md` as **replaced by brand assets** and must be swapped for real PNGs (icon 1024×1024, adaptive foreground/background/monochrome 1024×1024) in `assets/brand/` | **Needs decision** (supply brand PNGs; then update the `app.json` paths) |
 | SC-45 | `@trustlink/shared` is a `file:../shared` dependency, but EAS uploads only the app directory (`apps/customer`, `apps/rider`) — the cloud builder cannot resolve `../shared`, so a cloud `eas build` is expected to fail at `npm install` | Documented in `BUILD.md` §6; `eas build --local` works today because the sibling folder is on disk. The clean fix is a root npm workspace (`"workspaces": ["apps/*"]` + one root lockfile) so EAS detects the monorepo and uploads the root | **Resolved (Phase 19)** — the repo is an npm workspace with a single root `package-lock.json`; `@trustlink/shared` is consumed as the workspace dependency `"*"` (symlinked into `node_modules/@trustlink/shared`). Verified: clean `npm install` from the root, both apps bundle (1562 / 1506 modules), no duplicate `react-native`. See `docs/release/BUILD.md`. |
 | SC-46 | `app.json` sets `userInterfaceStyle: "light"` while Phase 16 ships light **and** dark themes | The in-app Appearance preference works, but a **release** build reports `useColorScheme() === 'light'` always, so "System" can never follow the device | **Resolved (Phase 19)** — both `app.config.ts` files set `userInterfaceStyle: "automatic"` (verified with `npx expo config --type public`, which also shows `userInterfaceStyle: 'automatic'`), so native chrome and a release build's `useColorScheme()` follow the device. |
@@ -123,12 +123,12 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 
 ## D. Needs decision (summary)
 
-1. **SC-2 / D14** — confirm cancellation fee tiers (50/75/full vs FR-C11 wording).
-2. **SC-5 / D4** — confirm UI shows 5-min OTP countdown while backend expires at 10 min.
+1. ~~**SC-2 / D14**~~ — *Resolved (M1)*: FR-C11 fee tiers (free through SEARCHING, 50% at ASSIGNED, full from PICKED_UP).
+2. ~~**SC-5 / D4**~~ — *Resolved (M1)*: UI and backend both use 5-minute OTP expiry.
 3. **SC-8 / SC-6** — source of `distanceKm` for fare without maps (fixture table acceptable for demo?). **Phase 7 implements SC-20 (client estimate)** — confirm acceptable.
 4. ~~**SC-16**~~ — *Resolved (verified kobo)*: the adapter converts naira→kobo exactly once at the api boundary; the backend DTO documents kobo, Paystack consumes kobo, Flutterwave divides by 100 in its service.
-5. **SC-17** — backend role enforcement gap (`@Roles` decorative outside `UsersController`); accept as-is or require backend fix.
-6. **Admin login** — backend endpoint + seed credentials, or interim frontend mock (Phase 4).
+5. ~~**SC-17**~~ — *Resolved (M1)*: `RolesGuard` is wired on every controller and covered by an e2e matrix.
+6. ~~**Admin login**~~ — *Resolved backend (M1)*: `POST /auth/admin/login` + `npm run seed:admin`; console wiring is M4.
 7. **SC-19** — retry after a declined/cancelled/timed-out payment (backend §12 would block on `PROCESSING`; UI allows retry).
 8. **SC-21** — approve a clipboard dependency (`expo-clipboard`) to replace RN core `Clipboard`.
 9. **SC-22** — rider vehicle type is not on the delivery payload (demo-only field used in the tracking rider card).
@@ -143,21 +143,21 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 18. **SC-35** — KYC needs a document upload endpoint (the rider app submits local image URIs today).
 19. **SC-37** — the dispatch phone line is a placeholder (used by "Call dispatch").
 20. **SC-39** — the delivery-failure route accepts no note (the rider note is local only).
-21. **SC-41** — the admin console signs in locally (no `/auth/admin/login`); decide whether to seed a real admin.
-22. **SC-43** — *High priority:* the backend must free a rider (`ON_TRIP → ONLINE`) when their delivery ends; until then a rider is unusable after one job.
+21. ~~**SC-41**~~ — *Resolved backend (M1)*; the console still needs its M4 wiring.
+22. ~~**SC-43**~~ — *Resolved (M1)*: the backend frees the rider on DELIVERED/FAILED/RETURNED/CANCELLED and redelivery.
 23. **SC-44** — supply real brand PNGs for the icon/adaptive-icon/splash (the committed ones are placeholders whose content is JPEG with a `.png` extension); update the `app.json` paths to `assets/brand/`.
 24. ~~**SC-45**~~ — *Resolved (Phase 19)*: the repo is an npm workspace with a single root lockfile, so the shared package reaches the EAS builder.
 25. ~~**SC-46**~~ — *Resolved (Phase 19)*: `userInterfaceStyle: "automatic"` in both `app.config.ts` files.
 26. **SC-48** — one React for the workspace (doctor 21/21) costs console bundle size; decide whether to accept it or let the console pin 19.3.x.
 
 ## E. Backend issues deferred (not blocking frontend, tracked here)
-- Signup DTO validation missing (interfaces, no class-validator).
+- ~~Signup DTO validation missing (interfaces, no class-validator).~~ **Resolved (M1)** — class-validator DTOs; signup role is customer/rider only.
 - Phone not normalised server-side.
-- OTP request rate-limiting absent; Redis unused.
-- `acknowledgedAt` absent on deliveries.
-- Recipient OTP for POD not generated/delivered.
+- OTP request rate-limiting absent; Redis unused (M2).
+- ~~`acknowledgedAt` absent on deliveries.~~ **Resolved (M1)** — column added and set on rider acknowledgment.
+- Recipient OTP for POD not generated/delivered (M2).
 - Cancellation endpoint inconsistency (`/deliveries/:id/cancel` vs `/notifications/cancel`).
-- Role guard not applied outside `UsersController`.
+- ~~Role guard not applied outside `UsersController`.~~ **Resolved (M1)** — `RolesGuard` on every controller, with an RBAC e2e matrix.
 
 ## F. Phase 1 — adapter gaps (throw `NotSupportedByBackendError`)
 

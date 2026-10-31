@@ -7,33 +7,15 @@ import * as bcrypt from 'bcryptjs';
 import { User, UserRole } from './entities/user.entity';
 import { OtpCode } from './entities/otp-code.entity';
 import { OtpService } from './services/otp.service';
-
-export interface SignupDto {
-  phone: string;
-  firstName?: string;
-  lastName?: string;
-  role: UserRole;
-  email?: string;
-}
-
-export interface ProfileSetupDto {
-  phone: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-  role: UserRole;
-  vehicleType?: string;
-  vehiclePlate?: string;
-}
-
-export interface VerifyOtpDto {
-  phone: string;
-  code: string;
-}
-
-export interface LoginDto {
-  phone: string;
-}
+import { RiderProfile, VehicleType } from '../deliveries/entities/rider-profile.entity';
+import {
+  AdminLoginDto,
+  LoginDto,
+  ProfileSetupDto,
+  SignupDto,
+  UpdateProfileDto,
+  VerifyOtpDto,
+} from './dto';
 
 @Injectable()
 export class AuthService {
@@ -42,11 +24,17 @@ export class AuthService {
     private userRepository: Repository<User>,
     @InjectRepository(OtpCode)
     private otpRepository: Repository<OtpCode>,
+    @InjectRepository(RiderProfile)
+    private riderProfileRepository: Repository<RiderProfile>,
     private jwtService: JwtService,
     private otpService: OtpService,
   ) {}
 
   async signup(dto: SignupDto) {
+    if (dto.role !== UserRole.CUSTOMER && dto.role !== UserRole.RIDER) {
+      throw new BadRequestException('role must be customer or rider');
+    }
+
     const existingUser = await this.userRepository.findOne({ where: { phone: dto.phone } });
     if (existingUser) {
       if (existingUser.role === dto.role) {
@@ -56,7 +44,11 @@ export class AuthService {
     }
 
     const user = this.userRepository.create({
-      ...dto,
+      phone: dto.phone,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      role: dto.role,
       isPhoneVerified: false,
     });
     await this.userRepository.save(user);
@@ -114,6 +106,24 @@ export class AuthService {
     return { user: this.sanitizeUser(user), token };
   }
 
+  async adminLogin(dto: AdminLoginDto) {
+    const user = await this.userRepository.findOne({
+      where: { email: dto.email, role: UserRole.ADMIN },
+    });
+
+    if (!user || !user.passwordHash || !user.isActive) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const matches = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!matches) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const token = this.generateToken(user);
+    return { user: this.sanitizeUser(user), token };
+  }
+
   async resendOtp(phone: string, purpose: 'signup' | 'login' | 'reset' = 'signup') {
     await this.otpService.sendOtp(phone, purpose);
     return { message: 'OTP resent successfully' };
@@ -127,41 +137,53 @@ export class AuthService {
     return this.sanitizeUser(user);
   }
 
-  async updateProfile(userId: string, data: Partial<User>) {
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
 
-    if (data.phone && data.phone !== user.phone) {
+    if (dto.phone && dto.phone !== user.phone) {
       throw new BadRequestException('Phone number cannot be changed');
     }
-    if (data.role && data.role !== user.role) {
+    if (dto.role && dto.role !== user.role) {
       throw new BadRequestException('Role cannot be changed');
     }
 
-    Object.assign(user, data);
+    if (dto.firstName !== undefined) user.firstName = dto.firstName;
+    if (dto.lastName !== undefined) user.lastName = dto.lastName;
+    if (dto.email !== undefined) user.email = dto.email;
+    if (dto.avatarUrl !== undefined) user.avatarUrl = dto.avatarUrl;
+
     await this.userRepository.save(user);
     return this.sanitizeUser(user);
   }
 
-  async setupProfile(dto: ProfileSetupDto) {
-    const user = await this.userRepository.findOne({ where: { phone: dto.phone } });
+  async setupProfile(userId: string, dto: ProfileSetupDto) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
 
     user.firstName = dto.firstName;
     user.lastName = dto.lastName;
-    user.email = dto.email || user.email;
-    user.role = dto.role;
-    if (dto.vehicleType) {
-      (user as any).vehicleType = dto.vehicleType;
-    }
-    if (dto.vehiclePlate) {
-      (user as any).vehiclePlate = dto.vehiclePlate;
-    }
+    if (dto.email !== undefined) user.email = dto.email;
     await this.userRepository.save(user);
+
+    if (user.role === UserRole.RIDER && (dto.vehicleType || dto.vehiclePlate)) {
+      let riderProfile = await this.riderProfileRepository.findOne({ where: { userId } });
+      if (!riderProfile) {
+        riderProfile = this.riderProfileRepository.create({
+          userId,
+          vehicleType: dto.vehicleType ?? VehicleType.MOTORCYCLE,
+          vehiclePlate: dto.vehiclePlate ?? '',
+        });
+      } else {
+        if (dto.vehicleType) riderProfile.vehicleType = dto.vehicleType;
+        if (dto.vehiclePlate !== undefined) riderProfile.vehiclePlate = dto.vehiclePlate;
+      }
+      await this.riderProfileRepository.save(riderProfile);
+    }
 
     const token = this.generateToken(user);
     return { user: this.sanitizeUser(user), token };
@@ -173,7 +195,7 @@ export class AuthService {
   }
 
   private sanitizeUser(user: User) {
-    const { passwordHash, ...sanitized } = user;
+    const { passwordHash: _passwordHash, ...sanitized } = user;
     return sanitized;
   }
 }

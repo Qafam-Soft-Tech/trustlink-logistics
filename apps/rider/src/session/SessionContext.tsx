@@ -38,6 +38,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         await data.auth.hydrate(user).catch(() => undefined);
         if (!active) return;
         setSession({ token, user });
+      } else if (token) {
+        // A signup token without a completed profile is not a session.
+        await authStorage.clearToken();
       }
       setReady(true);
     })();

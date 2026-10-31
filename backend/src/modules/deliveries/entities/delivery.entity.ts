@@ -162,6 +162,9 @@ export class Delivery {
   @Column({ nullable: true })
   assignedAt!: Date;
 
+  @Column({ type: 'timestamp', nullable: true })
+  acknowledgedAt!: Date | null;
+
   @Column({ nullable: true })
   pickedUpAt!: Date;
 
