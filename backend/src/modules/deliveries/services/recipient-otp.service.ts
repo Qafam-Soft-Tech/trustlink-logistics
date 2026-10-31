@@ -42,6 +42,9 @@ export class RecipientOtpService {
     );
     if (!sent) {
       this.logger.warn(`Recipient OTP for delivery ${deliveryId} stored but SMS was not sent`);
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.log(`[DEV] Recipient OTP for delivery ${deliveryId}: ${code}`);
+      }
     }
   }
 
