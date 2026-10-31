@@ -263,6 +263,21 @@ describe('M2 backend integrity (e2e)', () => {
     });
   });
 
+  describe('admin riders', () => {
+    it('lists rider profiles for admins and blocks customers', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/admin/riders')
+        .set(auth(adminToken))
+        .expect(200);
+      expect(Array.isArray(response.body)).toBe(true);
+
+      await request(app.getHttpServer())
+        .get('/api/admin/riders')
+        .set(auth(customerToken))
+        .expect(403);
+    });
+  });
+
   describe('reports', () => {
     it('returns an operational summary to admins and blocks customers', async () => {
       await createDelivery();

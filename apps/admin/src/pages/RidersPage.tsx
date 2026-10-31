@@ -16,9 +16,17 @@ function DocumentViewer({ rider }: { rider: RiderProfile }) {
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 'var(--spacing-md)' }}>
       {DOC_LABELS.map(([key, label]) => (
         <div key={key}>
-          <div className="card" style={{ height: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: 'var(--color-background-secondary, #f6f7f9)', color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-xs)', textAlign: 'center', padding: 'var(--spacing-sm)' }}>
+          <div className="card" style={{ height: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: 'var(--color-background-secondary, #f6f7f9)', color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-xs)', textAlign: 'center', padding: 'var(--spacing-sm)', overflow: 'hidden' }}>
             <strong style={{ color: 'var(--color-text-secondary)' }}>{label}</strong>
-            <span>{rider.documents[key]}</span>
+            {rider.documents[key]?.startsWith('http') ? (
+              <img
+                src={rider.documents[key]}
+                alt={label}
+                style={{ maxWidth: '100%', maxHeight: 80, objectFit: 'contain', borderRadius: 4 }}
+              />
+            ) : (
+              <span>{rider.documents[key] || 'Not uploaded'}</span>
+            )}
           </div>
         </div>
       ))}

@@ -24,7 +24,7 @@ export function ReportsPage() {
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)' }}>
-        <KpiCard label="Deliveries" value={summary.total} hint="all time (mock)" />
+        <KpiCard label="Deliveries" value={summary.total} hint="all time" />
         <KpiCard label="Completion rate" value={percent(summary.completionRate)} hint="delivered ÷ closed jobs" />
         <KpiCard label="Cancellation rate" value={percent(summary.cancellationRate)} hint="cancelled ÷ all deliveries" />
         <KpiCard label="Revenue" value={NGN(summary.revenue)} hint="paid deliveries" />

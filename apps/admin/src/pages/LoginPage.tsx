@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ADMIN_DEMO_EMAIL, ADMIN_DEMO_PASSWORD } from '../data/adminCredentials';
+import { readAdminDataSource } from '../data/dataSource';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -10,6 +11,7 @@ export function LoginPage() {
   const [password, setPassword] = useState(ADMIN_DEMO_PASSWORD);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const source = readAdminDataSource();
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -59,8 +61,17 @@ export function LoginPage() {
         </button>
 
         <p style={{ marginTop: 'var(--spacing-md)', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
-          Demo console (mock data): <strong>{ADMIN_DEMO_EMAIL}</strong> / <strong>{ADMIN_DEMO_PASSWORD}</strong>.
-          The backend has no <code>/auth/admin/login</code> route, so the console signs in locally — see <code>docs/frontend/DEMO.md</code>.
+          {source === 'api' ? (
+            <>
+              Live API mode. Use the seeded admin account (<strong>{ADMIN_DEMO_EMAIL}</strong> / <strong>{ADMIN_DEMO_PASSWORD}</strong>);
+              create it with <code>npm run seed:admin</code>. See <code>docs/release/BUILD.md</code>.
+            </>
+          ) : (
+            <>
+              Demo console (mock data): <strong>{ADMIN_DEMO_EMAIL}</strong> / <strong>{ADMIN_DEMO_PASSWORD}</strong>.
+              Set <code>VITE_DATA_SOURCE=api</code> to use the backend.
+            </>
+          )}
         </p>
       </form>
     </div>

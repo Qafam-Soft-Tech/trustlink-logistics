@@ -52,8 +52,8 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-37 | The rider "Can't take this? Call dispatch" action has no published number | A clearly-labelled placeholder dispatch line (`screens/jobs/dispatch.ts`) is used; replace before launch | **Needs decision** (real dispatch number) |
 | SC-38 | The backend never generates or delivers `recipientOtp` for POD (snapshot §10); there is no rider decline route (SC-12) | The mock supplies the fixture code and the Customer Demo menu reveals it to the presenter; the rider POD rejects a wrong code and offers "Call dispatch" instead of a decline | Resolved (documented) |
 | SC-39 | `POST /deliveries/:id/failure` accepts only `{ reason }` — no note | The rider note is optional and kept locally for the rider's reference; only the selected reason is sent | **Needs decision** (accept a note server-side) |
-| SC-40 | The admin app cannot import `@trustlink/shared` (separate npm project, no workspace; BASELINE.md blessed no Vite alias) | The admin keeps its own brand CSS and **copies** the minimal domain types + a compatible Abuja mock world (`apps/admin/src/data/`) | Resolved (documented duplication; revisit if a workspace/alias is approved) |
-| SC-41 | Admin auth: no `/auth/admin/login` route exists (SC-14) | `POST /auth/admin/login` (email + password, bcrypt) and `npm run seed:admin` now exist; the console still uses its local demo credential until M4 wires it | **Resolved backend (M1)**; console wiring is M4 |
+| SC-40 | The admin app cannot import `@trustlink/shared` (separate npm project, no workspace; BASELINE.md blessed no Vite alias) | The admin keeps local domain types and now has a dedicated typed API client (`apps/admin/src/api/adminApi.ts`); `VITE_DATA_SOURCE=api` uses the real backend | **Resolved (M4)** — duplication retained, no shared import needed |
+| SC-41 | Admin auth: no `/auth/admin/login` route exists (SC-14) | `POST /auth/admin/login` (email + password, bcrypt), `npm run seed:admin`, and the console now calls it in api mode | **Resolved (M4)** |
 | SC-42 | Dispatch assignment: the mock's `assignRider` admits a `REQUESTED` delivery, but the state machine only allows `requested → searching`, so the transition throws (`Cannot transition from requested to assigned`). The admin console's own mock *does* assign from REQUESTED | Backend now requires `SEARCHING` for eligibility and assignment (pay first, then dispatch); mocks should match in M3/M4 | **Resolved backend (M1)** |
 | SC-43 | **Backend bug (high priority):** nothing sets a rider from `ON_TRIP` back to `ONLINE` when their delivery becomes `DELIVERED`/`FAILED`/`RETURNED`, so `PUT /dispatch/status` and `/rider/profile/status` then reject the rider and no further job can be assigned | The backend now releases the rider on DELIVERED/FAILED/RETURNED/CANCELLED and on redelivery, only when no other active delivery remains | **Resolved (M1)** with regression tests |
 | SC-44 | The committed icon/adaptive-icon/splash assets are the Expo template placeholders **and their content is JPEG with a `.png` extension** — expo-doctor fails the config-schema check on both apps and a release build may reject or render them wrong | Kept as-is because the phase instructs "until then keep the current ones"; they are registered in `SCAFFOLD_REGISTER.md` as **replaced by brand assets** and must be swapped for real PNGs (icon 1024×1024, adaptive foreground/background/monochrome 1024×1024) in `assets/brand/` | **Needs decision** (supply brand PNGs; then update the `app.json` paths) |
@@ -79,8 +79,8 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 | Rider Jobs accept/start | `POST /jobs/:id/accept`, `/jobs/:id/pickup` | **NEEDS FRONTEND FIX** (use `POST /dispatch/:id/acknowledge`, `PUT /deliveries/:id/pickup`) | SC-14 |
 | Rider KYC | `POST /rider/kyc` | **NEEDS FRONTEND FIX** (use `POST /kyc/submit`; fix stub `Image`) | SC-14 |
 | Rider Earnings | `GET /rider/earnings`, `POST /rider/earnings/withdraw` | **DEFERRED / REMOVE** (out of R1 scope) | D7 |
-| Admin login | `POST /auth/admin/login` | **NEEDS BACKEND FIX** (endpoint + seed/credentials) | SC-14 |
-| Admin settings save | `PUT /admin/settings/:section` | **NEEDS BACKEND FIX** (or make settings frontend-only) | SC-14 |
+| Admin login | `POST /auth/admin/login` | **WORKS (M4)** — seeded email/password, console JWT login | SC-41 |
+| Admin settings save | `PUT /admin/settings/:section` | **DEFERRED** — no settings route in the current console | SC-14 |
 | Fare quote | `POST /pricing/calculate` | **UNKNOWN** (no caller yet; needs `distanceKm`) | SC-8 |
 | Payments | `POST /payments/initialize`, `GET /payments/:reference`, `POST /payments/verify/:reference`, webhooks | **UNKNOWN** (no caller; amount-units question) | SC-16 |
 | Dispatch | `GET /dispatch/board`, `PUT /dispatch/:id/assign|reassign`, `GET /dispatch/my-queue`, `POST /dispatch/:id/acknowledge` | **UNKNOWN** (no caller yet) | D10 |
@@ -89,7 +89,7 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 | Tracking by number | `GET /deliveries/track/:trackingNumber` | **NEEDS FRONTEND FIX** — requires token (not public) | SC-15 |
 | Issues | `POST /issues`, `GET /issues*`, `PUT /issues/:id/*` | **UNKNOWN** (no caller) | — |
 | Notifications | `GET /notifications`, `POST /notifications/send` | **UNKNOWN / DEFERRED** (push deferred) | SC-13 |
-| Admin users/riders/KYC | `GET /users*`, `PUT /users/:id/kyc|toggle-active`, `GET/PUT /kyc/*` | **UNKNOWN** (admin UI mock) | D10 |
+| Admin users/riders/KYC | `GET /users*`, `GET /admin/riders`, `PUT /users/:id/kyc|toggle-active`, `GET/PUT /kyc/*` | **WORKS (M4)** | D10 |
 | Cancellation (alt path) | `POST /deliveries/:id/cancel` | **DEFERRED** (use preview/cancel-with-fee instead) | SC-2 |
 
 ---

@@ -14,7 +14,7 @@ below is what the backend / platform team needs to close before a real pilot.
 | ID | Decision needed | Frontend behaviour today | Impact if unresolved |
 |---|---|---|---|
 | **SC-43** | **Backend must free the rider** (`ON_TRIP → ONLINE`) when their delivery becomes delivered/failed/returned | Backend releases the rider on DELIVERED/FAILED/RETURNED/CANCELLED and redelivery, only when no other active delivery remains | **Resolved (M1)** with regression tests |
-| **SC-41** | Seed a real admin user + `POST /auth/admin/login` | Endpoint and `npm run seed:admin` exist; the console still uses its demo credential until M4 | **Resolved backend (M1)** |
+| **SC-41** | Seed a real admin user + `POST /auth/admin/login` | Endpoint, seed script, and console JWT login are wired | **Resolved (M1 backend, M4 console)** |
 | **SC-17** | Enforce `@Roles` outside `UsersController` | `RolesGuard` is on every controller; cross-role e2e matrix passes | **Resolved (M1)** |
 | **SC-19** | Retry after a declined/cancelled/timed-out payment | Retry is allowed after FAILED/CANCELLED; a stale PROCESSING attempt is cancelled after the TTL | **Resolved (M2)** |
 | **SC-2** | Cancellation fee tiers (FR-C11 text vs the 50/75/full table) | FR-C11 adopted: free through SEARCHING, 50% at ASSIGNED, full from PICKED_UP | **Resolved (M1)** |

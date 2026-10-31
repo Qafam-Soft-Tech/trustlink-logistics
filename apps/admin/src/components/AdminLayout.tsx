@@ -151,6 +151,7 @@ function Icon({ name }: { name: string }) {
 
 function Header({ user, onLogout, onReset }: { user: { firstName: string; lastName: string; email: string } | null; onLogout: () => void; onReset: () => void }) {
   const { pathname } = useLocation();
+  const source = readAdminDataSource();
   const [menu, setMenu] = useState<{ open: boolean; path: string }>({ open: false, path: pathname });
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -194,8 +195,13 @@ function Header({ user, onLogout, onReset }: { user: { firstName: string; lastNa
                   {user?.email}
                 </div>
               </div>
-              <button className="dropdown-item" role="menuitem" onClick={onReset} title="Restore the seeded mock world">
-                Reset demo data
+              <button
+                className="dropdown-item"
+                role="menuitem"
+                onClick={onReset}
+                title={source === 'mock' ? 'Restore the seeded mock world' : 'Refresh the live data'}
+              >
+                {source === 'mock' ? 'Reset demo data' : 'Refresh data'}
               </button>
               <button className="dropdown-item danger" role="menuitem" onClick={onLogout}>
                 Logout

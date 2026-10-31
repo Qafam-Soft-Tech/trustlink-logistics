@@ -11,7 +11,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('admin_token');
+  const token = localStorage.getItem('trustlink.admin.token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -23,9 +23,11 @@ api.interceptors.response.use(
   (error) => {
     console.error('API Error:', error.response?.data || error.message);
     if (error.response?.status === 401) {
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin_user');
-      window.location.href = '/login';
+      localStorage.removeItem('trustlink.admin.token');
+      localStorage.removeItem('trustlink.admin.session');
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

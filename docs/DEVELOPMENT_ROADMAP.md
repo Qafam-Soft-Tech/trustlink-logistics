@@ -220,6 +220,7 @@ If something in this roadmap conflicts with `docs/REQUIREMENTS.md`, the requirem
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-10-31 | M4 admin console on the real API | API-backed admin provider (mock still selectable), JWT admin login/401 handling, real dispatch/KYC/users/issues/pricing/reports, `GET /admin/riders`, delivery events in the admin list. Admin build clean; backend 143 unit + 52 e2e. |
 | 2026-10-31 | M3 customer/rider apps on the real API | Area-based fare quotes, server fare for payment, Paystack browser checkout, KYC/POD uploads, recipient OTP resend, server notification read state, terminal polling stop, `/api` EAS URLs. 151 shared tests, 143 backend unit, 52 e2e; both apps export. |
 | 2026-10-31 | M2 backend integrity complete | Server-side distance/fare; recipient OTP for POD; uploads (local/S3); Termii SMS notifications; notification read state; optional pagination; account deletion; admin reports; payment retry + raw-body webhooks; global throttling. 143 unit + 52 e2e tests pass. |
 | 2026-10-31 | M1 backend contract/security hardening complete | Validated DTOs across every controller; signup role whitelist; JWT-protected profile setup; admin email/password login + seed; `RolesGuard` on every controller; exception filter/serialization; route-shadowing and address-delete fixes; SC-43 rider release; persisted timeline events; 5-minute OTP; FR-C11 cancellation fees. 136 unit + 41 e2e tests pass. |

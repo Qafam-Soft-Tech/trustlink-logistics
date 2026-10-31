@@ -144,6 +144,7 @@ export class DeliveryService {
     const query = this.deliveryRepository.createQueryBuilder('delivery')
       .leftJoinAndSelect('delivery.customer', 'customer')
       .leftJoinAndSelect('delivery.rider', 'rider')
+      .leftJoinAndSelect('delivery.events', 'events')
       .orderBy('delivery.createdAt', 'DESC');
 
     if (status) {

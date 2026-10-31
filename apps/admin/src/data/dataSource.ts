@@ -1,6 +1,6 @@
 /**
- * Admin data source. The console runs entirely on its own in-memory mock today, but the source is
- * still explicit: a production build must set `VITE_DATA_SOURCE` (no silent default — Phase 17B).
+ * Admin data source. `mock` uses the in-memory demo world; `api` uses the real backend.
+ * The source is explicit: a production build must set `VITE_DATA_SOURCE` (no silent default — Phase 17B).
  *
  * "Development" is decided by **Vite's `import.meta.env.PROD`**, not `process.env.NODE_ENV`
  * (this machine exports NODE_ENV=production globally, which would break `npm run dev`).
@@ -21,9 +21,5 @@ export function readAdminDataSource(): AdminDataSource {
     throw new Error(`Unknown VITE_DATA_SOURCE "${explicit}" — expected "mock" or "api".`);
   }
 
-  if (explicit === 'api') {
-    throw new Error('The admin console only supports VITE_DATA_SOURCE=mock today — there is no admin API client yet.');
-  }
-
-  return 'mock';
+  return explicit as AdminDataSource;
 }
