@@ -220,6 +220,7 @@ If something in this roadmap conflicts with `docs/REQUIREMENTS.md`, the requirem
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-10-31 | MVP delivery plan adopted (M0–M9); Phases 12–15 sequencing superseded | The frontend completed a separate Phase 0–19 track on mock data. The remaining work is integration/hardening/shipping, tracked as M0–M9 in the approved plan (M0 baseline complete). Phase 12–15 intent is preserved: NFR hardening, integration journeys, CI, and staging. |
 | 2026-09-11 | Phase 1-11 backend implementation complete; Phase 12-15 pending | Full R1 MVP backend implemented with all functional requirements from Phases 1-11. Admin dashboard, Customer app, Rider app scaffolds complete. Unit tests for OtpService (10) and KycService (26) passing. Backend builds clean. Admin builds clean. Mobile apps start. Real DB connection pending Docker availability. |
 | 2026-09-11 | Phase 1-3 backend implementation complete | Auth (phone+OTP), Rider KYC, User management implemented and unit tested |
 | 2026-09-11 | Phase 4-5 backend implementation complete | Delivery creation, fare calculation engine with dynamic pricing |

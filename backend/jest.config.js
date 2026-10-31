@@ -1,7 +1,8 @@
 module.exports = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '.',
-  testMatch: ['**/test/**/*.spec.ts'],
+  testMatch: ['<rootDir>/test/**/*.spec.ts'],
+  testPathIgnorePatterns: ['/node_modules/', '/dist/', '\\.e2e-spec\\.ts$', '\\.integration-spec\\.ts$'],
   transform: {
     '^.+\\.(t|j)s$': ['ts-jest', {
       tsconfig: 'tsconfig.test.json',

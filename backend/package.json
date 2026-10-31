@@ -10,10 +10,12 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "test": "jest",
+    "test:unit": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
+    "test:integration": "jest --config ./test/jest-integration.json --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
+    "lint": "oxlint src test"
   },
   "keywords": [],
   "author": "",
@@ -28,12 +30,11 @@
     "@nestjs/platform-express": "^11.2.3",
     "@nestjs/schedule": "^12.0.1",
     "@nestjs/throttler": "^6.5.0",
-    "@nestjs/typeorm": "^10.0.2",
-    "@types/sqlite3": "^3.1.11",
+    "@nestjs/typeorm": "^11.0.3",
     "axios": "^1.20.0",
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
-    "class-validator": "^0.15.1",
+    "class-validator": "^0.14.0",
     "cors": "^2.8.6",
     "csurf": "^1.11.0",
     "helmet": "^8.3.0",
@@ -42,10 +43,8 @@
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "pg": "^8.23.0",
-    "redis": "^6.2.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "sqlite3": "^6.0.1",
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
@@ -65,10 +64,11 @@
     "@types/passport-local": "^1.0.38",
     "@types/supertest": "^7.2.1",
     "babel-jest": "^30.5.1",
+    "oxlint": "^1.81.0",
     "jest": "^30.5.1",
     "supertest": "^7.2.2",
     "swagger-ui-express": "^5.0.1",
-    "ts-jest": "^29.4.12",
+    "ts-jest": "^29.4.15",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   }

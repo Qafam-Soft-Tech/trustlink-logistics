@@ -2,6 +2,9 @@
   "name": "trustlink",
   "private": true,
   "version": "0.0.0",
+  "engines": {
+    "node": ">=20"
+  },
   "overrides": {
     "react": "19.2.3",
     "react-dom": "19.2.3"
@@ -10,8 +13,13 @@
     "apps/*"
   ],
   "scripts": {
-    "test:shared": "npm test --workspace @trustlink/shared",
-    "typecheck:shared": "npm run typecheck --workspace @trustlink/shared",
+    "test": "npm run test:shared && npm run test:backend",
+    "test:shared": "npm run test --workspace @trustlink/shared",
+    "test:backend": "npm --prefix backend run test:unit",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present && npm --prefix backend run lint",
+    "build": "npm run build --workspace admin",
+    "build:backend": "npm --prefix backend run build",
     "contrast": "npm run contrast --workspace @trustlink/shared"
   }
 }

@@ -2,188 +2,201 @@
 
 Secure. Swift. Strategic.
 
-Last-mile delivery platform for Abuja, Nigeria. Parcels & documents only (food/groceries out of scope for R1).
+Last-mile parcel and document delivery for Abuja, Nigeria. R1 scope is parcels and documents only — food, groceries, live GPS tracking, rider earnings, and automatic dispatch are deliberately deferred (see `docs/REQUIREMENTS.md` §9).
 
 ---
 
-## Quick Start
+## Stack
 
-### Prerequisites
-- Node.js 20+
-- Docker & Docker Compose
-- pnpm (or npm/yarn)
+| Piece | Stack |
+|---|---|
+| Backend | NestJS 11, TypeORM, PostgreSQL, Redis |
+| Customer / Rider | Expo SDK 57, React Native 0.86, TypeScript |
+| Admin | React 19, Vite, React Router, TanStack Query |
+| Shared | `apps/shared` — theme, primitives, domain logic, data ports/adapters |
 
-### 1. Clone & Install
+The repository is an **npm workspace** covering `apps/*`. `backend/` is a separate npm project with its own lockfile.
+
+---
+
+## Prerequisites
+
+- Node.js 20+ (`.nvmrc` is provided)
+- npm
+- Docker Desktop (Postgres + Redis)
+- Android device or emulator for the mobile apps
+- `eas-cli` only when producing installable builds (see `docs/release/BUILD.md`)
+
+---
+
+## Install
+
+Install apps from the **repo root** — never inside an app directory:
+
 ```bash
-git clone <repo-url>
-cd TrustLink\ Logistics
-
-# Backend
-cd backend
-npm install
-
-# Customer app
-cd ../apps/customer
-npm install
-
-# Rider app
-cd ../rider
-npm install
-
-# Admin dashboard
-cd ../admin
 npm install
 ```
 
-### 2. Configure Environment
+`@trustlink/shared` resolves as a workspace dependency and there is one root `package-lock.json`.
+
+Install the backend separately:
+
+```bash
+cd backend
+npm install
+```
+
+> On Windows this machine exports `NODE_ENV=production` globally. npm then skips dev dependencies. Run installs with `NODE_ENV=development` (PowerShell: `$env:NODE_ENV='development'`). Do **not** set it for build/export commands.
+
+---
+
+## Configure
+
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env with your keys (see "Environment Variables" below)
 ```
 
-**Required for full auth flow:**
-```env
-# SMS (Termii) - get from dashboard.termii.com
-SMS_PROVIDER=termii
-SMS_PROVIDER_API_KEY=TLSEK_xxxxxxxxxxxxxxxx
-SMS_SENDER_ID=TrustLink    # Must match approved sender ID in Termii dashboard
+Fill in the values you have. Missing payment, SMS, maps, KYC, or storage keys are tolerated in development — the relevant services fall back to local behavior. Real values are never committed; `.env` is git-ignored.
 
-# Payments (Paystack) - get from dashboard.paystack.co
-PAYSTACK_SECRET_KEY=sk_test_xxx
-PAYSTACK_PUBLIC_KEY=pk_test_xxx
+The mobile apps and console read their data source from the environment:
 
-# Maps (Google Cloud Console)
-GOOGLE_MAPS_API_KEY=AIza_xxx
+| App | Variables |
+|---|---|
+| Customer | `EXPO_PUBLIC_DATA_SOURCE=mock\|api`, `EXPO_PUBLIC_API_URL` |
+| Rider | `EXPO_PUBLIC_DATA_SOURCE=mock\|api`, `EXPO_PUBLIC_API_URL` |
+| Admin | `VITE_DATA_SOURCE=mock\|api`, `VITE_API_URL` |
 
-# KYC (VerifyMe) - get from verifyme.ng
-KYC_PROVIDER_API_KEY=xxx
-```
+Development defaults to `mock`; non-development builds must set the variable explicitly. See each app's `.env.example`.
 
-### 3. Start Infrastructure
+---
+
+## Run
+
 ```bash
-docker compose up -d
-# Starts PostgreSQL (5432) + Redis (6379)
-```
+# 1. Infrastructure
+docker compose up -d --wait
 
-### 4. Run Backend
-```bash
-cd backend
+# 2. Backend (from backend/)
 npm run start:dev
-# API: http://localhost:3000
-# Swagger: http://localhost:3000/api/docs
-```
+# API:      http://localhost:3000/api
+# Swagger:  http://localhost:3000/api/docs
+# Health:   http://localhost:3000/api/health
 
-### 5. Run Mobile Apps
-```bash
-# Customer app
-cd apps/customer
+# 3. Customer app (from apps/customer/)
 npx expo start
-# Scan QR with Expo Go (same WiFi)
 
-# Rider app (separate terminal)
-cd apps/rider
+# 4. Rider app (from apps/rider/, second terminal)
 npx expo start
-```
 
-### 6. Run Admin Dashboard
-```bash
-cd apps/admin
+# 5. Admin console (from apps/admin/)
 npm run dev
 # http://localhost:5173
 ```
 
----
+For tester APKs and EAS profiles, follow `docs/release/BUILD.md`. The mobile apps no longer rely on Expo Go for release testing.
 
-## Environment Variables (backend/.env)
+### Demo credentials (mock data mode only)
 
-| Variable | Required | Source |
-|----------|----------|--------|
-| `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | ✅ | Docker Compose defaults |
-| `REDIS_HOST`, `REDIS_PORT` | ✅ | Docker Compose defaults |
-| `JWT_SECRET` | ✅ | Generate: `openssl rand -hex 32` |
-| `SMS_PROVIDER_API_KEY` | ✅ | Termii dashboard → API Key |
-| `SMS_SENDER_ID` | ✅ | Termii dashboard → **Sender ID** (must be pre-approved) |
-| `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY` | For payments | Paystack dashboard |
-| `GOOGLE_MAPS_API_KEY` | For maps/autocomplete | Google Cloud Console |
-| `KYC_PROVIDER_API_KEY` | For rider KYC | VerifyMe dashboard |
+| App | Credential |
+|---|---|
+| Customer | `08031234567` / OTP `482913` |
+| Rider | `08050000001` / OTP `482913` |
+| Admin | `admin@trustlink.ng` / `trustlink-demo` |
+
+These are fixtures, not real accounts. The API-backed admin login arrives with the backend hardening milestone.
 
 ---
 
-## SMS_SENDER_ID — How to Get It
+## Test
 
-1. **Sign up** at [termii.com](https://termii.com) → verify email/phone
-2. Go to **Dashboard → Sender ID** (or "Sender IDs" under SMS)
-3. **Request a Sender ID** — enter your brand name (e.g., `TrustLink`)
-   - Must be 11 chars max, alphanumeric only
-   - Termii reviews & approves (usually within minutes/hours)
-4. Once **approved**, copy the exact Sender ID string (case-sensitive)
-5. Paste into `.env`:
-   ```env
-   SMS_SENDER_ID=TrustLink
-   SMS_PROVIDER_API_KEY=TLSEK_your_key_here
-   SMS_PROVIDER=termii
-   ```
+```bash
+# Backend (from backend/)
+npm run test:unit          # fast, no database required
+npm run test:integration   # real Postgres (Docker); no suites yet
+npm run test:e2e           # HTTP end-to-end; uses Postgres
 
-> ⚠️ **Unapproved Sender IDs will fail** — OTP SMS won't send. Check Termii dashboard for status.
+# Shared domain/data tests
+npm test --workspace @trustlink/shared
+
+# Typechecks (all workspaces that define one)
+npm run typecheck
+
+# Admin build
+npm run build
+```
+
+`npm test` at the root runs the shared suite plus the backend unit suite. Integration and e2e intentionally need Docker.
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
-TrustLink Logistics/
-├── backend/           # NestJS API
-│   ├── src/modules/
-│   │   ├── auth/          # Phone + OTP, JWT
-│   │   ├── users/         # Profiles, KYC
-│   │   ├── deliveries/    # Requests, dispatch, execution, POD
-│   │   ├── payments/      # Fare calc, Paystack/Flutterwave
-│   │   └── notifications/ # Push/SMS
-│   └── test/              # 133 unit/integration tests
+/
+├── AGENTS.md
+├── docs/
+│   ├── REQUIREMENTS.md          # source of truth for what to build
+│   ├── DEVELOPMENT_ROADMAP.md   # phased build plan
+│   ├── frontend/                # frontend contract ledger, hand-off, phase reports
+│   └── release/BUILD.md         # EAS build and install instructions
 ├── apps/
-│   ├── customer/    # Expo (React Native)
-│   ├── rider/       # Expo (React Native)
-│   └── admin/       # React + Vite (web)
-├── docker-compose.yml
-└── README.md
+│   ├── customer/                # Expo app
+│   ├── rider/                   # Expo app
+│   ├── admin/                   # React + Vite console
+│   └── shared/                  # design system + domain + data layer
+├── backend/                     # NestJS API
+└── docker-compose.yml           # Postgres + Redis
 ```
 
 ---
 
-## Key Commands
+## Key commands
 
 | Task | Command |
-|------|---------|
+|---|---|
+| Install apps | `npm install` (repo root) |
+| Install backend | `cd backend && npm install` |
 | Backend dev server | `cd backend && npm run start:dev` |
 | Backend build | `cd backend && npm run build` |
-| Backend tests | `cd backend && npm test` |
+| Backend unit tests | `cd backend && npm run test:unit` |
+| Backend e2e tests | `cd backend && npm run test:e2e` |
+| Backend lint | `cd backend && npm run lint` |
+| Shared tests | `npm test --workspace @trustlink/shared` |
+| Admin dev / build | `cd apps/admin && npm run dev` / `npm run build` |
 | Customer app | `cd apps/customer && npx expo start` |
 | Rider app | `cd apps/rider && npx expo start` |
-| Admin dev | `cd apps/admin && npm run dev` |
-| Admin build | `cd apps/admin && npm run build` |
-| Lint (admin) | `cd apps/admin && npm run lint` |
-| Start DB/Redis | `docker compose up -d` |
-| Stop DB/Redis | `docker compose down` |
+| Infrastructure | `docker compose up -d --wait` / `docker compose down` |
 
 ---
 
-## API Documentation
+## API documentation
 
-Swagger UI: `http://localhost:3000/api/docs` (when backend running)
+Swagger UI is served at `http://localhost:3000/api/docs` while the backend runs. It will be disabled in production.
 
 ---
 
 ## Troubleshooting
 
 | Issue | Fix |
-|-------|-----|
-| "Cannot POST /api/auth/signup" | Backend not running or wrong port |
-| OTP not received | Check `SMS_PROVIDER_API_KEY`, `SMS_SENDER_ID` approved in Termii |
-| Expo "Unable to resolve axios" | `cd apps/customer && npm install axios --legacy-peer-deps` (same for rider) |
-| Metro port in use | Expo auto-picks next port (8082, 8083...) |
-| Phone can't reach backend | Use `--tunnel` flag: `npx expo start --tunnel` |
-| Admin login fails | Use `admin@trustlink.com` / `admin123` (dev only) |
+|---|---|
+| Install skips dev dependencies | Set `NODE_ENV=development` for the install |
+| Backend cannot connect to Postgres over SSL | Run with `NODE_ENV=development`, not `production` |
+| Backend unreachable from a physical phone | Set `EXPO_PUBLIC_API_URL` to your machine's LAN address, e.g. `http://192.168.1.20:3000/api` |
+| OTP not received | Check the Termii API key and that `SMS_SENDER_ID` is approved |
+| Metro port in use | Expo picks the next port (8082, 8083, …) |
+| Console shows demo data | Set `VITE_DATA_SOURCE=api` and `VITE_API_URL` for a real backend |
+| `npm install` inside an app recreates a lockfile | Delete that lockfile; always install from the repo root |
+
+---
+
+## Documentation
+
+- `docs/REQUIREMENTS.md` — functional/non-functional requirements, data model, state machine
+- `docs/DEVELOPMENT_ROADMAP.md` — phased delivery plan and test strategy
+- `docs/frontend/CONTRACT_LEDGER.md` — spec conflicts and client↔backend contract status
+- `docs/frontend/HANDOFF.md` — what the backend still owes the clients
+- `docs/release/BUILD.md` — installable builds with EAS
 
 ---
 
