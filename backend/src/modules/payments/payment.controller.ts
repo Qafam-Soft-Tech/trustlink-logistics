@@ -83,7 +83,7 @@ export class PaymentController {
     @Headers('x-paystack-signature') signature: string,
     @Req() req: RawBodyRequest<Request>,
   ) {
-    return this.paymentService.handlePaystackWebhook(req.body, signature);
+    return this.paymentService.handlePaystackWebhook(req.body, signature, req.rawBody);
   }
 
   @Post('webhook/flutterwave')

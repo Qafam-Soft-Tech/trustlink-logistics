@@ -4,8 +4,11 @@ import { Delivery, DeliveryEvent, DeliveryStatus, Address } from '../src/modules
 import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-delivery.entity';
 import { RiderProfile, RiderStatus } from '../src/modules/deliveries/entities/rider-profile.entity';
 import { User } from '../src/modules/auth/entities/user.entity';
+import { PricingConfig } from '../src/modules/payments/entities/pricing-config.entity';
 import { DeliveryService } from '../src/modules/deliveries/services/delivery.service';
-import { MockDb, TestFactory, seedBaseData, notificationServiceMock } from './mock-db';
+import { FareCalculationService } from '../src/modules/payments/services/fare-calculation.service';
+import { DistanceService } from '../src/modules/payments/services/distance.service';
+import { MockDb, TestFactory, seedBaseData, notificationServiceMock, recipientOtpServiceMock } from './mock-db';
 
 describe('M1: rider release and timeline persistence', () => {
   let module: TestingModule;
@@ -25,8 +28,11 @@ describe('M1: rider release and timeline persistence', () => {
     module = await Test.createTestingModule({
       providers: [
         DeliveryService,
-        ...db.providers([Delivery, Address, DeliveryEvent, ProofOfDelivery, RiderProfile, User]),
+        FareCalculationService,
+        DistanceService,
+        ...db.providers([Delivery, Address, DeliveryEvent, ProofOfDelivery, RiderProfile, User, PricingConfig]),
         notificationServiceMock,
+        recipientOtpServiceMock,
       ],
     }).compile();
 

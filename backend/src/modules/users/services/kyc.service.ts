@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 
 import { KycSubmission, KycStatus, KycDocumentType } from '../entities/kyc-submission.entity';
 import { User, UserRole } from '../../auth/entities/user.entity';
+import { Paginated, Pagination } from '../../../common/pagination';
 
 @Injectable()
 export class KycService {
@@ -131,12 +132,23 @@ export class KycService {
     return this.kycRepository.save(submission);
   }
 
-  async getPendingKycSubmissions(): Promise<KycSubmission[]> {
-    return this.kycRepository.find({
+  async getPendingKycSubmissions(pagination?: Pagination): Promise<KycSubmission[] | Paginated<KycSubmission>> {
+    const options = {
       where: { status: KycStatus.PENDING },
       relations: { user: true },
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'ASC' as const },
+    };
+
+    if (!pagination) {
+      return this.kycRepository.find(options);
+    }
+
+    const [items, total] = await this.kycRepository.findAndCount({
+      ...options,
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit,
     });
+    return { items, total, page: pagination.page, limit: pagination.limit };
   }
 
   async canRiderGoOnline(userId: string): Promise<boolean> {

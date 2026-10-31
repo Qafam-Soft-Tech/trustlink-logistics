@@ -35,12 +35,24 @@ export class PaymentService {
       throw new BadRequestException('Payment amount does not match the delivery fare');
     }
 
-    // Check if payment already exists
     const existingPayment = await this.paymentRepository.findOne({
       where: { deliveryId: dto.deliveryId },
+      order: { createdAt: 'DESC' },
     });
-    if (existingPayment && [PaymentStatus.SUCCESS, PaymentStatus.PROCESSING].includes(existingPayment.status)) {
-      throw new BadRequestException('Payment already processed for this delivery');
+    if (existingPayment) {
+      if (existingPayment.status === PaymentStatus.SUCCESS) {
+        throw new BadRequestException('Payment already processed for this delivery');
+      }
+      if (existingPayment.status === PaymentStatus.PROCESSING) {
+        const ttlMinutes = Number(this.configService.get('PAYMENT_PROCESSING_TTL_MINUTES', 15));
+        const ageMinutes = (Date.now() - new Date(existingPayment.createdAt).getTime()) / 60000;
+        if (ageMinutes < ttlMinutes) {
+          throw new BadRequestException('Payment is already in progress for this delivery');
+        }
+        existingPayment.status = PaymentStatus.CANCELLED;
+        existingPayment.failureReason = 'Payment attempt timed out';
+        await this.paymentRepository.save(existingPayment);
+      }
     }
 
     const reference = this.generateReference();
@@ -73,6 +85,7 @@ export class PaymentService {
         accessCode,
         status: PaymentStatus.PROCESSING,
         metadata: dto.metadata,
+        createdAt: new Date(),
       });
     } else if (dto.provider === PaymentProvider.FLUTTERWAVE) {
       const result = await this.initializeFlutterwavePayment({
@@ -95,6 +108,7 @@ export class PaymentService {
         authorizationUrl,
         status: PaymentStatus.PROCESSING,
         metadata: dto.metadata,
+        createdAt: new Date(),
       });
     } else {
       throw new BadRequestException('Unsupported payment provider');
@@ -132,11 +146,10 @@ export class PaymentService {
     
     if (verificationResult.status === PaymentStatus.SUCCESS) {
       payment.paidAt = verificationResult.paidAt || new Date();
-      // Update delivery status to SEARCHING
       if (payment.delivery) {
         payment.delivery.status = DeliveryStatus.SEARCHING;
         payment.delivery.paymentReference = payment.reference;
-        // Note: Delivery service will handle the actual status update
+        await this.deliveryRepository.save(payment.delivery);
       }
     } else if (verificationResult.status === PaymentStatus.FAILED) {
       payment.failedAt = new Date();
@@ -147,10 +160,11 @@ export class PaymentService {
     return verificationResult;
   }
 
-  async handlePaystackWebhook(payload: any, signature: string): Promise<{ received: boolean }> {
+  async handlePaystackWebhook(payload: any, signature: string, rawBody?: Buffer): Promise<{ received: boolean }> {
     const secret = this.configService.get('PAYSTACK_SECRET_KEY') || '';
-    const hash = crypto.createHmac('sha512', secret).update(JSON.stringify(payload)).digest('hex');
-    
+    const body = rawBody ?? Buffer.from(JSON.stringify(payload));
+    const hash = crypto.createHmac('sha512', secret).update(body).digest('hex');
+
     if (hash !== signature) {
       throw new BadRequestException('Invalid webhook signature');
     }
@@ -168,10 +182,11 @@ export class PaymentService {
   }
 
   async handleFlutterwaveWebhook(payload: any, signature: string): Promise<{ received: boolean }> {
-    const secret = this.configService.get('FLUTTERWAVE_SECRET_KEY') || '';
-    const secretHash = crypto.createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex');
-    
-    if (secretHash !== signature) {
+    const expectedHash = this.configService.get('FLUTTERWAVE_WEBHOOK_HASH') ||
+      this.configService.get('FLUTTERWAVE_SECRET_KEY') ||
+      '';
+
+    if (!signature || signature !== expectedHash) {
       throw new BadRequestException('Invalid webhook signature');
     }
 

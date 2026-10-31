@@ -46,10 +46,10 @@ export class RiderProfile {
   @Column({ type: 'enum', enum: RiderStatus, default: RiderStatus.OFFLINE })
   status!: RiderStatus;
 
-  @Column({ default: 0 })
+  @Column({ type: 'double precision', default: 0 })
   currentLatitude!: number;
 
-  @Column({ default: 0 })
+  @Column({ type: 'double precision', default: 0 })
   currentLongitude!: number;
 
   @Column({ nullable: true })

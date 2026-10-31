@@ -26,10 +26,10 @@ export class ProofOfDelivery {
   @Column()
   recipientPhone!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'double precision', nullable: true })
   latitude!: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'double precision', nullable: true })
   longitude!: number;
 
   @Column({ nullable: true })

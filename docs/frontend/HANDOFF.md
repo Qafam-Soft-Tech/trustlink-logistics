@@ -4,7 +4,8 @@ Prepared at the end of the frontend-first track (Phases 0–17). The backend is 
 below is what the backend / platform team needs to close before a real pilot.
 
 > **M1 update (2026-10-31):** SC-43, SC-41 (backend), SC-17, SC-2, SC-5 and SC-42 are closed on the backend.
-> See `CONTRACT_LEDGER.md` §A for the evidence. The console still needs its M4 API wiring.
+> **M2 update:** SC-8/20, SC-19, SC-26, SC-30, SC-33, SC-35 and recipient OTP are closed on the backend.
+> See `CONTRACT_LEDGER.md` §A for the evidence. The clients/console still need their M3/M4 wiring.
 
 ---
 
@@ -15,16 +16,16 @@ below is what the backend / platform team needs to close before a real pilot.
 | **SC-43** | **Backend must free the rider** (`ON_TRIP → ONLINE`) when their delivery becomes delivered/failed/returned | Backend releases the rider on DELIVERED/FAILED/RETURNED/CANCELLED and redelivery, only when no other active delivery remains | **Resolved (M1)** with regression tests |
 | **SC-41** | Seed a real admin user + `POST /auth/admin/login` | Endpoint and `npm run seed:admin` exist; the console still uses its demo credential until M4 | **Resolved backend (M1)** |
 | **SC-17** | Enforce `@Roles` outside `UsersController` | `RolesGuard` is on every controller; cross-role e2e matrix passes | **Resolved (M1)** |
-| **SC-19** | Retry after a declined/cancelled/timed-out payment | UI allows a retry; backend §12 blocks while a payment is `PROCESSING` | A user who abandons checkout may be unable to pay again |
+| **SC-19** | Retry after a declined/cancelled/timed-out payment | Retry is allowed after FAILED/CANCELLED; a stale PROCESSING attempt is cancelled after the TTL | **Resolved (M2)** |
 | **SC-2** | Cancellation fee tiers (FR-C11 text vs the 50/75/full table) | FR-C11 adopted: free through SEARCHING, 50% at ASSIGNED, full from PICKED_UP | **Resolved (M1)** |
 | **SC-5** | OTP validity 5 min (UI) vs 10 min (code/SMS) | Backend and UI both use 5 minutes; SMS copy updated | **Resolved (M1)** |
-| **SC-8 / SC-20** | Source of `distanceKm` for fares (no maps in R1) | Client estimates from launch-area coordinates | Fare accuracy depends on a coordinate table |
+| **SC-8 / SC-20** | Source of `distanceKm` for fares (no maps in R1) | Backend derives distance from coordinates/areas and stores the fare | **Resolved backend (M2)**; client sends areas in M3 |
 | **SC-27** | Refund/return endpoint | Copy only — no refund action exists | Cancellation refunds cannot be tracked in-app |
-| **SC-26** | Pagination for `GET /deliveries` | Client-side filtering + "Show more" | History will not scale past a few hundred deliveries |
-| **SC-30** | Notification read state / mark-read endpoint | Unread is stored on the device | Read state is lost across devices |
+| **SC-26** | Pagination for `GET /deliveries` | `?page=&limit=` envelope exists | **Resolved backend (M2)**; client adopts in M3 |
+| **SC-30** | Notification read state / mark-read endpoint | Server-side readAt, unread count and read-all exist | **Resolved backend (M2)** |
 | **SC-31** | Real support phone / WhatsApp / email lines | Help shows clearly-marked placeholders | Demo-only contact details |
-| **SC-33** | Account deletion/erasure endpoint (NDPA) | The UI explains the gap and routes to support | Cannot honour an erasure request in-app |
-| **SC-35** | KYC document upload endpoint | Local image URIs are submitted as document URLs | KYC documents are not really stored |
+| **SC-33** | Account deletion/erasure endpoint (NDPA) | `DELETE /users/me` anonymizes the account | **Resolved backend (M2)**; client adopts in M3 |
+| **SC-35** | KYC document upload endpoint | `POST /uploads` (local/S3) exists | **Resolved backend (M2)**; rider app adopts in M3 |
 | **SC-37** | Dispatch phone line | Placeholder number behind "Call dispatch" | Riders cannot actually reach dispatch |
 | **SC-39** | Note on delivery failure | Note kept locally; only the reason is sent | Dispatchers lose the rider's context |
 | **SC-22** | Rider vehicle type on the delivery payload | Demo-only `riderVehicleType` (mock decorates reads) | The customer tracking rider card loses the vehicle badge |
@@ -46,15 +47,15 @@ below is what the backend / platform team needs to close before a real pilot.
 ## 3. Backend gaps to close (from the ledger §F and §E)
 
 1. ~~`POST /auth/admin/login` (or an admin seed + documented flow).~~ **Done (M1)** — endpoint + `npm run seed:admin`.
-2. A docs/verification provider behind `/kyc/*` (document upload/storage + real NIN checks).
+2. A real verification provider behind `/kyc/*` (uploads are now stored; NIN checks are still manual).
 3. ~~`@Roles` enforcement beyond `UsersController` (guard the dispatch, execution, pricing and issue routes).~~ **Done (M1)**.
-4. `GET /deliveries` pagination (or a dedicated history route) — SC-26/C-14.
-5. A notification read endpoint — SC-30.
+4. ~~`GET /deliveries` pagination (or a dedicated history route) — SC-26/C-14.~~ **Done (M2)**.
+5. ~~A notification read endpoint — SC-30.~~ **Done (M2)**.
 6. A refund/return path linked to cancellations — SC-27.
 7. Recipient OTP generation/delivery for real POD — SC-38 (today it is a fixture value).
-8. Distance/geocoding source for `/pricing/calculate` — SC-8/SC-20.
-9. `DELETE /users/me` or an erasure request flow — SC-33.
-10. Revisit the `PROCESSING` payment block so a retry is possible — SC-19.
+8. ~~Distance/geocoding source for `/pricing/calculate` — SC-8/SC-20.~~ **Done (M2)**.
+9. ~~`DELETE /users/me` or an erasure request flow — SC-33.~~ **Done (M2)**.
+10. ~~Revisit the `PROCESSING` payment block so a retry is possible — SC-19.~~ **Done (M2)**.
 11. ~~**Free the rider on job end** (`ON_TRIP → ONLINE` on delivered/failed/returned) — **SC-43, highest priority**.~~ **Done (M1)** — the backend now releases the rider when no active delivery remains.
 
 ## 4. Demo-day prerequisites

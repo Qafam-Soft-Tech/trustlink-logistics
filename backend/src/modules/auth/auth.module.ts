@@ -28,6 +28,6 @@ import { TermiiSmsService } from './services/termii-sms.service';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, OtpService, TermiiSmsService],
-  exports: [AuthService, JwtModule, OtpService],
+  exports: [AuthService, JwtModule, OtpService, TermiiSmsService],
 })
 export class AuthModule {}

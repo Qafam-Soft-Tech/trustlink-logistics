@@ -48,6 +48,9 @@ export class Notification {
   @Column({ nullable: true })
   sentAt!: Date;
 
+  @Column({ type: 'timestamp', nullable: true })
+  readAt!: Date | null;
+
   @Column({ nullable: true })
   errorMessage!: string;
 

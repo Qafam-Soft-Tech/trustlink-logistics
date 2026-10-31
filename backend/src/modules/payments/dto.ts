@@ -18,10 +18,43 @@ import { PaymentProvider } from './entities/payment.entity';
 const PHONE_PATTERN = /^0\d{10}$/;
 
 export class CalculateFareDto {
+  @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(200)
-  distanceKm!: number;
+  distanceKm?: number;
+
+  @IsOptional()
+  @IsString()
+  pickupArea?: string;
+
+  @IsOptional()
+  @IsString()
+  dropoffArea?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  pickupLatitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  pickupLongitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  dropoffLatitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  dropoffLongitude?: number;
 
   @IsNumber()
   @Min(0.1)

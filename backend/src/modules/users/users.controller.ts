@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../auth/entities/user.entity';
+import { parsePagination } from '../../common/pagination';
 import { UpdateUserKycDto } from './dto';
 
 @ApiTags('Users')
@@ -21,8 +22,10 @@ export class UsersController {
   async findAll(
     @Query('role') role?: UserRole,
     @Query('isActive') isActive?: boolean,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.usersService.findAll(role, isActive);
+    return this.usersService.findAll(role, isActive, parsePagination(page, limit));
   }
 
   @Get(':id')

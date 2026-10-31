@@ -3,10 +3,13 @@ import { Delivery, DeliveryEvent, DeliveryStatus, PackageType, Address } from '.
 import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-delivery.entity';
 import { RiderProfile } from '../src/modules/deliveries/entities/rider-profile.entity';
 import { User } from '../src/modules/auth/entities/user.entity';
+import { PricingConfig } from '../src/modules/payments/entities/pricing-config.entity';
 import { Issue, IssueType, IssuePriority } from '../src/modules/deliveries/entities/issue.entity';
 import { DeliveryService } from '../src/modules/deliveries/services/delivery.service';
 import { IssueService } from '../src/modules/deliveries/services/issue.service';
-import { MockDb, TestFactory, seedBaseData, notificationServiceMock } from './mock-db';
+import { FareCalculationService } from '../src/modules/payments/services/fare-calculation.service';
+import { DistanceService } from '../src/modules/payments/services/distance.service';
+import { MockDb, TestFactory, seedBaseData, notificationServiceMock, recipientOtpServiceMock } from './mock-db';
 
 describe('Phase 10: History, Receipts & Support Flag', () => {
   let module: TestingModule;
@@ -30,8 +33,11 @@ describe('Phase 10: History, Receipts & Support Flag', () => {
       providers: [
         IssueService,
         DeliveryService,
-        ...db.providers([Issue, Delivery, DeliveryEvent, ProofOfDelivery, Address, RiderProfile, User]),
+        FareCalculationService,
+        DistanceService,
+        ...db.providers([Issue, Delivery, DeliveryEvent, ProofOfDelivery, Address, RiderProfile, User, PricingConfig]),
         notificationServiceMock,
+        recipientOtpServiceMock,
       ],
     }).compile();
 

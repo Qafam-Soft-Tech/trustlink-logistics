@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Put, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Put, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 import { KycService } from './services/kyc.service';
@@ -7,6 +7,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User, UserRole } from '../auth/entities/user.entity';
+import { parsePagination } from '../../common/pagination';
 import { RejectKycDto, SubmitKycDto } from './dto';
 
 @ApiTags('KYC')
@@ -47,8 +48,8 @@ export class KycController {
   @Get('pending')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all pending KYC submissions (admin)' })
-  async getPendingSubmissions() {
-    return this.kycService.getPendingKycSubmissions();
+  async getPendingSubmissions(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.kycService.getPendingKycSubmissions(parsePagination(page, limit));
   }
 
   @Put(':userId/approve')

@@ -52,10 +52,10 @@ export class Address {
   @Column({ nullable: true })
   country!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'double precision', nullable: true })
   latitude!: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'double precision', nullable: true })
   longitude!: number;
 
   @Column({ default: false })
@@ -103,10 +103,10 @@ export class Delivery {
   @Column({ nullable: true })
   pickupArea!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'double precision', nullable: true })
   pickupLatitude!: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'double precision', nullable: true })
   pickupLongitude!: number;
 
   // Dropoff address (embedded for snapshot at creation time)
@@ -119,10 +119,10 @@ export class Delivery {
   @Column({ nullable: true })
   dropoffArea!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'double precision', nullable: true })
   dropoffLatitude!: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'double precision', nullable: true })
   dropoffLongitude!: number;
 
   // Package details
@@ -178,6 +178,9 @@ export class Delivery {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   fare!: number;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  distanceKm!: number;
+
   @Column({ nullable: true })
   paymentReference!: string;
 
@@ -217,10 +220,10 @@ export class DeliveryEvent {
   @Column({ nullable: true })
   notes!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'double precision', nullable: true })
   latitude!: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'double precision', nullable: true })
   longitude!: number;
 
   @CreateDateColumn()

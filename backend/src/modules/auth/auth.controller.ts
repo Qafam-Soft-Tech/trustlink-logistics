@@ -1,5 +1,6 @@
 import { Controller, Post, Body, Get, UseGuards, Put } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { AuthService } from './auth.service';
 import { AdminLoginDto, LoginDto, ProfileSetupDto, ResendOtpDto, SignupDto, UpdateProfileDto, VerifyOtpDto } from './dto';
@@ -13,36 +14,42 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('signup')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @ApiOperation({ summary: 'Register a new user (customer or rider)' })
   async signup(@Body() dto: SignupDto) {
     return this.authService.signup(dto);
   }
 
   @Post('verify-otp')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @ApiOperation({ summary: 'Verify OTP for signup' })
   async verifyOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyOtp(dto);
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @ApiOperation({ summary: 'Request OTP for login' })
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
 
   @Post('verify-login-otp')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @ApiOperation({ summary: 'Verify OTP for login' })
   async verifyLoginOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyLoginOtp(dto);
   }
 
   @Post('resend-otp')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @ApiOperation({ summary: 'Resend OTP' })
   async resendOtp(@Body() dto: ResendOtpDto) {
     return this.authService.resendOtp(dto.phone, dto.purpose || 'signup');
   }
 
   @Post('admin/login')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @ApiOperation({ summary: 'Sign in to the admin console with email and password' })
   async adminLogin(@Body() dto: AdminLoginDto) {
     return this.authService.adminLogin(dto);

@@ -1,12 +1,18 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { configureApp } from './app.setup';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
 
   configureApp(app);
+
+  if ((process.env.STORAGE_DRIVER ?? 'local').toLowerCase() === 'local') {
+    app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
+  }
 
   const config = new DocumentBuilder()
     .setTitle('TrustLink Logistics API')

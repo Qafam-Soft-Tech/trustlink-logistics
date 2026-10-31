@@ -19,6 +19,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User, UserRole } from '../auth/entities/user.entity';
+import { parsePagination } from '../../common/pagination';
 import {
   AssignRiderDto,
   CompleteDeliveryDto,
@@ -47,21 +48,31 @@ export class DeliveryController {
 
   @Get()
   @ApiOperation({ summary: 'Get deliveries for current user (customer/rider)' })
-  async getMyDeliveries(@CurrentUser() user: User, @Query('status') status?: DeliveryStatus) {
+  async getMyDeliveries(
+    @CurrentUser() user: User,
+    @Query('status') status?: DeliveryStatus,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pagination = parsePagination(page, limit);
     if (user.role === UserRole.CUSTOMER) {
-      return this.deliveryService.getCustomerDeliveries(user.id, status);
+      return this.deliveryService.getCustomerDeliveries(user.id, status, pagination);
     }
     if (user.role === UserRole.RIDER) {
-      return this.deliveryService.getRiderDeliveries(user.id, status);
+      return this.deliveryService.getRiderDeliveries(user.id, status, pagination);
     }
-    return this.deliveryService.getAllDeliveries(status);
+    return this.deliveryService.getAllDeliveries(status, pagination);
   }
 
   @Get('all')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all deliveries (admin)' })
-  async getAllDeliveries(@Query('status') status?: DeliveryStatus) {
-    return this.deliveryService.getAllDeliveries(status);
+  async getAllDeliveries(
+    @Query('status') status?: DeliveryStatus,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.deliveryService.getAllDeliveries(status, parsePagination(page, limit));
   }
 
   // Saved addresses are declared before `:id` so they are not shadowed by it.
@@ -199,6 +210,13 @@ export class DeliveryController {
     const delivery = await this.deliveryService.getDeliveryById(id);
     this.checkAccess(user, delivery);
     return this.deliveryService.completeDelivery(id, user.id, dto);
+  }
+
+  @Post(':id/recipient-otp/resend')
+  @Roles(UserRole.CUSTOMER, UserRole.RIDER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Resend the recipient confirmation code' })
+  async resendRecipientOtp(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.deliveryService.resendRecipientOtp(id, user.id, user.role as 'customer' | 'rider' | 'admin');
   }
 
   @Post(':id/failure')

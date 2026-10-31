@@ -26,12 +26,17 @@ export class TermiiSmsService {
   }
 
   async sendOtp(phone: string, code: string): Promise<boolean> {
+    return this.sendMessage(
+      phone,
+      `Your TrustLink verification code is ${code}. Valid for 5 minutes. Do not share.`,
+    );
+  }
+
+  async sendMessage(phone: string, message: string): Promise<boolean> {
     if (!this.apiKey) {
-      this.logger.warn(`SMS_PROVIDER_API_KEY not configured — OTP for ${phone} not sent via SMS`);
+      this.logger.warn(`SMS_PROVIDER_API_KEY not configured — message to ${phone} not sent via SMS`);
       return false;
     }
-
-    const message = `Your TrustLink verification code is ${code}. Valid for 5 minutes. Do not share.`;
 
     try {
       const response = await axios.post<TermiiSmsResponse>(

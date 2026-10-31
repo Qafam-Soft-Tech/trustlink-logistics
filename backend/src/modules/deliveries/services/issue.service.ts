@@ -6,6 +6,7 @@ import { Issue, IssueStatus, IssueType, IssuePriority } from '../entities/issue.
 import { Delivery } from '../entities/delivery.entity';
 import { ProofOfDelivery } from '../entities/proof-of-delivery.entity';
 import { User } from '../../auth/entities/user.entity';
+import { Paginated, Pagination, paginateQuery } from '../../../common/pagination';
 
 @Injectable()
 export class IssueService {
@@ -60,7 +61,7 @@ export class IssueService {
     return this.issueRepository.save(issue);
   }
 
-  async getUserIssues(userId: string, status?: string): Promise<any[]> {
+  async getUserIssues(userId: string, status?: string, pagination?: Pagination): Promise<any[] | Paginated<any>> {
     const query = this.issueRepository.createQueryBuilder('issue')
       .where('issue.reporterId = :userId', { userId })
       .leftJoinAndSelect('issue.delivery', 'delivery')
@@ -72,10 +73,10 @@ export class IssueService {
       query.andWhere('issue.status = :status', { status });
     }
 
-    return query.getMany();
+    return pagination ? paginateQuery(query, pagination) : query.getMany();
   }
 
-  async getAssignedIssues(userId: string, status?: string): Promise<any[]> {
+  async getAssignedIssues(userId: string, status?: string, pagination?: Pagination): Promise<any[] | Paginated<any>> {
     const query = this.issueRepository.createQueryBuilder('issue')
       .where('issue.assignedToId = :userId', { userId })
       .leftJoinAndSelect('issue.delivery', 'delivery')
@@ -87,10 +88,10 @@ export class IssueService {
       query.andWhere('issue.status = :status', { status });
     }
 
-    return query.getMany();
+    return pagination ? paginateQuery(query, pagination) : query.getMany();
   }
 
-  async getAllIssues(status?: string, priority?: string): Promise<any[]> {
+  async getAllIssues(status?: string, priority?: string, pagination?: Pagination): Promise<any[] | Paginated<any>> {
     const query = this.issueRepository.createQueryBuilder('issue')
       .leftJoinAndSelect('issue.delivery', 'delivery')
       .leftJoinAndSelect('issue.reporter', 'reporter')
@@ -105,7 +106,7 @@ export class IssueService {
       query.andWhere('issue.priority = :priority', { priority });
     }
 
-    return query.getMany();
+    return pagination ? paginateQuery(query, pagination) : query.getMany();
   }
 
   async getIssueById(issueId: string): Promise<any> {

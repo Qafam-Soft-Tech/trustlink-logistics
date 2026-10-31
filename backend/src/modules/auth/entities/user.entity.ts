@@ -53,6 +53,9 @@ export class User {
   @Column({ default: false })
   isPhoneVerified!: boolean;
 
+  @Column({ type: 'timestamp', nullable: true })
+  deletedAt!: Date | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

@@ -8,8 +8,9 @@ import { PricingConfig } from '../src/modules/payments/entities/pricing-config.e
 import { Payment, PaymentProvider, PaymentStatus } from '../src/modules/payments/entities/payment.entity';
 import { DeliveryService } from '../src/modules/deliveries/services/delivery.service';
 import { FareCalculationService } from '../src/modules/payments/services/fare-calculation.service';
+import { DistanceService } from '../src/modules/payments/services/distance.service';
 import { PaymentService } from '../src/modules/payments/services/payment.service';
-import { MockDb, seedBaseData, configServiceMock, notificationServiceMock } from './mock-db';
+import { MockDb, seedBaseData, configServiceMock, notificationServiceMock, recipientOtpServiceMock } from './mock-db';
 
 describe('Phase 6: Payments Integration', () => {
   let module: TestingModule;
@@ -33,9 +34,11 @@ describe('Phase 6: Payments Integration', () => {
         PaymentService,
         DeliveryService,
         FareCalculationService,
+        DistanceService,
         ...db.providers([Payment, Delivery, Address, DeliveryEvent, ProofOfDelivery, User, RiderProfile, PricingConfig]),
         configServiceMock,
         notificationServiceMock,
+        recipientOtpServiceMock,
       ],
     }).compile();
 
@@ -220,6 +223,7 @@ describe('Phase 6: Payments Integration', () => {
 
     it('should process charge.success webhook idempotently', async () => {
       const delivery = await createRequestedDelivery();
+      await deliveryRepository.update(delivery.id, { fare: 1500 });
 
       const initResult = await paymentService.initializePayment(testData.customer.id, {
         deliveryId: delivery.id,
@@ -263,6 +267,7 @@ describe('Phase 6: Payments Integration', () => {
   describe('Payment State Enforcement', () => {
     it('should not allow a second payment once one has been processed', async () => {
       const delivery = await createRequestedDelivery();
+      await deliveryRepository.update(delivery.id, { fare: 1500 });
 
       // Delivery starts in REQUESTED
       let updatedDelivery = await deliveryRepository.findOne({ where: { id: delivery.id } });
@@ -291,6 +296,84 @@ describe('Phase 6: Payments Integration', () => {
         phone: testData.customer.phone,
         provider: PaymentProvider.PAYSTACK,
       })).rejects.toThrow('Payment already processed for this delivery');
+    });
+  });
+
+  describe('Payment Retry', () => {
+    it('blocks a second attempt while the first is still processing', async () => {
+      const delivery = await createRequestedDelivery();
+      await deliveryRepository.update(delivery.id, { fare: 1500 });
+
+      const first = await paymentService.initializePayment(testData.customer.id, {
+        deliveryId: delivery.id,
+        amount: 150000,
+        email: testData.customer.email,
+        phone: testData.customer.phone,
+        provider: PaymentProvider.PAYSTACK,
+      });
+      await paymentRepository.update({ reference: first.reference }, { createdAt: new Date() });
+
+      await expect(paymentService.initializePayment(testData.customer.id, {
+        deliveryId: delivery.id,
+        amount: 150000,
+        email: testData.customer.email,
+        phone: testData.customer.phone,
+        provider: PaymentProvider.PAYSTACK,
+      })).rejects.toThrow('Payment is already in progress for this delivery');
+    });
+
+    it('allows a retry after a failed attempt', async () => {
+      const delivery = await createRequestedDelivery();
+      await deliveryRepository.update(delivery.id, { fare: 1500 });
+
+      const first = await paymentService.initializePayment(testData.customer.id, {
+        deliveryId: delivery.id,
+        amount: 150000,
+        email: testData.customer.email,
+        phone: testData.customer.phone,
+        provider: PaymentProvider.PAYSTACK,
+      });
+      await paymentRepository.update({ reference: first.reference }, { status: PaymentStatus.FAILED });
+
+      const second = await paymentService.initializePayment(testData.customer.id, {
+        deliveryId: delivery.id,
+        amount: 150000,
+        email: testData.customer.email,
+        phone: testData.customer.phone,
+        provider: PaymentProvider.PAYSTACK,
+      });
+
+      expect(second.reference).toBeDefined();
+      expect(second.reference).not.toBe(first.reference);
+    });
+
+    it('replaces a stale processing attempt', async () => {
+      const delivery = await createRequestedDelivery();
+      await deliveryRepository.update(delivery.id, { fare: 1500 });
+
+      const first = await paymentService.initializePayment(testData.customer.id, {
+        deliveryId: delivery.id,
+        amount: 150000,
+        email: testData.customer.email,
+        phone: testData.customer.phone,
+        provider: PaymentProvider.PAYSTACK,
+      });
+      await paymentRepository.update(
+        { reference: first.reference },
+        { createdAt: new Date(Date.now() - 60 * 60 * 1000) },
+      );
+
+      const second = await paymentService.initializePayment(testData.customer.id, {
+        deliveryId: delivery.id,
+        amount: 150000,
+        email: testData.customer.email,
+        phone: testData.customer.phone,
+        provider: PaymentProvider.PAYSTACK,
+      });
+
+      expect(second.reference).toBeDefined();
+      const stale = await paymentRepository.findOne({ where: { reference: first.reference } });
+      expect(stale.status).toBe(PaymentStatus.CANCELLED);
     });
   });
 });

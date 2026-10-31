@@ -7,6 +7,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User, UserRole } from '../auth/entities/user.entity';
+import { parsePagination } from '../../common/pagination';
 import { AssignIssueDto, CreateIssueDto, UpdateIssueStatusDto } from './dto';
 
 @ApiTags('Issues')
@@ -25,15 +26,25 @@ export class IssueController {
 
   @Get()
   @ApiOperation({ summary: 'Get my reported issues' })
-  async getMyIssues(@CurrentUser() user: User, @Query('status') status?: string) {
-    return this.issueService.getUserIssues(user.id, status);
+  async getMyIssues(
+    @CurrentUser() user: User,
+    @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.issueService.getUserIssues(user.id, status, parsePagination(page, limit));
   }
 
   @Get('assigned')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get issues assigned to me (admin)' })
-  async getAssignedIssues(@CurrentUser() user: User, @Query('status') status?: string) {
-    return this.issueService.getAssignedIssues(user.id, status);
+  async getAssignedIssues(
+    @CurrentUser() user: User,
+    @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.issueService.getAssignedIssues(user.id, status, parsePagination(page, limit));
   }
 
   @Get('all')
@@ -42,8 +53,10 @@ export class IssueController {
   async getAllIssues(
     @Query('status') status?: string,
     @Query('priority') priority?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.issueService.getAllIssues(status, priority);
+    return this.issueService.getAllIssues(status, priority, parsePagination(page, limit));
   }
 
   @Get(':id')

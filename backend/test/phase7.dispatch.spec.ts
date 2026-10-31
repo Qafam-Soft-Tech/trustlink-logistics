@@ -7,7 +7,8 @@ import { PricingConfig } from '../src/modules/payments/entities/pricing-config.e
 import { DeliveryService } from '../src/modules/deliveries/services/delivery.service';
 import { DispatchService } from '../src/modules/deliveries/services/dispatch.service';
 import { FareCalculationService } from '../src/modules/payments/services/fare-calculation.service';
-import { MockDb, TestFactory, seedBaseData, notificationServiceMock } from './mock-db';
+import { DistanceService } from '../src/modules/payments/services/distance.service';
+import { MockDb, TestFactory, seedBaseData, notificationServiceMock, recipientOtpServiceMock } from './mock-db';
 
 describe('Phase 7: Dispatch, Assignment & Rider Job Flow', () => {
   let module: TestingModule;
@@ -31,8 +32,10 @@ describe('Phase 7: Dispatch, Assignment & Rider Job Flow', () => {
         DispatchService,
         DeliveryService,
         FareCalculationService,
+        DistanceService,
         ...db.providers([Delivery, Address, DeliveryEvent, ProofOfDelivery, User, RiderProfile, PricingConfig]),
         notificationServiceMock,
+        recipientOtpServiceMock,
       ],
     }).compile();
 

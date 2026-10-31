@@ -15,7 +15,7 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-5 | OTP expiry 5 min (spec) vs 10 min (code + SMS text) | UI and backend both use **5 min**; SMS copy updated | D4 | **Resolved (M1)** |
 | SC-6 | Weight "bracket" (spec) vs numeric kg with tiers to 25 kg (code) | Chips ≤1/≤5/≤10/≤25 kg → send upper-bound numeric `packageWeight` | D16 | Resolved (chips → kg) |
 | SC-7 | Phone not normalised on backend (raw-string lookup; only Termii converts to 234) | One `toCanonicalPhone()`; canonical = `080xxxxxxxx` (what screens send today) | D17 | Resolved |
-| SC-8 | FR-C05 "no request until fare accepted" vs backend create-then-fare; fare needs `distanceKm` the client can't get without maps | Flow: quote → accept → create → pay; mock distance from a fixture table | — | **Needs decision** (distance source) |
+| SC-8 | FR-C05 "no request until fare accepted" vs backend create-then-fare; fare needs `distanceKm` the client can't get without maps | Server derives distance from Abuja area/coordinates and stores the fare on creation; the client should send areas/coords (M3) | — | **Resolved backend (M2)** |
 | SC-9 | Address: spec lat/lng/landmark_note vs code street/area/city/state; no LGA | Use street, landmark, area, city, state (city/state fixed FCT/Abuja for R1) | — | Resolved (per §10) |
 | SC-10 | Spec `/v1/...` vs code `/api/...` | Use `/api` | — | Resolved |
 | SC-11 | Customer/Rider apps store no token and send no Authorization header | SessionProvider: token in `expo-secure-store` + axios request interceptor | D19 | Resolved (plan) |
@@ -31,23 +31,23 @@ Phase 0 deliverable. This is the running register of spec/behaviour conflicts an
 | SC-16 | `InitializePaymentDto.amount` documented "in kobo", but fares are **naira decimals** (`DEFAULT_PRICING_CONFIG`); payment entity comment also says kobo | Frontend sends **amount in kobo** exactly once, at the api boundary (`Math.round(amountNaira * 100)`); UI and mock stay in naira | **Resolved — verified kobo** (backend DTO documents kobo; Paystack consumes kobo, Flutterwave divides by 100 in its service) |
 | SC-17 | `@Roles(...)` is enforced only where `RolesGuard` is present (only `UsersController`). All other controllers use `JwtAuthGuard` alone, so declared roles (admin/rider/customer) are **not enforced** at the guard | `RolesGuard` is wired on every controller and a cross-role e2e matrix passes | **Resolved (M1)** |
 | SC-18 | Deep links in **Expo Go** need the runtime `exp://…` prefix from `expo-linking` (`Linking.createURL('/')`), which is **not** in the approved dependency list | `scheme: trustlink` + `trustlink://` prefix configured (dev builds work); Expo-Go `exp://` prefix deferred | **Resolved (Phase 5)** — `expo-linking` installed (customer); prefixes `[createURL('/'), 'trustlink://']`; see `DEMO.md` §4 |
-| SC-19 | Payment retry: backend §12 blocks a new `payments/initialize` while a payment is `SUCCESS` **or `PROCESSING`**; a declined/cancelled/timed-out attempt would therefore stay blocked | Mock + UI block only when a payment is **SUCCESS** (or the delivery has left REQUESTED); retry after decline/cancel/timeout is allowed | **Needs decision** (retry-after-processing) |
-| SC-20 | No backend distance source (`POST /pricing/calculate` needs `distanceKm`; no maps in R1) | Client-side estimate `pricing.estimateDistance` from launch-area coordinates (domain-owned table) → sent to `calculate` | **Needs decision** (restates SC-8; confirm fixture-table estimate is acceptable) |
+| SC-19 | Payment retry: backend §12 blocks a new `payments/initialize` while a payment is `SUCCESS` **or `PROCESSING`**; a declined/cancelled/timed-out attempt would therefore stay blocked | Retry is allowed after FAILED/CANCELLED; a recent PROCESSING attempt blocks, a stale one is cancelled after the TTL | **Resolved (M2)** |
+| SC-20 | No backend distance source (`POST /pricing/calculate` needs `distanceKm`; no maps in R1) | Backend `DistanceService` resolves coordinates/areas; `/pricing/calculate` accepts them and delivery creation stores the server fare | **Resolved backend (M2)**; client adopts in M3 |
 | SC-21 | "Copy" on the confirmation screen needs a clipboard API; `expo-clipboard` is not in the approved dependency list | Used React Native core `Clipboard` (deprecated in RN, still present) behind `utils/clipboard.ts` | Resolved (swap to `expo-clipboard` when a dep is approved) |
 | SC-22 | Rider card needs the rider's **vehicle type**, but `Delivery` embeds only the rider `User` (vehicle type lives on `RiderProfile`) | Demo-only `Delivery.riderVehicleType` (mock decorates on read); the card hides the badge when absent (api mode) | **Needs decision** (add vehicle to the delivery payload, or a rider lookup endpoint) |
 | SC-23 | Cancellation "reason" — `POST /notifications/cancel/:deliveryId` accepts no body | UI collects an optional reason and shows it as support context; it is **not sent** (no contract field) | **Needs decision** (accept a reason body server-side) |
 | SC-24 | No `GET /deliveries/history` route (SC-14) | Completed/failed/cancelled history comes from client-side filtering of `GET /deliveries` (Active / Completed / Cancelled & failed + search) | Resolved (frontend filtering; no history endpoint) |
 | SC-25 | Receipts and proof of delivery: no receipt endpoint, and `recipientOtp` is never issued by the backend (SC §10) | Receipt is generated client-side (`domain/receipt.ts`) and shared as text/email; POD is read from `GET /deliveries/:id/proof` | Resolved (share + email only) |
-| SC-26 | History has no server-side pagination — `GET /deliveries` returns every delivery | UI renders incrementally (8 rows per "Show more") and resets on search; fine for demo volumes | **Needs decision** (add `?page=`/cursor to `/deliveries`; backend frozen) |
+| SC-26 | History has no server-side pagination — `GET /deliveries` returns every delivery | `?page=&limit=` now returns `{ items, total, page, limit }`; without them the legacy array is returned | **Resolved (M2)**; client adopts in M3 |
 | SC-27 | No refund/return endpoint. `Payment.status` includes `refunded` but nothing ever sets it, and the delivery keeps no refund record | Refund is explanatory copy only (cancel preview/result amounts are shown at cancel time) — no refund action exists | **Needs decision** (refund endpoint; requires backend work) — founder chose to keep copy-only |
 | SC-28 | PDF receipts need `expo-print` + `expo-sharing`, neither on the approved dependency list | **Approved (founder, 2026-10-07)** — installed; `Receipt` offers text share, `mailto:` email and a generated PDF (`utils/receiptPdf.ts`, `receiptHtml()` with theme colours) | Resolved |
 | SC-29 | POD `photoUrl` is a backend-provided string; there is no capture/upload endpoint in R1 | `PodCard` renders any loadable URL (http/https/file/data/content) and falls back to a labelled placeholder; demo values are not real images | Resolved (display-ready; capture is a later phase) |
-| SC-30 | `Notification` has no read/unread field and there is no read endpoint | Unread is tracked **locally** (`storage/notificationReads.ts`, AsyncStorage); "mark all read" is device-local | **Needs decision** (add `read`/`readAt` + a mark-read endpoint server-side) |
+| SC-30 | `Notification` has no read/unread field and there is no read endpoint | `readAt` + unread-count, per-item read and read-all endpoints now exist | **Resolved backend (M2)**; client adopts in M3 |
 | SC-31 | Contact-support phone/WhatsApp/email are not provided anywhere | Help screen ships clearly-marked **Placeholder** channels (`screens/support/helpContent.ts`) to be replaced before launch | **Needs decision** (real support lines) |
 | SC-32 | `CreateIssueDto` requires `priority`, but the report form only asks type + description | Reports are filed with priority `medium`; support triages | Resolved (documented) |
-| SC-33 | No account-deletion route (`DELETE /users/me` etc.) | **DEFERRED** as instructed: the Account screen offers a "Delete account" action that explains the gap and routes to support (no fake deletion) | **Needs decision** (add a deletion/erase endpoint; NDPA erasure request) |
+| SC-33 | No account-deletion route (`DELETE /users/me` etc.) | `DELETE /users/me` anonymizes the account and blocks while a delivery is active | **Resolved backend (M2)**; client adopts in M3 |
 | SC-34 | Terms/Privacy had no real text (external placeholder URLs) | In-app Terms and Privacy screens with real prose (NDPA context), each marked **"Draft for legal review"**; the auth consent line now opens them in-app | Resolved (draft text; legal sign-off pending) |
-| SC-35 | KYC documents have no upload endpoint — `SubmitKycDto` takes document **URLs** | The rider app picks images with `expo-image-picker` (already installed) and submits the local URIs; a real upload/storage step is still needed | **Needs decision** (file upload endpoint or direct-to-storage) |
+| SC-35 | KYC documents have no upload endpoint — `SubmitKycDto` takes document **URLs** | `POST /uploads` (JPEG/PNG/WebP, 5 MB) with local/S3 storage; the rider app will upload in M3 | **Resolved backend (M2)** |
 | SC-36 | Rider jobs are read-only in R1 Phase 12 | `Jobs` lists `GET /dispatch/my-queue` and `Alerts` lists notifications with no accept/execute actions; job execution is Phase 13 | Resolved (scoped to Phase 12) |
 | SC-37 | The rider "Can't take this? Call dispatch" action has no published number | A clearly-labelled placeholder dispatch line (`screens/jobs/dispatch.ts`) is used; replace before launch | **Needs decision** (real dispatch number) |
 | SC-38 | The backend never generates or delivers `recipientOtp` for POD (snapshot §10); there is no rider decline route (SC-12) | The mock supplies the fixture code and the Customer Demo menu reveals it to the presenter; the rider POD rejects a wrong code and offers "Call dispatch" instead of a decline | Resolved (documented) |
@@ -125,22 +125,22 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 
 1. ~~**SC-2 / D14**~~ — *Resolved (M1)*: FR-C11 fee tiers (free through SEARCHING, 50% at ASSIGNED, full from PICKED_UP).
 2. ~~**SC-5 / D4**~~ — *Resolved (M1)*: UI and backend both use 5-minute OTP expiry.
-3. **SC-8 / SC-6** — source of `distanceKm` for fare without maps (fixture table acceptable for demo?). **Phase 7 implements SC-20 (client estimate)** — confirm acceptable.
+3. ~~**SC-8 / SC-20 / SC-6**~~ — *Resolved backend (M2)*: server-side area/coordinate distance and stored fare; client adopts in M3.
 4. ~~**SC-16**~~ — *Resolved (verified kobo)*: the adapter converts naira→kobo exactly once at the api boundary; the backend DTO documents kobo, Paystack consumes kobo, Flutterwave divides by 100 in its service.
 5. ~~**SC-17**~~ — *Resolved (M1)*: `RolesGuard` is wired on every controller and covered by an e2e matrix.
 6. ~~**Admin login**~~ — *Resolved backend (M1)*: `POST /auth/admin/login` + `npm run seed:admin`; console wiring is M4.
-7. **SC-19** — retry after a declined/cancelled/timed-out payment (backend §12 would block on `PROCESSING`; UI allows retry).
+7. ~~**SC-19**~~ — *Resolved (M2)*: retry after FAILED/CANCELLED; stale PROCESSING is cancelled after the TTL.
 8. **SC-21** — approve a clipboard dependency (`expo-clipboard`) to replace RN core `Clipboard`.
 9. **SC-22** — rider vehicle type is not on the delivery payload (demo-only field used in the tracking rider card).
 10. **SC-23** — cancellation reason is collected in the UI but the backend route accepts no body.
-11. **SC-26** — history pagination must move server-side (`/deliveries` returns everything); frontend "Show more" ships meanwhile.
+11. ~~**SC-26**~~ — *Resolved (M2)*: optional `?page=&limit=` envelope on deliveries/issues/users/KYC.
 12. **SC-27** — refunds/returns have no endpoint (founder: keep copy-only for now).
 13. **SC-28** — *Resolved*: `expo-print` + `expo-sharing` approved and installed for PDF receipts.
-14. **SC-30** — notifications have no read state server-side (unread is device-local today).
+14. ~~**SC-30**~~ — *Resolved backend (M2)*: `readAt`, unread-count, per-item read and read-all.
 15. **SC-31** — real support phone/WhatsApp/email lines still needed (placeholders ship).
-16. **SC-33** — account deletion has no endpoint (UI explains and routes to support; deferred).
+16. ~~**SC-33**~~ — *Resolved backend (M2)*: `DELETE /users/me` anonymizes the account and blocks active deliveries.
 17. **SC-34** — Terms/Privacy are real drafts pending legal sign-off.
-18. **SC-35** — KYC needs a document upload endpoint (the rider app submits local image URIs today).
+18. ~~**SC-35**~~ — *Resolved backend (M2)*: `POST /uploads` with local/S3 storage; rider app adopts in M3.
 19. **SC-37** — the dispatch phone line is a placeholder (used by "Call dispatch").
 20. **SC-39** — the delivery-failure route accepts no note (the rider note is local only).
 21. ~~**SC-41**~~ — *Resolved backend (M1)*; the console still needs its M4 wiring.
@@ -153,9 +153,9 @@ Classification: **WORKS** · **NEEDS FRONTEND FIX** · **NEEDS BACKEND FIX** · 
 ## E. Backend issues deferred (not blocking frontend, tracked here)
 - ~~Signup DTO validation missing (interfaces, no class-validator).~~ **Resolved (M1)** — class-validator DTOs; signup role is customer/rider only.
 - Phone not normalised server-side.
-- OTP request rate-limiting absent; Redis unused (M2).
+- OTP/global throttling is in-memory; Redis is still unused (approved for the single-instance pilot).
 - ~~`acknowledgedAt` absent on deliveries.~~ **Resolved (M1)** — column added and set on rider acknowledgment.
-- Recipient OTP for POD not generated/delivered (M2).
+- ~~Recipient OTP for POD not generated/delivered.~~ **Resolved (M2)** — hashed, expiring, SMS-delivered, verified before delivery.
 - Cancellation endpoint inconsistency (`/deliveries/:id/cancel` vs `/notifications/cancel`).
 - ~~Role guard not applied outside `UsersController`.~~ **Resolved (M1)** — `RolesGuard` on every controller, with an RBAC e2e matrix.
 

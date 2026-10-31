@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 import { NotificationService } from './services/notification.service';
@@ -22,6 +22,24 @@ export class NotificationController {
     const parsed = Number(limit ?? 20);
     const safeLimit = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 100) : 20;
     return this.notificationService.getNotifications(user.id, safeLimit);
+  }
+
+  @Get('unread-count')
+  @ApiOperation({ summary: 'Get the unread notification count' })
+  async getUnreadCount(@CurrentUser() user: User) {
+    return this.notificationService.getUnreadCount(user.id);
+  }
+
+  @Put('read-all')
+  @ApiOperation({ summary: 'Mark all notifications as read' })
+  async markAllAsRead(@CurrentUser() user: User) {
+    return this.notificationService.markAllAsRead(user.id);
+  }
+
+  @Put(':id/read')
+  @ApiOperation({ summary: 'Mark a notification as read' })
+  async markAsRead(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.notificationService.markAsRead(user.id, id);
   }
 
   @Get('cancellation-preview/:deliveryId')

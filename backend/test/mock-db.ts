@@ -7,6 +7,8 @@ import { DeliveryStatus, PackageType } from '../src/modules/deliveries/entities/
 import { VehicleType, RiderStatus } from '../src/modules/deliveries/entities/rider-profile.entity';
 import { PricingConfigKey, DEFAULT_PRICING_CONFIG } from '../src/modules/payments/entities/pricing-config.entity';
 import { NotificationService } from '../src/modules/notifications/services/notification.service';
+import { RecipientOtpService } from '../src/modules/deliveries/services/recipient-otp.service';
+import { TermiiSmsService } from '../src/modules/auth/services/termii-sms.service';
 
 const ENTITY_NAMES = [
   'User',
@@ -21,6 +23,7 @@ const ENTITY_NAMES = [
   'Payment',
   'Notification',
   'Issue',
+  'RecipientOtp',
 ];
 
 // Maps a relation property (e.g. `delivery` from `deliveryId`) to its entity store.
@@ -466,7 +469,7 @@ export function seedBaseData(db: MockDb): { customer: any; rider: any; admin: an
 export const configServiceMock: Record<string, any> = {
   provide: ConfigService,
   useValue: {
-    get: () => '',
+    get: (_key: string, defaultValue?: unknown) => defaultValue ?? '',
   },
 };
 
@@ -474,5 +477,21 @@ export const notificationServiceMock: Record<string, any> = {
   provide: NotificationService,
   useValue: {
     notifyDeliveryStatusChange: jest.fn(async () => undefined),
+  },
+};
+
+export const recipientOtpServiceMock: Record<string, any> = {
+  provide: RecipientOtpService,
+  useValue: {
+    issue: jest.fn(async () => undefined),
+    verify: jest.fn(async () => true),
+  },
+};
+
+export const termiiSmsServiceMock: Record<string, any> = {
+  provide: TermiiSmsService,
+  useValue: {
+    sendOtp: jest.fn(async () => true),
+    sendMessage: jest.fn(async () => true),
   },
 };

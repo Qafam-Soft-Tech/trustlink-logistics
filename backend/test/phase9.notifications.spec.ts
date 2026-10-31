@@ -4,9 +4,12 @@ import { ProofOfDelivery } from '../src/modules/deliveries/entities/proof-of-del
 import { RiderProfile } from '../src/modules/deliveries/entities/rider-profile.entity';
 import { User } from '../src/modules/auth/entities/user.entity';
 import { Notification, NotificationChannel } from '../src/modules/notifications/entities/notification.entity';
+import { PricingConfig } from '../src/modules/payments/entities/pricing-config.entity';
 import { DeliveryService } from '../src/modules/deliveries/services/delivery.service';
+import { FareCalculationService } from '../src/modules/payments/services/fare-calculation.service';
+import { DistanceService } from '../src/modules/payments/services/distance.service';
 import { NotificationService } from '../src/modules/notifications/services/notification.service';
-import { MockDb, TestFactory, seedBaseData, configServiceMock } from './mock-db';
+import { MockDb, TestFactory, seedBaseData, configServiceMock, recipientOtpServiceMock, termiiSmsServiceMock } from './mock-db';
 
 describe('Phase 9: Customer Tracking, Notifications & Cancellation', () => {
   let module: TestingModule;
@@ -28,8 +31,12 @@ describe('Phase 9: Customer Tracking, Notifications & Cancellation', () => {
       providers: [
         DeliveryService,
         NotificationService,
-        ...db.providers([Delivery, Address, DeliveryEvent, ProofOfDelivery, RiderProfile, User, Notification]),
+        FareCalculationService,
+        DistanceService,
+        ...db.providers([Delivery, Address, DeliveryEvent, ProofOfDelivery, RiderProfile, User, Notification, PricingConfig]),
         configServiceMock,
+        recipientOtpServiceMock,
+        termiiSmsServiceMock,
       ],
     }).compile();
 

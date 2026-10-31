@@ -7,7 +7,11 @@ import { ProofOfDelivery } from '../entities/proof-of-delivery.entity';
 import { RiderProfile, RiderStatus, VehicleType } from '../entities/rider-profile.entity';
 import { User, UserRole, KycStatus } from '../../auth/entities/user.entity';
 import { NotificationService } from '../../notifications/services/notification.service';
+import { FareCalculationService } from '../../payments/services/fare-calculation.service';
+import { DistanceService } from '../../payments/services/distance.service';
+import { RecipientOtpService } from './recipient-otp.service';
 import { CreateDeliveryDto } from '../dto';
+import { Paginated, Pagination, paginateQuery } from '../../../common/pagination';
 
 type ActorRole = 'customer' | 'rider' | 'admin';
 
@@ -27,6 +31,9 @@ export class DeliveryService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private notificationService: NotificationService,
+    private fareCalculationService: FareCalculationService,
+    private distanceService: DistanceService,
+    private recipientOtpService: RecipientOtpService,
   ) {}
 
   async createDelivery(customerId: string, data: CreateDeliveryDto): Promise<Delivery> {
@@ -45,10 +52,19 @@ export class DeliveryService {
       throw new BadRequestException('Recipient must be different from sender');
     }
 
+    const distanceKm = this.distanceService.resolve(data);
+    const fare = await this.fareCalculationService.calculateFare({
+      distanceKm,
+      weightKg: Number(data.packageWeight),
+      packageType: data.packageType,
+    });
+
     const delivery = this.deliveryRepository.create({
       trackingNumber: this.generateTrackingNumber(),
       customerId,
       ...data,
+      distanceKm,
+      fare: fare.totalFare,
       status: DeliveryStatus.REQUESTED,
     });
 
@@ -85,7 +101,11 @@ export class DeliveryService {
     return delivery;
   }
 
-  async getCustomerDeliveries(customerId: string, status?: DeliveryStatus): Promise<Delivery[]> {
+  async getCustomerDeliveries(
+    customerId: string,
+    status?: DeliveryStatus,
+    pagination?: Pagination,
+  ): Promise<Delivery[] | Paginated<Delivery>> {
     const query = this.deliveryRepository.createQueryBuilder('delivery')
       .where('delivery.customerId = :customerId', { customerId })
       .leftJoinAndSelect('delivery.rider', 'rider')
@@ -96,10 +116,14 @@ export class DeliveryService {
       query.andWhere('delivery.status = :status', { status });
     }
 
-    return query.getMany();
+    return pagination ? paginateQuery(query, pagination) : query.getMany();
   }
 
-  async getRiderDeliveries(riderId: string, status?: DeliveryStatus): Promise<Delivery[]> {
+  async getRiderDeliveries(
+    riderId: string,
+    status?: DeliveryStatus,
+    pagination?: Pagination,
+  ): Promise<Delivery[] | Paginated<Delivery>> {
     const query = this.deliveryRepository.createQueryBuilder('delivery')
       .where('delivery.riderId = :riderId', { riderId })
       .leftJoinAndSelect('delivery.customer', 'customer')
@@ -110,10 +134,13 @@ export class DeliveryService {
       query.andWhere('delivery.status = :status', { status });
     }
 
-    return query.getMany();
+    return pagination ? paginateQuery(query, pagination) : query.getMany();
   }
 
-  async getAllDeliveries(status?: DeliveryStatus): Promise<Delivery[]> {
+  async getAllDeliveries(
+    status?: DeliveryStatus,
+    pagination?: Pagination,
+  ): Promise<Delivery[] | Paginated<Delivery>> {
     const query = this.deliveryRepository.createQueryBuilder('delivery')
       .leftJoinAndSelect('delivery.customer', 'customer')
       .leftJoinAndSelect('delivery.rider', 'rider')
@@ -123,7 +150,7 @@ export class DeliveryService {
       query.andWhere('delivery.status = :status', { status });
     }
 
-    return query.getMany();
+    return pagination ? paginateQuery(query, pagination) : query.getMany();
   }
 
   async updateDeliveryStatus(
@@ -212,6 +239,7 @@ export class DeliveryService {
       notes: `Assigned to rider ${riderProfile.user.firstName} ${riderProfile.user.lastName}`,
     });
     await this.notificationService.notifyDeliveryStatusChange(deliveryId, DeliveryStatus.ASSIGNED, 'admin');
+    await this.recipientOtpService.issue(deliveryId, delivery.recipientPhone);
 
     return delivery;
   }
@@ -360,6 +388,10 @@ export class DeliveryService {
     if (!proofData.recipientOtp || proofData.recipientOtp.length !== 6) {
       throw new BadRequestException('Valid 6-digit recipient OTP required');
     }
+    const otpValid = await this.recipientOtpService.verify(deliveryId, proofData.recipientOtp);
+    if (!otpValid) {
+      throw new BadRequestException('Invalid or expired recipient OTP');
+    }
 
     const proof = this.proofOfDeliveryRepository.create({
       deliveryId,
@@ -455,6 +487,26 @@ export class DeliveryService {
     await this.releaseRiderIfIdle(previousRiderId);
 
     return delivery;
+  }
+
+  async resendRecipientOtp(
+    deliveryId: string,
+    requesterId: string,
+    role: ActorRole,
+  ): Promise<{ sent: boolean }> {
+    const delivery = await this.getDeliveryById(deliveryId);
+    if (![DeliveryStatus.ASSIGNED, DeliveryStatus.PICKED_UP, DeliveryStatus.IN_TRANSIT].includes(delivery.status)) {
+      throw new BadRequestException('Recipient OTP can only be sent while the delivery is active');
+    }
+    if (role === 'rider' && delivery.riderId !== requesterId) {
+      throw new ForbiddenException('Not assigned to this delivery');
+    }
+    if (role === 'customer' && delivery.customerId !== requesterId) {
+      throw new ForbiddenException('Not authorized');
+    }
+
+    await this.recipientOtpService.issue(deliveryId, delivery.recipientPhone);
+    return { sent: true };
   }
 
   async getProofOfDelivery(deliveryId: string): Promise<ProofOfDelivery | null> {

@@ -8,6 +8,9 @@ dist/
 build/
 coverage/
 
+# Local uploads (development storage driver)
+backend/uploads/
+
 # TypeScript incremental cache
 *.tsbuildinfo
 

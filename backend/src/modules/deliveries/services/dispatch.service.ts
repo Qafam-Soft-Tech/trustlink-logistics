@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { Delivery, DeliveryEvent, DeliveryStatus } from '../entities/delivery.entity';
 import { RiderProfile, VehicleType, RiderStatus } from '../entities/rider-profile.entity';
 import { User, KycStatus } from '../../auth/entities/user.entity';
-import { NotificationService } from '../../notifications/services/notification.service';
+import { DeliveryService } from './delivery.service';
 
 export interface EligibleRider {
   rider: RiderProfile;
@@ -30,7 +30,7 @@ export class DispatchService {
     private riderProfileRepository: Repository<RiderProfile>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    private notificationService: NotificationService,
+    private deliveryService: DeliveryService,
   ) {}
 
   async getEligibleRiders(deliveryId: string): Promise<EligibleRider[]> {
@@ -79,49 +79,7 @@ export class DispatchService {
   }
 
   async assignRider(deliveryId: string, riderId: string, adminId: string): Promise<Delivery> {
-    const delivery = await this.deliveryRepository.findOne({ where: { id: deliveryId } });
-    if (!delivery) {
-      throw new NotFoundException('Delivery not found');
-    }
-    if (delivery.status !== DeliveryStatus.SEARCHING) {
-      throw new BadRequestException('Delivery cannot be assigned in current status');
-    }
-
-    const riderProfile = await this.riderProfileRepository.findOne({
-      where: { userId: riderId },
-      relations: { user: true },
-    });
-    if (!riderProfile) {
-      throw new NotFoundException('Rider profile not found');
-    }
-    if (riderProfile.user.kycStatus !== KycStatus.APPROVED) {
-      throw new BadRequestException('Rider KYC not approved');
-    }
-    if (riderProfile.status !== RiderStatus.ONLINE) {
-      throw new BadRequestException('Rider is not online');
-    }
-    if (!this.isVehicleCompatible(riderProfile.vehicleType, delivery.packageType, Number(delivery.packageWeight))) {
-      throw new BadRequestException('Rider vehicle type not compatible with package');
-    }
-
-    delivery.riderId = riderId;
-    delivery.status = DeliveryStatus.ASSIGNED;
-    delivery.assignedAt = new Date();
-    delivery.acknowledgedAt = null;
-    await this.deliveryRepository.save(delivery);
-
-    riderProfile.status = RiderStatus.ON_TRIP;
-    await this.riderProfileRepository.save(riderProfile);
-
-    await this.appendEvent(delivery, {
-      status: DeliveryStatus.ASSIGNED,
-      actorId: adminId,
-      actorRole: 'admin',
-      notes: `Assigned to rider ${riderProfile.user.firstName} ${riderProfile.user.lastName}`,
-    });
-    await this.notificationService.notifyDeliveryStatusChange(deliveryId, DeliveryStatus.ASSIGNED, 'admin');
-
-    return delivery;
+    return this.deliveryService.assignRider(deliveryId, riderId, adminId);
   }
 
   async reassignRider(deliveryId: string, newRiderId: string, adminId: string, reason: string): Promise<Delivery> {

@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 
 import { Delivery, DeliveryEvent, DeliveryStatus } from '../../deliveries/entities/delivery.entity';
 import { RiderProfile, RiderStatus } from '../../deliveries/entities/rider-profile.entity';
+import { User } from '../../auth/entities/user.entity';
+import { TermiiSmsService } from '../../auth/services/termii-sms.service';
 import { Notification, NotificationChannel, NotificationStatus, SendNotificationDto } from '../entities/notification.entity';
 
 @Injectable()
@@ -17,6 +19,9 @@ export class NotificationService {
     private deliveryEventRepository: Repository<DeliveryEvent>,
     @InjectRepository(RiderProfile)
     private riderProfileRepository: Repository<RiderProfile>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    private termiiSms: TermiiSmsService,
   ) {}
 
   // Cancellation fee tiers based on delivery status
@@ -74,9 +79,14 @@ export class NotificationService {
   }
 
   private async sendSms(notification: Notification): Promise<void> {
-    // Simulate SMS via Termii/Africa's Talking
-    console.log(`[SMS] To user ${notification.userId}: ${notification.body}`);
-    await new Promise(resolve => setTimeout(resolve, 10));
+    const user = await this.userRepository.findOne({ where: { id: notification.userId } });
+    if (!user) {
+      throw new Error('Notification recipient not found');
+    }
+    const sent = await this.termiiSms.sendMessage(user.phone, notification.body);
+    if (!sent) {
+      throw new Error('SMS provider did not accept the message');
+    }
   }
 
   private async sendEmail(notification: Notification): Promise<void> {
@@ -278,12 +288,25 @@ export class NotificationService {
     });
   }
 
-  async markAsRead(notificationId: string): Promise<Notification> {
-    const notification = await this.notificationRepository.findOne({ where: { id: notificationId } });
+  async markAsRead(userId: string, notificationId: string): Promise<Notification> {
+    const notification = await this.notificationRepository.findOne({
+      where: { id: notificationId, userId },
+    });
     if (!notification) {
       throw new NotFoundException('Notification not found');
     }
-    return notification;
+    notification.readAt = new Date();
+    return this.notificationRepository.save(notification);
+  }
+
+  async markAllAsRead(userId: string): Promise<{ updated: boolean }> {
+    await this.notificationRepository.update({ userId, readAt: IsNull() }, { readAt: new Date() });
+    return { updated: true };
+  }
+
+  async getUnreadCount(userId: string): Promise<{ unread: number }> {
+    const unread = await this.notificationRepository.count({ where: { userId, readAt: IsNull() } });
+    return { unread };
   }
 
   private async releaseRiderIfIdle(riderId: string | null): Promise<void> {

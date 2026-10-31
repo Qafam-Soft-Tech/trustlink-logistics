@@ -8,8 +8,9 @@ import { PricingConfig, PricingConfigKey, DEFAULT_PRICING_CONFIG } from '../src/
 import { DeliveryService } from '../src/modules/deliveries/services/delivery.service';
 import { DispatchService } from '../src/modules/deliveries/services/dispatch.service';
 import { FareCalculationService } from '../src/modules/payments/services/fare-calculation.service';
+import { DistanceService } from '../src/modules/payments/services/distance.service';
 import { KycService } from '../src/modules/users/services/kyc.service';
-import { MockDb, TestFactory, seedBaseData, notificationServiceMock } from './mock-db';
+import { MockDb, TestFactory, seedBaseData, notificationServiceMock, recipientOtpServiceMock } from './mock-db';
 
 describe('Phase 11: Admin Account Management & Reporting', () => {
   let module: TestingModule;
@@ -41,8 +42,10 @@ describe('Phase 11: Admin Account Management & Reporting', () => {
         DispatchService,
         DeliveryService,
         FareCalculationService,
+        DistanceService,
         ...db.providers([User, Delivery, DeliveryEvent, RiderProfile, KycSubmission, PricingConfig, Address, ProofOfDelivery]),
         notificationServiceMock,
+        recipientOtpServiceMock,
       ],
     }).compile();
 

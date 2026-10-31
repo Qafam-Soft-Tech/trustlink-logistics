@@ -11,6 +11,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 import { FareCalculationService } from './services/fare-calculation.service';
+import { DistanceService } from './services/distance.service';
 import { PricingConfigKey, DEFAULT_PRICING_CONFIG } from './entities/pricing-config.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -24,13 +25,20 @@ import { CalculateFareDto, UpdatePricingDto } from './dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class PricingController {
-  constructor(private fareCalculationService: FareCalculationService) {}
+  constructor(
+    private fareCalculationService: FareCalculationService,
+    private distanceService: DistanceService,
+  ) {}
 
   @Post('calculate')
   @Roles(UserRole.CUSTOMER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Calculate fare for a delivery' })
   async calculateFare(@Body() dto: CalculateFareDto) {
-    return this.fareCalculationService.calculateFare(dto);
+    return this.fareCalculationService.calculateFare({
+      distanceKm: this.distanceService.resolve(dto),
+      weightKg: dto.weightKg,
+      packageType: dto.packageType,
+    });
   }
 
   @Get('config')
