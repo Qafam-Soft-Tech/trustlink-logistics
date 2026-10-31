@@ -1,6 +1,8 @@
-/** App metadata. Keep APP_VERSION in step with apps/customer/app.json `expo.version`. */
+import Constants from 'expo-constants';
+
+/** App metadata. The version is read from app.config.ts `expo.version` at runtime (expo-constants). */
 export const APP_NAME = 'TrustLink Customer';
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = Constants.expoConfig?.version ?? '0.0.0';
 export const TAGLINE = 'Secure. Swift. Strategic.';
 export const BUILD_LABEL = `${APP_NAME} · Version ${APP_VERSION}`;
 export const DEMO_DATA_NOTICE =

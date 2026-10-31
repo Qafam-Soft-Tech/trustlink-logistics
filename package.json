@@ -1,0 +1,17 @@
+{
+  "name": "trustlink",
+  "private": true,
+  "version": "0.0.0",
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "test:shared": "npm test --workspace @trustlink/shared",
+    "typecheck:shared": "npm run typecheck --workspace @trustlink/shared",
+    "contrast": "npm run contrast --workspace @trustlink/shared"
+  }
+}
