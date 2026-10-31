@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   useTheme,
@@ -18,7 +19,8 @@ import {
   type PaymentProvider,
   errorMessage,
 } from '@trustlink/shared';
-import { useDistanceEstimate, useFareQuote, useInitializePayment, useProfile } from '../../hooks';
+import { useFareQuote, useInitializePayment, useProfile } from '../../hooks';
+import { useData } from '../../data/DataContext';
 import type { NewDeliveryStackParamList } from '../../navigation/types';
 import { useNewDeliveryDraft } from '../newdelivery/DraftContext';
 
@@ -37,8 +39,13 @@ function Row2({ label, value }: { label: string; value: string }) {
 export function PaySummaryScreen({ navigation }: Props) {
   const { theme } = useTheme();
   const { draft, created, setPaymentReference } = useNewDeliveryDraft();
-  const distance = useDistanceEstimate(draft.pickup.area, draft.dropoff.area);
-  const quote = useFareQuote({ distanceKm: distance.data, weightKg: draft.packageWeight, packageType: draft.packageType });
+  const data = useData();
+  const quote = useFareQuote({
+    pickupArea: draft.pickup.area,
+    dropoffArea: draft.dropoff.area,
+    weightKg: draft.packageWeight,
+    packageType: draft.packageType,
+  });
   const profile = useProfile();
   const initialize = useInitializePayment();
   const [provider, setProvider] = useState<PaymentProvider>('paystack');
@@ -58,28 +65,30 @@ export function PaySummaryScreen({ navigation }: Props) {
 
   const amount = created.fare || quote.data?.totalFare || 0;
 
-  const pay = () => {
+  const pay = async () => {
     setError(undefined);
-    initialize.mutate(
-      {
+    try {
+      const result = await initialize.mutateAsync({
         deliveryId: created.id,
         amountNaira: amount,
         provider,
         email: profile.data?.email ?? undefined,
         phone: profile.data?.phone,
-      },
-      {
-        onSuccess: (result) => {
-          setPaymentReference(result.reference);
-          setSheetOpen(false);
-          navigation.navigate('Processing', { deliveryId: created.id, reference: result.reference });
-        },
-        onError: (e) => {
-          setError(errorMessage(e, 'payment'));
-          setSheetOpen(false);
-        },
-      },
-    );
+      });
+
+      setPaymentReference(result.reference);
+      setSheetOpen(false);
+
+      const isMockCheckout = !result.authorizationUrl || result.authorizationUrl.includes('/mock/');
+      if (data.source === 'api' && result.authorizationUrl && !isMockCheckout) {
+        await WebBrowser.openBrowserAsync(result.authorizationUrl, { showInRecents: true });
+      }
+
+      navigation.navigate('Processing', { deliveryId: created.id, reference: result.reference });
+    } catch (e) {
+      setError(errorMessage(e, 'payment'));
+      setSheetOpen(false);
+    }
   };
 
   return (
@@ -98,7 +107,11 @@ export function PaySummaryScreen({ navigation }: Props) {
 
         {quote.data ? <FareBreakdownCard breakdown={quote.data} /> : null}
 
-        <Banner variant="warning" title="Test mode" message="No real payment is taken. Card and Bank transfer are simulated." />
+        {data.source === 'mock' ? (
+          <Banner variant="warning" title="Test mode" message="No real payment is taken. Card and Bank transfer are simulated." />
+        ) : (
+          <Banner variant="info" title="Secure checkout" message="You'll complete payment in Paystack, then return here for confirmation." />
+        )}
         {error ? <Banner variant="error" message={error} /> : null}
       </ScrollView>
 

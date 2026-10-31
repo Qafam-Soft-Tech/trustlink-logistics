@@ -373,10 +373,16 @@ export class PaymentService {
                 gatewayResponse: response.data.gateway_response,
               });
             } else {
+              const providerStatus = response.data.status;
+              const mappedStatus = providerStatus === 'success'
+                ? PaymentStatus.SUCCESS
+                : ['failed', 'reversed', 'abandoned'].includes(providerStatus)
+                  ? PaymentStatus.FAILED
+                  : PaymentStatus.PROCESSING;
               resolve({
-                status: PaymentStatus.FAILED,
+                status: mappedStatus,
                 amount: response.data.amount || 0,
-                gatewayResponse: response.data.gateway_response || 'Failed',
+                gatewayResponse: response.data.gateway_response || providerStatus || 'Pending',
               });
             }
           } catch (e) {
@@ -500,10 +506,14 @@ export class PaymentService {
                 gatewayResponse: response.data.processor_response,
               });
             } else {
+              const providerStatus = response.data.status;
+              const mappedStatus = providerStatus === 'failed'
+                ? PaymentStatus.FAILED
+                : PaymentStatus.PROCESSING;
               resolve({
-                status: PaymentStatus.FAILED,
-                amount: response.data.amount * 100 || 0,
-                gatewayResponse: response.data.processor_response || 'Failed',
+                status: mappedStatus,
+                amount: (response.data.amount || 0) * 100,
+                gatewayResponse: response.data.processor_response || providerStatus || 'Pending',
               });
             }
           } catch (e) {

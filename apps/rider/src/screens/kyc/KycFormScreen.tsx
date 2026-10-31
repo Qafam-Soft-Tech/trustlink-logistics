@@ -18,7 +18,7 @@ import {
   isValidNin,
   type VehicleType,
 } from '@trustlink/shared';
-import { useSubmitKyc } from '../../hooks';
+import { useSubmitKyc, useUploadFile } from '../../hooks';
 import type { ProfileStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'KycForm'>;
@@ -33,6 +33,8 @@ const VEHICLES: Array<{ value: VehicleType; label: string }> = [
 export function KycFormScreen({ navigation }: Props) {
   const { theme } = useTheme();
   const submit = useSubmitKyc();
+  const upload = useUploadFile();
+  const [uploading, setUploading] = useState(false);
 
   const [step, setStep] = useState(0);
   const [review, setReview] = useState(false);
@@ -81,24 +83,38 @@ export function KycFormScreen({ navigation }: Props) {
     else setReview(true);
   };
 
-  const doSubmit = () => {
+  const doSubmit = async () => {
     setError(undefined);
-    submit.mutate(
-      {
+    if (!idFront || !idBack || !selfie || !vehicleReg) {
+      setError('Attach all documents before submitting.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const [front, back, face, registration] = await Promise.all([
+        upload.mutateAsync({ uri: idFront, name: 'id-front.jpg' }),
+        upload.mutateAsync({ uri: idBack, name: 'id-back.jpg' }),
+        upload.mutateAsync({ uri: selfie, name: 'selfie.jpg' }),
+        upload.mutateAsync({ uri: vehicleReg, name: 'vehicle-registration.jpg' }),
+      ]);
+
+      await submit.mutateAsync({
         nin,
         idType: 'nin',
-        idFrontUrl: idFront as string,
-        idBackUrl: idBack as string,
-        selfieUrl: selfie as string,
-        vehicleRegistrationUrl: vehicleReg as string,
+        idFrontUrl: front.url,
+        idBackUrl: back.url,
+        selfieUrl: face.url,
+        vehicleRegistrationUrl: registration.url,
         vehicleType,
         vehiclePlate: plate.trim().toUpperCase(),
-      },
-      {
-        onSuccess: () => navigation.goBack(),
-        onError: (e: unknown) => setError((e as Error).message || 'Could not submit your documents.'),
-      },
-    );
+      });
+      navigation.goBack();
+    } catch (e) {
+      setError((e as Error).message || 'Could not submit your documents.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const renderPicker = (label: string, uri: string | undefined, setter: (value: string) => void) => (
@@ -190,7 +206,7 @@ export function KycFormScreen({ navigation }: Props) {
       <Column style={{ padding: 16, gap: 8 }}>
         {review ? (
           <>
-            <Button variant="primary" size="lg" loading={submit.isPending} onPress={doSubmit}>Submit for review</Button>
+            <Button variant="primary" size="lg" loading={submit.isPending || uploading} onPress={doSubmit}>Submit for review</Button>
             <Button variant="ghost" size="md" onPress={() => setReview(false)}>Back to documents</Button>
           </>
         ) : (

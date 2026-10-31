@@ -22,7 +22,7 @@
       "env": {
         "APP_VARIANT": "preview-api",
         "EXPO_PUBLIC_DATA_SOURCE": "api",
-        "EXPO_PUBLIC_API_URL": "https://api.trustlink.example"
+        "EXPO_PUBLIC_API_URL": "https://api.trustlink.example/api"
       }
     },
     "production": {
@@ -32,7 +32,7 @@
       "env": {
         "APP_VARIANT": "production",
         "EXPO_PUBLIC_DATA_SOURCE": "api",
-        "EXPO_PUBLIC_API_URL": "https://api.trustlink.example"
+        "EXPO_PUBLIC_API_URL": "https://api.trustlink.example/api"
       }
     }
   },

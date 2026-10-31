@@ -60,6 +60,7 @@ export function createMockAdaptersFromStore(getStore: () => MockStore): DataPort
       cancelPreview: (id) => run((s) => s.cancelPreview(id)),
       cancel: (id) => run((s) => s.cancel(id)),
       proof: (id) => run((s) => s.proof(id)),
+      resendRecipientOtp: (id) => run((s) => s.resendRecipientOtp(id)),
     },
     pricing: {
       calculate: (input) => run((s) => s.calculateFare(input)),
@@ -78,8 +79,14 @@ export function createMockAdaptersFromStore(getStore: () => MockStore): DataPort
       getByDelivery: (deliveryId) => run((s) => s.paymentByDelivery(deliveryId)),
       verify: (reference) => run((s) => s.verifyPayment(reference)),
     },
+    files: {
+      upload: (input) => run(() => ({ url: input.uri })),
+    },
     notification: {
       list: (limit) => run((s) => s.listNotifications(limit ?? 20)),
+      markRead: (id) => run((s) => s.markNotificationRead(id)),
+      markAllRead: () => run((s) => s.markAllNotificationsRead()),
+      unreadCount: () => run((s) => s.unreadNotificationCount()),
     },
     issue: {
       create: (input) => run((s) => s.createIssue(input)),

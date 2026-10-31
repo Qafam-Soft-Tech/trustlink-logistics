@@ -33,7 +33,11 @@ export class PaymentController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Initialize payment for a delivery' })
   async initializePayment(@CurrentUser() user: User, @Body() dto: InitializePaymentDto) {
-    return this.paymentService.initializePayment(user.id, dto);
+    return this.paymentService.initializePayment(user.id, {
+      ...dto,
+      email: dto.email || `${user.phone}@trustlink.ng`,
+      phone: dto.phone || user.phone,
+    });
   }
 
   @Get('delivery/:deliveryId')

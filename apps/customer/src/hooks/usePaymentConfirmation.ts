@@ -4,7 +4,7 @@ import { useData } from '../data/DataContext';
 
 export type PaymentConfirmationState = 'verifying' | 'pending' | 'success' | 'failed' | 'timeout';
 
-const MAX_POLLS = 3;
+const MAX_POLLS = 10;
 const POLL_INTERVAL_MS = 2000;
 
 /**
@@ -53,13 +53,13 @@ export function usePaymentConfirmation(reference?: string, enabled = true): { st
     }
     const id = setTimeout(async () => {
       try {
-        const payment = await data.payment.getByReference(reference);
-        if (payment.status === 'success') {
+        const result = await data.payment.verify(reference);
+        if (result.status === 'success') {
           queryClient.invalidateQueries({ queryKey: ['deliveries'] });
           setState('success');
           return;
         }
-        if (payment.status === 'failed' || payment.status === 'cancelled') {
+        if (result.status === 'failed' || result.status === 'cancelled') {
           setState('failed');
           return;
         }

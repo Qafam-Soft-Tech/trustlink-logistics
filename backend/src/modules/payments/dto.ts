@@ -84,11 +84,13 @@ export class InitializePaymentDto {
   @Min(1)
   amount!: number;
 
+  @IsOptional()
   @IsEmail()
-  email!: string;
+  email?: string;
 
+  @IsOptional()
   @Matches(PHONE_PATTERN, { message: 'phone must be an 11-digit Nigerian number starting with 0' })
-  phone!: string;
+  phone?: string;
 
   @IsEnum(PaymentProvider)
   provider!: PaymentProvider;

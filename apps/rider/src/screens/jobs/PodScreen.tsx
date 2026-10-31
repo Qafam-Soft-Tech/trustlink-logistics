@@ -4,7 +4,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme, Screen, TopBar, Text, Button, Card, Column, Row, Banner, Skeleton, ErrorState, SuccessState, OtpInput, TextArea, isValidOtp } from '@trustlink/shared';
 import { errorMessage } from '@trustlink/shared';
-import { useDeliveryJob, useCompleteDelivery } from '../../hooks';
+import { useDeliveryJob, useCompleteDelivery, useUploadFile, useResendRecipientOtp } from '../../hooks';
+import { useData } from '../../data/DataContext';
 import { ExecutionExitGuard } from './ExecutionExitGuard';
 import type { JobsStackParamList } from '../../navigation/types';
 
@@ -15,11 +16,16 @@ export function PodScreen({ navigation, route }: Props) {
   const { jobId } = route.params;
   const job = useDeliveryJob(jobId);
   const complete = useCompleteDelivery();
+  const upload = useUploadFile();
+  const resend = useResendRecipientOtp();
+  const data = useData();
 
   const [photo, setPhoto] = useState<string | undefined>();
   const [code, setCode] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | undefined>();
+  const [resendMessage, setResendMessage] = useState<string | undefined>();
+  const [uploading, setUploading] = useState(false);
   const [done, setDone] = useState(false);
 
   if (job.isLoading) {
@@ -70,7 +76,7 @@ export function PodScreen({ navigation, route }: Props) {
     if (!result.canceled && result.assets[0]) setPhoto(result.assets[0].uri);
   };
 
-  const submit = () => {
+  const submit = async () => {
     setError(undefined);
     if (!photo) {
       setError('Take a delivery photo before completing.');
@@ -80,25 +86,35 @@ export function PodScreen({ navigation, route }: Props) {
       setError('Enter the 6-digit code from the recipient.');
       return;
     }
-    complete.mutate(
-      {
+
+    setUploading(true);
+    try {
+      const uploaded = await upload.mutateAsync({ uri: photo, name: 'proof-of-delivery.jpg' });
+      await complete.mutateAsync({
         id: jobId,
         proof: {
-          photoUrl: photo,
+          photoUrl: uploaded.url,
           recipientOtp: code,
           recipientName: delivery.recipientName,
           recipientPhone: delivery.recipientPhone,
           notes: notes.trim() || undefined,
         },
-      },
-      {
-        onSuccess: () => setDone(true),
-        onError: (e: unknown) => {
-          setCode('');
-          setError(errorMessage(e, 'jobs'));
-        },
-      },
-    );
+      });
+      setDone(true);
+    } catch (e) {
+      setCode('');
+      setError(errorMessage(e, 'jobs'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const resendCode = () => {
+    setResendMessage(undefined);
+    resend.mutate(jobId, {
+      onSuccess: () => setResendMessage('A new code was sent to the recipient.'),
+      onError: (e: unknown) => setError(errorMessage(e, 'jobs')),
+    });
   };
 
   return (
@@ -108,7 +124,9 @@ export function PodScreen({ navigation, route }: Props) {
         <Banner
           variant="info"
           title="Recipient code"
-          message="Ask the recipient for their 6-digit code. In this demo the code is shown in the Customer app: Demo menu → recipient codes."
+          message={data.source === 'mock'
+            ? 'Ask the recipient for their 6-digit code. In this demo the code is shown in the Customer app: Demo menu → recipient codes.'
+            : 'Ask the recipient for their 6-digit code. They receive it by SMS; use “Resend code” if they did not get it.'}
         />
 
         <Card>
@@ -131,6 +149,8 @@ export function PodScreen({ navigation, route }: Props) {
             <Column gap="sm">
               <Text variant="h4" color="inherit" style={{ color: theme.roles.text }}>Recipient code</Text>
               <OtpInput value={code} onChange={setCode} />
+              <Button variant="ghost" size="sm" loading={resend.isPending} onPress={resendCode}>Resend code</Button>
+              {resendMessage ? <Text variant="caption" color="inherit" style={{ color: theme.roles.primaryAction }}>{resendMessage}</Text> : null}
             </Column>
             <TextArea label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="e.g. Left with the recipient at the front desk" />
             <Text variant="caption" color="inherit" style={{ color: theme.roles.textMuted }}>
@@ -143,7 +163,7 @@ export function PodScreen({ navigation, route }: Props) {
       </ScrollView>
 
       <Column style={{ padding: 16 }}>
-        <Button variant="primary" size="lg" loading={complete.isPending} onPress={submit}>Complete delivery</Button>
+        <Button variant="primary" size="lg" loading={complete.isPending || uploading} onPress={submit}>Complete delivery</Button>
       </Column>
 
       <ExecutionExitGuard navigation={navigation} active={!done} />

@@ -407,8 +407,19 @@ export class MockStore {
   estimateDistance(input: { pickupArea: string; dropoffArea: string }): number {
     return estimateDistanceKm(input.pickupArea, input.dropoffArea);
   }
-  calculateFare(input: { distanceKm: number; weightKg: number; packageType: string }): FareBreakdown {
-    return calculateFare(this.state.pricing, input);
+  calculateFare(input: {
+    distanceKm?: number;
+    pickupArea?: string;
+    dropoffArea?: string;
+    weightKg: number;
+    packageType: string;
+  }): FareBreakdown {
+    const distanceKm = input.distanceKm ?? estimateDistanceKm(input.pickupArea, input.dropoffArea);
+    return calculateFare(this.state.pricing, {
+      distanceKm,
+      weightKg: input.weightKg,
+      packageType: input.packageType,
+    });
   }
   updateConfig(key: PricingConfigKey, value: number, description?: string): PricingConfig {
     this.state.pricing[key] = value;
@@ -480,6 +491,35 @@ export class MockStore {
   listNotifications(limit = 20): Notification[] {
     const s = this.getSession();
     return this.state.notifications.filter((n) => n.userId === s.user.id).slice(0, limit);
+  }
+
+  markNotificationRead(id: string): Notification {
+    const s = this.getSession();
+    const notification = this.state.notifications.find((n) => n.id === id && n.userId === s.user.id);
+    if (!notification) throw new NotFoundError('Notification not found');
+    notification.readAt = nowIso();
+    return notification;
+  }
+
+  markAllNotificationsRead(): { updated: boolean } {
+    const s = this.getSession();
+    this.state.notifications.forEach((n) => {
+      if (n.userId === s.user.id && !n.readAt) n.readAt = nowIso();
+    });
+    return { updated: true };
+  }
+
+  unreadNotificationCount(): { unread: number } {
+    const s = this.getSession();
+    return { unread: this.state.notifications.filter((n) => n.userId === s.user.id && !n.readAt).length };
+  }
+
+  resendRecipientOtp(deliveryId: string): { sent: boolean } {
+    const d = this.getDelivery(deliveryId);
+    if (!['assigned', 'picked_up', 'in_transit'].includes(d.status)) {
+      throw new ConflictError('Recipient OTP can only be sent while the delivery is active');
+    }
+    return { sent: true };
   }
 
   /* ---------------- issues ---------------- */

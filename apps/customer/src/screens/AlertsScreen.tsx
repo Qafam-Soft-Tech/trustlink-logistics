@@ -24,7 +24,7 @@ import {
   type Notification,
 } from '@trustlink/shared';
 import { isOffline } from '@trustlink/shared';
-import { useNotifications, useReadNotificationIds, useMarkNotificationRead, useMarkAllNotificationsRead } from '../hooks';
+import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from '../hooks';
 import { alertIconFor } from './support/helpContent';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -34,14 +34,12 @@ export function AlertsScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const notifications = useNotifications(30);
-  const reads = useReadNotificationIds();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
 
   const all = notifications.data ?? [];
   const offline = isOffline(notifications.error);
-  const readIds = new Set(reads.data ?? []);
-  const unreadCount = all.filter((n) => !readIds.has(n.id)).length;
+  const unreadCount = all.filter((n) => !n.readAt).length;
   const { today, earlier } = groupNotificationsByDay(all);
 
   const open = (notification: Notification) => {
@@ -59,7 +57,7 @@ export function AlertsScreen() {
       <Column gap="sm">
         <Text variant="label" color="inherit" style={{ color: theme.roles.textSecondary }}>{title}</Text>
         {items.map((notification) => {
-          const unread = !readIds.has(notification.id);
+          const unread = !notification.readAt;
           const status = notificationStatus(notification);
           const fallback = notificationSmsFallback(notification);
           return (
@@ -108,7 +106,7 @@ export function AlertsScreen() {
       <TopBar
         title="Alerts"
         rightAction={unreadCount > 0 ? <Ionicons name="checkmark-done-outline" size={22} color={theme.roles.primaryAction} /> : undefined}
-        onRightPress={() => markAll.mutate(all.map((n) => n.id))}
+        onRightPress={() => markAll.mutate()}
       />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 16 }}

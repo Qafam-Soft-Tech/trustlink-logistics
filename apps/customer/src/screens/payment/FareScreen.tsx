@@ -30,7 +30,12 @@ export function FareScreen({ navigation }: Props) {
   const { theme } = useTheme();
   const { draft, created, setCreated } = useNewDeliveryDraft();
   const distance = useDistanceEstimate(draft.pickup.area, draft.dropoff.area);
-  const quote = useFareQuote({ distanceKm: distance.data, weightKg: draft.packageWeight, packageType: draft.packageType });
+  const quote = useFareQuote({
+    pickupArea: draft.pickup.area,
+    dropoffArea: draft.dropoff.area,
+    weightKg: draft.packageWeight,
+    packageType: draft.packageType,
+  });
   const create = useCreateDelivery();
 
   const total = quote.data?.totalFare ?? 0;
@@ -47,7 +52,12 @@ export function FareScreen({ navigation }: Props) {
   const accept = () => {
     create.mutate(toCreateDeliveryInput(draft), {
       onSuccess: (delivery) => {
-        setCreated({ id: delivery.id, trackingNumber: delivery.trackingNumber, fare: delivery.fare ?? total });
+        const serverFare = Number(delivery.fare);
+        setCreated({
+          id: delivery.id,
+          trackingNumber: delivery.trackingNumber,
+          fare: Number.isFinite(serverFare) && serverFare > 0 ? serverFare : total,
+        });
         navigation.navigate('PaySummary');
       },
     });
@@ -66,7 +76,7 @@ export function FareScreen({ navigation }: Props) {
             {expired ? (
               <Banner variant="warning" title="Quote expired" message="Fares change with distance and demand. Refresh to get the current price." />
             ) : (
-              <Banner variant="info" title="Test mode" message="No rider is assigned until your payment is confirmed." />
+              <Banner variant="info" title="How it works" message="No rider is assigned until your payment is confirmed." />
             )}
 
             <RouteSummaryCard

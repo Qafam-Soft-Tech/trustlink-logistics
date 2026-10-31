@@ -1,6 +1,6 @@
 /** API adapters — implement every port against the REAL backend routes. */
 import type { DataPorts } from '../ports';
-import { HttpClient, NotSupportedByBackendError } from '../http';
+import { HttpClient } from '../http';
 import type {
   Address,
   AuthResult,
@@ -44,10 +44,6 @@ interface VerifyPaymentResponse {
 }
 
 export function createApiAdapters(http: HttpClient): DataPorts {
-  const notSupported = (method: string, path: string, note?: string): never => {
-    throw new NotSupportedByBackendError(method, path, note);
-  };
-
   return {
     auth: {
       requestOtp: (input) =>
@@ -79,17 +75,17 @@ export function createApiAdapters(http: HttpClient): DataPorts {
       listAddresses: () => http.get<Address[]>('/deliveries/addresses'),
       createAddress: (input) => http.post<Address>('/deliveries/addresses', input),
       updateAddress: (id, patch) => http.put<Address>(`/deliveries/addresses/${id}`, patch),
-      deleteAddress: () => notSupported('DELETE', '/deliveries/addresses/:id', 'no delete route — SC-14'),
+      deleteAddress: (id) => http.delete<void>(`/deliveries/addresses/${id}`),
       setDefaultAddress: (id) => http.post<void>(`/deliveries/addresses/${id}/default`),
       cancelPreview: (id) => http.get<CancellationPreview>(`/notifications/cancellation-preview/${id}`),
       cancel: (id) => http.post<CancelResult>(`/notifications/cancel/${id}`),
       proof: (id) => http.get<ProofOfDelivery | null>(`/deliveries/${id}/proof`),
+      resendRecipientOtp: (id) => http.post<{ sent: boolean }>(`/deliveries/${id}/recipient-otp/resend`),
     },
 
     pricing: {
       calculate: (input) => http.post<FareBreakdown>('/pricing/calculate', input),
-      // No backend distance route: the client estimates from launch-area coordinates and
-      // sends `distanceKm` to /pricing/calculate (ledger SC-8).
+      // Display/ETA only — the server derives the authoritative distance and fare.
       estimateDistance: async ({ pickupArea, dropoffArea }) => estimateDistanceKm(pickupArea, dropoffArea),
       getValues: async () => {
         const configs = await http.get<PricingConfig[]>('/pricing/config');
@@ -122,8 +118,15 @@ export function createApiAdapters(http: HttpClient): DataPorts {
       verify: (reference) => http.post<VerifyPaymentResponse>(`/payments/verify/${reference}`),
     },
 
+    files: {
+      upload: (input) => http.upload<{ url: string }>('/uploads', input),
+    },
+
     notification: {
       list: (limit) => http.get<Notification[]>('/notifications', { params: { limit } }),
+      markRead: (id) => http.put<Notification>(`/notifications/${id}/read`),
+      markAllRead: () => http.put<{ updated: boolean }>('/notifications/read-all'),
+      unreadCount: () => http.get<{ unread: number }>('/notifications/unread-count'),
     },
 
     issue: {

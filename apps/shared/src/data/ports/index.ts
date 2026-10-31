@@ -56,15 +56,30 @@ export interface DeliveryPort {
   cancelPreview(id: string): Promise<CancellationPreview>;
   cancel(id: string): Promise<CancelResult>;
   proof(id: string): Promise<ProofOfDelivery | null>;
+  resendRecipientOtp(id: string): Promise<{ sent: boolean }>;
 }
 
 export interface PricingPort {
-  calculate(input: { distanceKm: number; weightKg: number; packageType: string }): Promise<FareBreakdown>;
-  /** Client-side distance estimate (km) for a pickup/drop-off area pair — feeds `calculate` (SC-8). */
+  calculate(input: {
+    distanceKm?: number;
+    pickupArea?: string;
+    dropoffArea?: string;
+    pickupLatitude?: number;
+    pickupLongitude?: number;
+    dropoffLatitude?: number;
+    dropoffLongitude?: number;
+    weightKg: number;
+    packageType: string;
+  }): Promise<FareBreakdown>;
+  /** Client-side distance estimate (km) for display/ETA only; the server computes the fare. */
   estimateDistance(input: { pickupArea: string; dropoffArea: string }): Promise<number>;
   getValues(): Promise<PricingValues>;
   getConfigs(): Promise<PricingConfig[]>;
   updateConfig(key: PricingConfigKey, value: number, description?: string): Promise<PricingConfig>;
+}
+
+export interface FilesPort {
+  upload(input: { uri: string; name?: string; type?: string }): Promise<{ url: string }>;
 }
 
 export interface PaymentPort {
@@ -76,6 +91,9 @@ export interface PaymentPort {
 
 export interface NotificationPort {
   list(limit?: number): Promise<Notification[]>;
+  markRead(id: string): Promise<Notification>;
+  markAllRead(): Promise<{ updated: boolean }>;
+  unreadCount(): Promise<{ unread: number }>;
 }
 
 export interface IssuePort {
@@ -134,6 +152,7 @@ export interface DataPorts {
   delivery: DeliveryPort;
   pricing: PricingPort;
   payment: PaymentPort;
+  files: FilesPort;
   notification: NotificationPort;
   issue: IssuePort;
   kyc: KycPort;

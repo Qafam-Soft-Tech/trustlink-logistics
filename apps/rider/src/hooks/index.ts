@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CreateIssueInput, ProofInput, RiderStatus, SubmitKycInput, VehicleType } from '@trustlink/shared';
 import { useData } from '../data/DataContext';
 
+const TERMINAL_STATUSES = ['delivered', 'failed', 'returned', 'cancelled'];
+
 /* ---------------- work ---------------- */
 
 export function useMyQueue() {
@@ -21,7 +23,10 @@ export function useDeliveryJob(id?: string) {
     queryKey: ['rider-job', id],
     queryFn: () => data.delivery.get(id as string),
     enabled: Boolean(id),
-    refetchInterval: 10000,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status && TERMINAL_STATUSES.includes(status) ? false : 10000;
+    },
   });
 }
 
@@ -69,6 +74,18 @@ export function useCompleteDelivery() {
     mutationFn: ({ id, proof }: { id: string; proof: ProofInput }) => data.execution.complete(id, proof),
     onSuccess: invalidate,
   });
+}
+
+export function useUploadFile() {
+  const data = useData();
+  return useMutation({
+    mutationFn: (input: { uri: string; name?: string; type?: string }) => data.files.upload(input),
+  });
+}
+
+export function useResendRecipientOtp() {
+  const data = useData();
+  return useMutation({ mutationFn: (deliveryId: string) => data.delivery.resendRecipientOtp(deliveryId) });
 }
 
 export function useCreateRiderIssue() {

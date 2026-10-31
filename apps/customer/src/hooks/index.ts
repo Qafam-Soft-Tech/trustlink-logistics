@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CreateDeliveryInput, CreateIssueInput, DeliveryStatus, InitializePaymentInput, IssueStatus, PackageType } from '@trustlink/shared';
 import { useData } from '../data/DataContext';
-import { loadReadNotificationIds, saveReadNotificationIds } from '../storage/notificationReads';
+
+const TERMINAL_STATUSES: DeliveryStatus[] = ['delivered', 'failed', 'returned', 'cancelled'];
 
 export function useDeliveries(status?: DeliveryStatus) {
   const data = useData();
@@ -17,7 +18,10 @@ export function useDelivery(id?: string) {
     queryKey: ['delivery', id],
     queryFn: () => data.delivery.get(id as string),
     enabled: Boolean(id),
-    refetchInterval: 10000,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status && TERMINAL_STATUSES.includes(status) ? false : 10000;
+    },
   });
 }
 
@@ -114,13 +118,36 @@ export function useDistanceEstimate(pickupArea?: string, dropoffArea?: string) {
   });
 }
 
-export function useFareQuote(input: { distanceKm?: number; weightKg: number; packageType: PackageType }) {
+export function useFareQuote(input: {
+  pickupArea?: string;
+  dropoffArea?: string;
+  pickupLatitude?: number;
+  pickupLongitude?: number;
+  dropoffLatitude?: number;
+  dropoffLongitude?: number;
+  weightKg: number;
+  packageType: PackageType;
+}) {
   const data = useData();
+  const hasLocation = Boolean(input.pickupArea && input.dropoffArea) ||
+    (typeof input.pickupLatitude === 'number' && typeof input.dropoffLatitude === 'number');
   return useQuery({
-    queryKey: ['fare', input.distanceKm, input.weightKg, input.packageType],
-    queryFn: () => data.pricing.calculate({ distanceKm: input.distanceKm as number, weightKg: input.weightKg, packageType: input.packageType }),
-    enabled: typeof input.distanceKm === 'number' && input.distanceKm > 0,
+    queryKey: ['fare', input.pickupArea, input.dropoffArea, input.pickupLatitude, input.dropoffLatitude, input.weightKg, input.packageType],
+    queryFn: () => data.pricing.calculate(input),
+    enabled: hasLocation,
   });
+}
+
+export function useUploadFile() {
+  const data = useData();
+  return useMutation({
+    mutationFn: (input: { uri: string; name?: string; type?: string }) => data.files.upload(input),
+  });
+}
+
+export function useResendRecipientOtp() {
+  const data = useData();
+  return useMutation({ mutationFn: (deliveryId: string) => data.delivery.resendRecipientOtp(deliveryId) });
 }
 
 export function useInitializePayment() {
@@ -181,29 +208,20 @@ export function useCreateIssue() {
 
 /* ---------------- notifications ---------------- */
 
-/** Locally-recorded read ids for in-app alerts (no backend read field — SC-30). */
-export function useReadNotificationIds() {
-  return useQuery({ queryKey: ['notification-reads'], queryFn: loadReadNotificationIds, staleTime: Infinity });
-}
-
 export function useMarkNotificationRead() {
+  const data = useData();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const current = await loadReadNotificationIds();
-      if (!current.includes(id)) await saveReadNotificationIds([id, ...current]);
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notification-reads'] }),
+    mutationFn: (id: string) => data.notification.markRead(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 }
 
 export function useMarkAllNotificationsRead() {
+  const data = useData();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (ids: string[]) => {
-      const current = await loadReadNotificationIds();
-      await saveReadNotificationIds(Array.from(new Set([...ids, ...current])));
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notification-reads'] }),
+    mutationFn: () => data.notification.markAllRead(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 }

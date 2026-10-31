@@ -140,6 +140,7 @@ export interface Delivery {
   deliveredAt?: string | null;
   cancelledAt?: string | null;
   fare?: number | null;
+  distanceKm?: number | null;
   paymentReference?: string | null;
   createdAt: string;
   updatedAt?: string;
@@ -212,6 +213,7 @@ export interface Notification {
   data?: Record<string, unknown> | null;
   status: NotificationStatus;
   sentAt?: string | null;
+  readAt?: string | null;
   createdAt: string;
 }
 
