@@ -111,7 +111,7 @@ export function AlertsScreen() {
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 16 }}
         refreshControl={
-          <RefreshControl refreshing={notifications.isFetching} onRefresh={() => notifications.refetch()} tintColor={theme.roles.primaryAction} />
+          <RefreshControl refreshing={notifications.isFetching} onRefresh={() => { void notifications.refetch(); }} tintColor={theme.roles.primaryAction} />
         }
       >
         <Banner

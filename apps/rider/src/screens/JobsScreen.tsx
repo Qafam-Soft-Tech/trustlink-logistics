@@ -34,7 +34,7 @@ export function JobsScreen({ navigation }: Props) {
       <TopBar title="Jobs" />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 16 }}
-        refreshControl={<RefreshControl refreshing={jobs.isFetching} onRefresh={() => jobs.refetch()} tintColor={theme.roles.primaryAction} />}
+        refreshControl={<RefreshControl refreshing={jobs.isFetching} onRefresh={() => { void jobs.refetch(); }} tintColor={theme.roles.primaryAction} />}
       >
         {pendingAcknowledgement > 0 ? (
           <Banner variant="info" title="New job assigned" message={`${pendingAcknowledgement} job${pendingAcknowledgement === 1 ? '' : 's'} waiting for you to accept.`} />

@@ -15,7 +15,7 @@ export function AlertsScreen() {
       <TopBar title="Alerts" />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 16 }}
-        refreshControl={<RefreshControl refreshing={notifications.isFetching} onRefresh={() => notifications.refetch()} tintColor={theme.roles.primaryAction} />}
+        refreshControl={<RefreshControl refreshing={notifications.isFetching} onRefresh={() => { void notifications.refetch(); }} tintColor={theme.roles.primaryAction} />}
       >
         <Banner
           variant="info"

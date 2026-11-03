@@ -9,7 +9,7 @@ type ColorKey = keyof typeof colors;
 
 const HIT_TARGET = 44;
 
-export const Box = React.forwardRef<View, ViewProps>(({ children, style, ...props }, ref) => (
+export const Box = React.forwardRef<React.ComponentRef<typeof View>, ViewProps>(({ children, style, ...props }, ref) => (
   <View ref={ref} style={[styles.container, style]} {...props}>
     {children}
   </View>
@@ -22,7 +22,7 @@ export type ThemedTextProps = TextProps & {
   color?: ColorKey | 'inherit';
 };
 
-export const Text = React.forwardRef<RNText, ThemedTextProps>(
+export const Text = React.forwardRef<React.ComponentRef<typeof RNText>, ThemedTextProps>(
   ({ children, style, variant = 'body', color = 'textPrimary', maxFontSizeMultiplier = 1.3, ...props }, ref) => {
     const { theme } = useTheme();
     const { fontSize, fontWeight, lineHeight, fontFamily } = theme.typography;
@@ -49,7 +49,7 @@ Text.displayName = 'Text';
 
 export type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'destructive';
 
-export const Button = React.forwardRef<View, TouchableOpacityProps & {
+export const Button = React.forwardRef<React.ComponentRef<typeof TouchableOpacity>, TouchableOpacityProps & {
   variant?: ButtonVariant;
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
@@ -124,7 +124,7 @@ export const Button = React.forwardRef<View, TouchableOpacityProps & {
 );
 Button.displayName = 'Button';
 
-export const Input = React.forwardRef<TextInput, TextInputProps & {
+export const Input = React.forwardRef<React.ComponentRef<typeof TextInput>, TextInputProps & {
   label?: string;
   error?: string;
   helperText?: string;
@@ -173,7 +173,7 @@ export const Input = React.forwardRef<TextInput, TextInputProps & {
 );
 Input.displayName = 'Input';
 
-export const Card = React.forwardRef<View, ViewProps & {
+export const Card = React.forwardRef<React.ComponentRef<typeof View>, ViewProps & {
   elevation?: 'none' | 'sm' | 'md' | 'lg';
   onPress?: () => void;
   activeOpacity?: number;
@@ -205,7 +205,7 @@ export const Card = React.forwardRef<View, ViewProps & {
 );
 Card.displayName = 'Card';
 
-export const Avatar = React.forwardRef<Image, ImageProps & {
+export const Avatar = React.forwardRef<React.ComponentRef<typeof View>, ImageProps & {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   name?: string;
 }>(
@@ -244,7 +244,7 @@ Avatar.displayName = 'Avatar';
 
 export type BadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'info' | 'primary';
 
-export const Badge = React.forwardRef<View, ViewProps & {
+export const Badge = React.forwardRef<React.ComponentRef<typeof View>, ViewProps & {
   variant?: BadgeVariant;
   size?: 'xs' | 'sm' | 'md';
 }>(
@@ -277,7 +277,7 @@ export const Badge = React.forwardRef<View, ViewProps & {
 );
 Badge.displayName = 'Badge';
 
-export const Chip = React.forwardRef<View, TouchableOpacityProps & {
+export const Chip = React.forwardRef<React.ComponentRef<typeof TouchableOpacity>, TouchableOpacityProps & {
   label: string;
   selected?: boolean;
   icon?: React.ReactNode;

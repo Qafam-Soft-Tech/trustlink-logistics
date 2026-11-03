@@ -10,7 +10,7 @@ const HIT_TARGET = 44;
 type ColorKey = keyof typeof colors;
 
 /** ScreenContainer — themed root surface. `Screen` is kept as an alias for existing usage. */
-export const Screen = React.forwardRef<View, ViewProps & { backgroundColor?: ColorKey }>(
+export const Screen = React.forwardRef<React.ComponentRef<typeof View>, ViewProps & { backgroundColor?: ColorKey }>(
   ({ children, style, backgroundColor, ...props }, ref) => {
     const { theme } = useTheme();
     const bg = backgroundColor ? theme.colors[backgroundColor] : theme.roles.bg;
@@ -25,7 +25,7 @@ Screen.displayName = 'Screen';
 
 export const ScreenContainer = Screen;
 
-export const ScrollableScreen = React.forwardRef<ScrollView, ScrollViewProps & {
+export const ScrollableScreen = React.forwardRef<React.ComponentRef<typeof ScrollView>, ScrollViewProps & {
   backgroundColor?: ColorKey;
   contentContainerStyle?: any;
 }>(
@@ -44,7 +44,7 @@ export const ScrollableScreen = React.forwardRef<ScrollView, ScrollViewProps & {
 ScrollableScreen.displayName = 'ScrollableScreen';
 
 /** TopBar — themed header with back + title + optional right action (rightAction + onRightPress). */
-export const Header = React.forwardRef<View, ViewProps & {
+export const Header = React.forwardRef<React.ComponentRef<typeof View>, ViewProps & {
   title: string;
   leftAction?: React.ReactNode;
   rightAction?: React.ReactNode;
@@ -96,7 +96,7 @@ Header.displayName = 'Header';
 
 export const TopBar = Header;
 
-export const TabBar = React.forwardRef<View, ViewProps & {
+export const TabBar = React.forwardRef<React.ComponentRef<typeof View>, ViewProps & {
   tabs: Array<{ label: string; icon: React.ReactNode; activeIcon?: React.ReactNode; badge?: string | number }>;
   activeIndex: number;
   onPress: (index: number) => void;
@@ -132,7 +132,7 @@ export const TabBar = React.forwardRef<View, ViewProps & {
 );
 TabBar.displayName = 'TabBar';
 
-export const Divider = React.forwardRef<View, ViewProps & { orientation?: 'horizontal' | 'vertical'; label?: string }>(
+export const Divider = React.forwardRef<React.ComponentRef<typeof View>, ViewProps & { orientation?: 'horizontal' | 'vertical'; label?: string }>(
   ({ orientation = 'horizontal', label, style, ...props }, ref) => {
     const { theme } = useTheme();
     const { roles, spacing } = theme;
@@ -154,7 +154,7 @@ export const Divider = React.forwardRef<View, ViewProps & { orientation?: 'horiz
 );
 Divider.displayName = 'Divider';
 
-export const Row = React.forwardRef<View, ViewProps & {
+export const Row = React.forwardRef<React.ComponentRef<typeof View>, ViewProps & {
   align?: 'start' | 'center' | 'end' | 'stretch';
   justify?: 'start' | 'center' | 'end' | 'space-between' | 'space-around' | 'space-evenly';
   gap?: keyof typeof import('../theme').spacing | number;
@@ -171,7 +171,7 @@ export const Row = React.forwardRef<View, ViewProps & {
 );
 Row.displayName = 'Row';
 
-export const Column = React.forwardRef<View, ViewProps & {
+export const Column = React.forwardRef<React.ComponentRef<typeof View>, ViewProps & {
   align?: 'start' | 'center' | 'end' | 'stretch';
   justify?: 'start' | 'center' | 'end' | 'space-between' | 'space-around' | 'space-evenly';
   gap?: keyof typeof import('../theme').spacing | number;
@@ -188,7 +188,7 @@ export const Column = React.forwardRef<View, ViewProps & {
 );
 Column.displayName = 'Column';
 
-export const Center = React.forwardRef<View, ViewProps>(({ children, style, ...props }, ref) => (
+export const Center = React.forwardRef<React.ComponentRef<typeof View>, ViewProps>(({ children, style, ...props }, ref) => (
   <View ref={ref} style={[styles.center, style]} {...props}>
     {children}
   </View>

@@ -10,6 +10,7 @@ No build has been run from this repository yet — the first `eas build` is stil
 | Need | Command / note |
 |---|---|
 | Node 20+ and npm | The repo is a **single npm workspace** — always install from the repo root |
+| Expo SDK 58 | Local development uses **Expo Go for SDK 58**; installable builds use EAS |
 | Expo account | expo.dev/signup |
 | `eas-cli` | `npm install --global eas-cli` (a global tool, **not** a project dependency) |
 | Login | `eas login` — never commit credentials; `EXPO_TOKEN` is for non-interactive shells only |
@@ -35,7 +36,7 @@ npm install                      # one root package-lock.json, one hoisted node_
 ## 3. Local development
 
 ```bash
-cd apps/customer && npx expo start -c        # Metro (Expo Go); use -c after shared/ changes
+cd apps/customer && npx expo start -c        # Metro (Expo Go SDK 58); use -c after shared/ changes
 cd apps/rider    && npx expo start -c        # second app takes port 8082
 cd apps/admin    && npm run dev              # Vite console (add -- --host to open it from a phone)
 ```
@@ -92,11 +93,12 @@ Credentials: customer `08031234567` / `482913`; rider `08050000001` / `482913`; 
 
 - `app.config.ts` → `expo.version` = `1.0.0`; `eas.json` → `cli.appVersionSource: "local"`, so `android.versionCode` in the same file is the Play version code. Bump it before each store upload.
 - The About screen reads the version at runtime through `expo-constants` (`Constants.expoConfig?.version`), so it always matches the installed build.
-- Recorded sizes, re-measured with **`NODE_ENV` unset**: customer **1562 modules**, rider **1506 modules**, admin `557.24 kB` JS / `12.93 kB` CSS (92 modules) — the console size is logged in SC-48. Re-measure with `npx expo export --platform android` (mobile) and `npm run build --workspace admin`, never from a shell that has `NODE_ENV=development` set (see §1).
+- Recorded sizes after the SDK 58 upgrade, re-measured with **`NODE_ENV` unset**: customer **1664 modules**, rider **1599 modules**, admin `412.47 kB` JS / `12.93 kB` CSS (126.32 kB gzip). Re-measure with `npx expo export --platform android` (mobile) and `npm run build --workspace admin`, never from a shell that has `NODE_ENV=development` set (see §1).
+- SDK 57 installable builds are **incompatible** with this SDK 58 JS bundle. Rebuild the preview APK and production AAB after pulling this branch.
 
 ## 9. First-build risks
 
-1. **Brand assets are still placeholders** whose content is JPEG named `.png` (expo-doctor flags it, SC-44): replace with real PNGs in `assets/brand/` and update `app.config.ts` paths.
+1. **Brand assets are still placeholders** whose content is JPEG named `.png` (SC-44). Expo-doctor passes with the current SDK 58 schema, but replace them with real PNGs in `assets/brand/` and update `app.config.ts` before store submission.
 2. **`props.nodeModulesPaths`/hoisting**: dev builds rely on the root `node_modules`; always `npm install` from the root after pulling.
 3. **`eas.json` env is public** — never put a secret in `EXPO_PUBLIC_*`.
 4. **First EAS run per app** asks to create the project (writes `extra.eas.projectId` into the config — commit it) and to generate an Android keystore (keep it in EAS).

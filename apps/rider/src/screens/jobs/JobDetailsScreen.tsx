@@ -49,7 +49,7 @@ export function JobDetailsScreen({ navigation, route }: Props) {
       <TopBar title="Job" showBack onBack={() => navigation.goBack()} />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 16 }}
-        refreshControl={<RefreshControl refreshing={job.isFetching} onRefresh={() => job.refetch()} tintColor={theme.roles.primaryAction} />}
+        refreshControl={<RefreshControl refreshing={job.isFetching} onRefresh={() => { void job.refetch(); }} tintColor={theme.roles.primaryAction} />}
       >
         <Column gap="sm">
           <Row justify="space-between" align="center">

@@ -220,6 +220,7 @@ If something in this roadmap conflicts with `docs/REQUIREMENTS.md`, the requirem
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-11-03 | Expo SDK 58 upgrade | RN 0.88.1, React 19.3.0, gesture-handler 3.3, Reanimated 4.7.1, worklets 0.13.0, all Expo modules 58.x; `expo-clipboard` replaces core Clipboard; RN 0.88 ref types and `RefreshControl.onRefresh` fixed; one React/RN at the workspace root. Doctor 20/20 both apps, typecheck clean, 151 shared + 143 backend tests, admin build, both Android exports. |
 | 2026-10-31 | M4 admin console on the real API | API-backed admin provider (mock still selectable), JWT admin login/401 handling, real dispatch/KYC/users/issues/pricing/reports, `GET /admin/riders`, delivery events in the admin list. Admin build clean; backend 143 unit + 52 e2e. |
 | 2026-10-31 | M3 customer/rider apps on the real API | Area-based fare quotes, server fare for payment, Paystack browser checkout, KYC/POD uploads, recipient OTP resend, server notification read state, terminal polling stop, `/api` EAS URLs. 151 shared tests, 143 backend unit, 52 e2e; both apps export. |
 | 2026-10-31 | M2 backend integrity complete | Server-side distance/fare; recipient OTP for POD; uploads (local/S3); Termii SMS notifications; notification read state; optional pagination; account deletion; admin reports; payment retry + raw-body webhooks; global throttling. 143 unit + 52 e2e tests pass. |
