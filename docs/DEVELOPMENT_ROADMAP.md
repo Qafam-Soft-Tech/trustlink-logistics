@@ -216,6 +216,17 @@ If something in this roadmap conflicts with `docs/REQUIREMENTS.md`, the requirem
 
 ---
 
+## 8.1 Security hardening backlog (M5)
+
+Tracked here so it is not lost between sessions.
+
+- **OTP storage:** `otp_codes.code` is currently stored **plaintext** (which is why local testing can read it). Hash it — bcrypt/argon2 or HMAC-SHA256 with a server-side pepper — and compare hashes in `OtpService`. Keep the dev-only `[OTP]` console log gated by `NODE_ENV !== 'production'`. Add tests for hash/compare, expiry, single-use, and the 3-attempt lock.
+- **Recipient OTP:** already bcrypt-hashed and single-use; keep the 15-minute expiry and 3-attempt limit covered by tests.
+- **Rate limiting:** the global in-memory throttler is acceptable for the single-instance pilot; move throttler storage to Redis before horizontal scaling (approved amendment to REQUIREMENTS §8).
+- **Uploads:** the 5 MB JPEG/PNG/WebP cap is in place; add malware scanning for KYC/rider documents before public launch.
+
+---
+
 ## 9. Change Log
 
 | Date | Change | Reason |
