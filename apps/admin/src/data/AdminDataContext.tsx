@@ -17,6 +17,7 @@ import type {
 } from './types';
 import { createInitialState } from './mock';
 import { readAdminDataSource } from './dataSource';
+import { useAuth } from '../context/AuthContext';
 import {
   adminApi,
   type ApiDelivery,
@@ -289,34 +290,41 @@ function mapPricing(config: ApiPricingConfig): PricingConfig {
 
 function ApiAdminDataProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
 
   const deliveriesQuery = useQuery({
     queryKey: ['admin', 'deliveries'],
     queryFn: adminApi.deliveries,
     refetchInterval: 10000,
+    enabled: isAuthenticated,
   });
   const paymentsQuery = useQuery({
     queryKey: ['admin', 'payments'],
     queryFn: adminApi.payments,
     refetchInterval: 10000,
+    enabled: isAuthenticated,
   });
   const ridersQuery = useQuery({
     queryKey: ['admin', 'riders'],
     queryFn: adminApi.riders,
     refetchInterval: 10000,
+    enabled: isAuthenticated,
   });
   const usersQuery = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: () => adminApi.users(),
+    enabled: isAuthenticated,
   });
   const issuesQuery = useQuery({
     queryKey: ['admin', 'issues'],
     queryFn: adminApi.issues,
     refetchInterval: 10000,
+    enabled: isAuthenticated,
   });
   const pricingQuery = useQuery({
     queryKey: ['admin', 'pricing'],
     queryFn: adminApi.pricing,
+    enabled: isAuthenticated,
   });
 
   const invalidateAll = useCallback(() => {
