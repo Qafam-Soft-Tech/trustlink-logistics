@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
 
 @Entity('otp_codes')
-@Index(['phone', 'code'], { unique: true })
+@Index(['phone', 'purpose'])
 export class OtpCode {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -9,8 +9,12 @@ export class OtpCode {
   @Column()
   phone!: string;
 
-  @Column()
-  code!: string;
+  /**
+   * HMAC-SHA256 of the 6-digit code. The database column keeps the historical
+   * name `code` so existing local databases upgrade cleanly.
+   */
+  @Column({ name: 'code' })
+  codeHash!: string;
 
   @Column({ type: 'enum', enum: ['signup', 'login', 'reset'], default: 'signup' })
   purpose!: string;

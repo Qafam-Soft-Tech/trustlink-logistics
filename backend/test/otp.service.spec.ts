@@ -70,7 +70,7 @@ describe('OtpService', () => {
   beforeEach(() => {
     otpRepository = new MockRepository<OtpCode>();
     termiiSms = { sendOtp: jest.fn().mockResolvedValue(true) } as any;
-    service = new OtpService(otpRepository as any, termiiSms);
+    service = new OtpService(otpRepository as any, termiiSms, { get: () => undefined } as any);
   });
 
   describe('generateOtp', () => {
@@ -108,7 +108,7 @@ describe('OtpService', () => {
       const existingOtp = {
         id: '1',
         phone,
-        code: 'oldcode',
+        codeHash: 'oldhash',
         purpose,
         attempts: 0,
         isUsed: false,
@@ -117,7 +117,7 @@ describe('OtpService', () => {
       };
       otpRepository.setItems([existingOtp]);
       otpRepository.findOne.mockResolvedValue(existingOtp);
-      otpRepository.save.mockResolvedValue({ ...existingOtp, code: 'newcode' });
+      otpRepository.save.mockResolvedValue({ ...existingOtp, codeHash: 'newhash' });
 
       await service.sendOtp(phone, purpose);
 
@@ -141,7 +141,7 @@ describe('OtpService', () => {
       const otpEntity = {
         id: '1',
         phone,
-        code,
+        codeHash: (service as any).hashOtp(code),
         purpose,
         attempts: 0,
         isUsed: false,
@@ -169,7 +169,7 @@ describe('OtpService', () => {
       const otpEntity = {
         id: '1',
         phone,
-        code,
+        codeHash: (service as any).hashOtp(code),
         purpose,
         attempts: 0,
         isUsed: false,
@@ -187,7 +187,7 @@ describe('OtpService', () => {
       const otpEntity = {
         id: '1',
         phone,
-        code,
+        codeHash: (service as any).hashOtp(code),
         purpose,
         attempts: 3,
         isUsed: false,
@@ -205,7 +205,7 @@ describe('OtpService', () => {
       const otpEntity = {
         id: '1',
         phone,
-        code: 'correctcode',
+        codeHash: (service as any).hashOtp('correctcode'),
         purpose,
         attempts: 0,
         isUsed: false,
@@ -225,7 +225,7 @@ describe('OtpService', () => {
       const otpEntity = {
         id: '1',
         phone,
-        code,
+        codeHash: (service as any).hashOtp(code),
         purpose,
         attempts: 0,
         isUsed: false,

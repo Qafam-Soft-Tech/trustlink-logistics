@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
@@ -12,15 +13,30 @@ export class OtpService {
   private readonly OTP_LENGTH = 6;
   private readonly OTP_EXPIRY_MINUTES = 5;
   private readonly MAX_ATTEMPTS = 3;
+  private readonly hashSecret: string;
 
   constructor(
     @InjectRepository(OtpCode)
     private otpRepository: Repository<OtpCode>,
     private termiiSms: TermiiSmsService,
-  ) {}
+    configService: ConfigService,
+  ) {
+    const configuredSecret = configService.get<string>('OTP_HASH_SECRET') ||
+      configService.get<string>('JWT_SECRET');
+
+    if (!configuredSecret) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('OTP_HASH_SECRET or JWT_SECRET must be set in production');
+      }
+      this.hashSecret = 'trustlink-dev-otp-secret';
+    } else {
+      this.hashSecret = configuredSecret;
+    }
+  }
 
   async sendOtp(phone: string, purpose: 'signup' | 'login' | 'reset' = 'signup'): Promise<void> {
     const code = this.generateOtp();
+    const codeHash = this.hashOtp(code);
     const expiresAt = new Date(Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000);
 
     const existingOtp = await this.otpRepository.findOne({
@@ -28,21 +44,25 @@ export class OtpService {
     });
 
     if (existingOtp) {
-      existingOtp.code = code;
+      existingOtp.codeHash = codeHash;
       existingOtp.expiresAt = expiresAt;
       existingOtp.attempts = 0;
       await this.otpRepository.save(existingOtp);
     } else {
       const otp = this.otpRepository.create({
         phone,
-        code,
+        codeHash,
         purpose,
         expiresAt,
       });
       await this.otpRepository.save(otp);
     }
 
-    this.logger.log(`[OTP] Phone: ${phone}, Code: ${code}, Purpose: ${purpose}`);
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.log(`[OTP] Phone: ${phone}, Code: ${code}, Purpose: ${purpose}`);
+    } else {
+      this.logger.log(`[OTP] Phone: ${phone}, Purpose: ${purpose}`);
+    }
 
     const sent = await this.termiiSms.sendOtp(phone, code);
     if (!sent) {
@@ -52,7 +72,7 @@ export class OtpService {
 
   async verifyOtp(phone: string, code: string, purpose: 'signup' | 'login' | 'reset' = 'signup'): Promise<boolean> {
     const otp = await this.otpRepository.findOne({
-      where: { phone, code, purpose, isUsed: false },
+      where: { phone, purpose, isUsed: false },
     });
 
     if (!otp) {
@@ -70,7 +90,7 @@ export class OtpService {
     otp.attempts += 1;
     await this.otpRepository.save(otp);
 
-    if (otp.code === code) {
+    if (this.verifyHash(code, otp.codeHash)) {
       otp.isUsed = true;
       await this.otpRepository.save(otp);
       return true;
@@ -80,6 +100,26 @@ export class OtpService {
   }
 
   private generateOtp(): string {
+    // Test-only seam: Jest e2e suites need a known code because the DB stores only a hash.
+    // It is ignored outside Jest and never available in a production runtime.
+    const testCode = process.env.OTP_TEST_CODE;
+    if (testCode && process.env.JEST_WORKER_ID) {
+      return testCode;
+    }
     return crypto.randomInt(100000, 999999).toString();
+  }
+
+  private hashOtp(code: string): string {
+    return crypto.createHmac('sha256', this.hashSecret).update(code).digest('hex');
+  }
+
+  private verifyHash(code: string, storedHash: string): boolean {
+    if (!storedHash || storedHash.length !== 64) {
+      return false;
+    }
+
+    const candidate = Buffer.from(this.hashOtp(code), 'hex');
+    const stored = Buffer.from(storedHash, 'hex');
+    return candidate.length === stored.length && crypto.timingSafeEqual(candidate, stored);
   }
 }

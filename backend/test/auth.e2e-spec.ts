@@ -9,6 +9,9 @@ import { OtpCode } from '../src/modules/auth/entities/otp-code.entity';
 import { configureApp } from '../src/app.setup';
 import * as bcrypt from 'bcryptjs';
 
+const TEST_OTP = '123456';
+process.env.OTP_TEST_CODE = TEST_OTP;
+
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
   let userRepository: Repository<User>;
@@ -214,7 +217,7 @@ describe('AuthController (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .post('/api/auth/verify-otp')
-        .send({ phone, code: otp!.code })
+        .send({ phone, code: TEST_OTP })
         .expect(201);
 
       expect(response.body).toHaveProperty('token');
@@ -238,11 +241,9 @@ describe('AuthController (e2e)', () => {
     it('should reject expired OTP', async () => {
       await otpRepository.update({ phone }, { expiresAt: new Date(Date.now() - 1000) });
 
-      const otp = await otpRepository.findOne({ where: { phone, purpose: 'signup' } });
-
       const response = await request(app.getHttpServer())
         .post('/api/auth/verify-otp')
-        .send({ phone, code: otp!.code })
+        .send({ phone, code: TEST_OTP })
         .expect(401);
 
       expect(response.body.message).toBe('Invalid or expired OTP');
@@ -251,11 +252,9 @@ describe('AuthController (e2e)', () => {
     it('should reject after max attempts', async () => {
       await otpRepository.update({ phone }, { attempts: 3 });
 
-      const otp = await otpRepository.findOne({ where: { phone, purpose: 'signup' } });
-
       const response = await request(app.getHttpServer())
         .post('/api/auth/verify-otp')
-        .send({ phone, code: otp!.code })
+        .send({ phone, code: TEST_OTP })
         .expect(401);
 
       expect(response.body.message).toBe('Invalid or expired OTP');
@@ -269,10 +268,9 @@ describe('AuthController (e2e)', () => {
       await request(app.getHttpServer())
         .post('/api/auth/signup')
         .send({ phone, firstName: 'John', lastName: 'Doe', role: 'customer' });
-      const otp = await otpRepository.findOne({ where: { phone, purpose: 'signup' } });
       await request(app.getHttpServer())
         .post('/api/auth/verify-otp')
-        .send({ phone, code: otp!.code });
+        .send({ phone, code: TEST_OTP });
     });
 
     it('should send login OTP for verified user', async () => {
@@ -315,10 +313,9 @@ describe('AuthController (e2e)', () => {
       await request(app.getHttpServer())
         .post('/api/auth/signup')
         .send({ phone, firstName: 'John', lastName: 'Doe', role: 'customer' });
-      const otp = await otpRepository.findOne({ where: { phone, purpose: 'signup' } });
       await request(app.getHttpServer())
         .post('/api/auth/verify-otp')
-        .send({ phone, code: otp!.code });
+        .send({ phone, code: TEST_OTP });
     });
 
     it('should verify login OTP and return token', async () => {
@@ -326,11 +323,9 @@ describe('AuthController (e2e)', () => {
         .post('/api/auth/login')
         .send({ phone });
 
-      const loginOtp = await otpRepository.findOne({ where: { phone, purpose: 'login' } });
-
       const response = await request(app.getHttpServer())
         .post('/api/auth/verify-login-otp')
-        .send({ phone, code: loginOtp!.code })
+        .send({ phone, code: TEST_OTP })
         .expect(201);
 
       expect(response.body).toHaveProperty('token');
@@ -359,10 +354,9 @@ describe('AuthController (e2e)', () => {
       await request(app.getHttpServer())
         .post('/api/auth/signup')
         .send({ phone, firstName: 'John', lastName: 'Doe', role: 'customer' });
-      const otp = await otpRepository.findOne({ where: { phone, purpose: 'signup' } });
       const verifyRes = await request(app.getHttpServer())
         .post('/api/auth/verify-otp')
-        .send({ phone, code: otp!.code });
+        .send({ phone, code: TEST_OTP });
       token = verifyRes.body.token;
     });
 
@@ -402,10 +396,9 @@ describe('AuthController (e2e)', () => {
       await request(app.getHttpServer())
         .post('/api/auth/signup')
         .send({ phone, firstName: 'John', lastName: 'Doe', role: 'customer' });
-      const otp = await otpRepository.findOne({ where: { phone, purpose: 'signup' } });
       const verifyRes = await request(app.getHttpServer())
         .post('/api/auth/verify-otp')
-        .send({ phone, code: otp!.code });
+        .send({ phone, code: TEST_OTP });
       token = verifyRes.body.token;
     });
 
