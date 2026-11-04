@@ -220,7 +220,7 @@ If something in this roadmap conflicts with `docs/REQUIREMENTS.md`, the requirem
 
 Tracked here so it is not lost between sessions.
 
-- **OTP storage:** `otp_codes.code` is currently stored **plaintext** (which is why local testing can read it). Hash it — bcrypt/argon2 or HMAC-SHA256 with a server-side pepper — and compare hashes in `OtpService`. Keep the dev-only `[OTP]` console log gated by `NODE_ENV !== 'production'`. Add tests for hash/compare, expiry, single-use, and the 3-attempt lock.
+- ~~**OTP storage:** `otp_codes.code` was stored plaintext.~~ **Resolved (M5)** — `OtpService` now stores HMAC-SHA256 hashes (pepper: `OTP_HASH_SECRET` or `JWT_SECRET`), verifies in constant time, and logs the plaintext code only outside production. Tests cover hash/compare, expiry, single-use, and the 3-attempt lock. The DB column keeps the historical name `code`.
 - **Recipient OTP:** already bcrypt-hashed and single-use; keep the 15-minute expiry and 3-attempt limit covered by tests.
 - **Rate limiting:** the global in-memory throttler is acceptable for the single-instance pilot; move throttler storage to Redis before horizontal scaling (approved amendment to REQUIREMENTS §8).
 - **Uploads:** the 5 MB JPEG/PNG/WebP cap is in place; add malware scanning for KYC/rider documents before public launch.
@@ -231,6 +231,7 @@ Tracked here so it is not lost between sessions.
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-11-04 | M5–M9 release readiness | Hashed auth OTPs + review-code path; CI migration/e2e/export/docker jobs; TypeORM baseline migration + production Docker image; live-DB/API-key runbook; valid store PNGs, iOS bundle IDs and splash config; Play/App Store/legal drafts. Deep regression: 143 backend unit, 54 e2e (incl. full journey), 156 shared, typecheck, admin build, doctor 20/20, both exports, Docker health/CORS/seed. |
 | 2026-11-03 | Expo SDK 58 upgrade | RN 0.88.1, React 19.3.0, gesture-handler 3.3, Reanimated 4.7.1, worklets 0.13.0, all Expo modules 58.x; `expo-clipboard` replaces core Clipboard; RN 0.88 ref types and `RefreshControl.onRefresh` fixed; one React/RN at the workspace root. Doctor 20/20 both apps, typecheck clean, 151 shared + 143 backend tests, admin build, both Android exports. |
 | 2026-10-31 | M4 admin console on the real API | API-backed admin provider (mock still selectable), JWT admin login/401 handling, real dispatch/KYC/users/issues/pricing/reports, `GET /admin/riders`, delivery events in the admin list. Admin build clean; backend 143 unit + 52 e2e. |
 | 2026-10-31 | M3 customer/rider apps on the real API | Area-based fare quotes, server fare for payment, Paystack browser checkout, KYC/POD uploads, recipient OTP resend, server notification read state, terminal polling stop, `/api` EAS URLs. 151 shared tests, 143 backend unit, 52 e2e; both apps export. |

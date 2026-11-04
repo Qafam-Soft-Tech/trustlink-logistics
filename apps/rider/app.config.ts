@@ -21,12 +21,15 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'automatic',
   ios: {
     supportsTablet: true,
+    bundleIdentifier: isPreview ? 'com.qafam.trustlink.rider.preview' : 'com.qafam.trustlink.rider',
+    buildNumber: '1',
+    config: { usesNonExemptEncryption: false },
   },
   android: {
     package: isPreview ? 'com.qafam.trustlink.rider.preview' : 'com.qafam.trustlink.rider',
     versionCode: 1,
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
+      backgroundColor: '#0b1f47',
       foregroundImage: './assets/android-icon-foreground.png',
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',
@@ -37,7 +40,15 @@ const config: ExpoConfig = {
     favicon: './assets/favicon.png',
   },
   plugins: [
-    'expo-splash-screen',
+    [
+      'expo-splash-screen',
+      {
+        image: './assets/splash-icon.png',
+        imageWidth: 220,
+        resizeMode: 'contain',
+        backgroundColor: '#0b1f47',
+      },
+    ],
     'expo-secure-store',
     [
       'expo-image-picker',

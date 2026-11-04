@@ -1,7 +1,7 @@
 # TrustLink — Building and installing Android builds (repo root)
 
-Testers install an **APK**; the apps no longer use Expo Go. This is the whole procedure.
-No build has been run from this repository yet — the first `eas build` is still a human step.
+Testers install an **APK**; local development uses **Expo Go SDK 58**. This is the whole procedure.
+Local production checks have run: the backend Docker image builds and starts healthy, and both Android bundles export on SDK 58. The first `eas build` is still a human step because it needs the Expo/EAS account.
 
 ---
 
@@ -98,7 +98,7 @@ Credentials: customer `08031234567` / `482913`; rider `08050000001` / `482913`; 
 
 ## 9. First-build risks
 
-1. **Brand assets are still placeholders** whose content is JPEG named `.png` (SC-44). Expo-doctor passes with the current SDK 58 schema, but replace them with real PNGs in `assets/brand/` and update `app.config.ts` before store submission.
+1. **MVP brand assets are generated monograms** (valid 1024×1024 PNGs); expo-doctor passes. Replace them with the designer's final brand PNGs in `assets/` before store submission if a different mark is required.
 2. **`props.nodeModulesPaths`/hoisting**: dev builds rely on the root `node_modules`; always `npm install` from the root after pulling.
 3. **`eas.json` env is public** — never put a secret in `EXPO_PUBLIC_*`.
 4. **First EAS run per app** asks to create the project (writes `extra.eas.projectId` into the config — commit it) and to generate an Android keystore (keep it in EAS).

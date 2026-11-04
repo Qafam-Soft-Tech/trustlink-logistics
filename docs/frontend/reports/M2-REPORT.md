@@ -109,7 +109,7 @@ The M2 e2e suite covers: upload accept/reject/anonymous, area-based quote vs sto
 6. **Rider vehicle type is still not on the delivery payload** (SC-22); the tracking card hides the badge in api mode.
 7. **The client still sends its own `distanceKm` for quotes**; M3 switches it to areas/coordinates and removes the client estimate.
 8. **The first `createDelivery` after a schema change may be slower** while TypeORM synchronizes; production will use migrations (M7).
-9. **Auth OTPs are stored in plaintext** in `otp_codes.code` (the recipient OTP is already bcrypt-hashed). This is convenient for local testing but must be hashed before production — tracked in `DEVELOPMENT_ROADMAP.md` §8.1 (M5 security hardening).
+9. ~~**Auth OTPs are stored in plaintext** in `otp_codes.code`.~~ **Resolved (M5)** — auth OTPs are HMAC-SHA256 hashed; the recipient OTP was already bcrypt-hashed. The DB column keeps the historical name `code`.
 
 ---
 

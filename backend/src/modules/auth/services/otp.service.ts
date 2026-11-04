@@ -35,7 +35,13 @@ export class OtpService {
   }
 
   async sendOtp(phone: string, purpose: 'signup' | 'login' | 'reset' = 'signup'): Promise<void> {
-    const code = this.generateOtp();
+    // Store-review account: a single allowlisted phone gets a fixed 6-digit code.
+    // Set REVIEW_PHONE/REVIEW_OTP only while a store review is active, then remove them.
+    const reviewPhone = process.env.REVIEW_PHONE;
+    const reviewOtp = process.env.REVIEW_OTP;
+    const code = reviewPhone && reviewOtp && phone === reviewPhone
+      ? reviewOtp
+      : this.generateOtp();
     const codeHash = this.hashOtp(code);
     const expiresAt = new Date(Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000);
 

@@ -21,7 +21,11 @@ export class RecipientOtpService {
   ) {}
 
   async issue(deliveryId: string, phone: string): Promise<void> {
-    const code = crypto.randomInt(100000, 999999).toString();
+    // Jest-only seam so the scripted journey can complete POD without reading the hash.
+    const testCode = process.env.RECIPIENT_OTP_TEST_CODE;
+    const code = testCode && process.env.JEST_WORKER_ID
+      ? testCode
+      : crypto.randomInt(100000, 999999).toString();
     const codeHash = await bcrypt.hash(code, 8);
     const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
 

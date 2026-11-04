@@ -44,11 +44,15 @@ jobs:
       NODE_ENV: development
       PORT: 3000
       JWT_SECRET: ci-only-secret-not-for-production
+      OTP_HASH_SECRET: ci-only-otp-hash-secret-not-for-production
       DB_HOST: localhost
       DB_PORT: 5432
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
       DB_NAME: trustlink
+      DB_SYNCHRONIZE: 'false'
+      DB_MIGRATIONS_RUN: 'true'
+      DB_SSL: 'false'
       REDIS_HOST: localhost
       REDIS_PORT: 6379
       REDIS_PASSWORD: ''
@@ -68,6 +72,8 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npm run build
+      - run: npm run migration:run
+      - run: npm run migration:show
       - run: npm run lint
       - run: npm run test:unit
       - run: npm run test:integration
@@ -105,9 +111,13 @@ jobs:
       - run: npm run build --workspace admin
 
   mobile:
-    name: Mobile (typecheck)
+    name: Mobile (typecheck, export)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
+    env:
+      EXPO_PUBLIC_DATA_SOURCE: api
+      EXPO_PUBLIC_API_URL: https://api.trustlink.example/api
+      EXPO_NO_TELEMETRY: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -118,3 +128,17 @@ jobs:
       - run: npm ci
       - run: npm run typecheck --workspace customer
       - run: npm run typecheck --workspace rider
+      - run: npx expo export --platform android --output-dir dist-ci
+        working-directory: apps/customer
+      - run: npx expo export --platform android --output-dir dist-ci
+        working-directory: apps/rider
+
+  docker:
+    name: Backend production image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: backend
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t trustlink-api:ci ./backend
+      - run: docker run --rm trustlink-api:ci node -e "console.log('image ok')"
