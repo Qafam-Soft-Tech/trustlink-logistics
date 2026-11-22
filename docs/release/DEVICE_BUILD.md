@@ -25,7 +25,8 @@ npx eas-cli build --platform android --profile preview-api
 The `preview-api` profile:
 - builds an APK (not an AAB),
 - uses the real API,
-- uses the current LAN URL `http://10.209.131.15:3000/api`.
+- uses the current LAN URL `http://10.209.131.15:3000/api`,
+- enables Android cleartext traffic for that HTTP LAN URL (preview builds only; production stays HTTPS-only).
 
 Install from the build page/QR on the phone. `adb install -r <file>.apk` is also fine.
 

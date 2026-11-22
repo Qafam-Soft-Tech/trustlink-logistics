@@ -45,6 +45,7 @@ const config: ExpoConfig = {
     },
   },
   plugins: [
+    ['expo-build-properties', { android: { usesCleartextTraffic: isPreview } }],
     [
       'expo-splash-screen',
       {
