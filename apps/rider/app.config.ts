@@ -39,6 +39,11 @@ const config: ExpoConfig = {
   web: {
     favicon: './assets/favicon.png',
   },
+  extra: {
+    eas: {
+      projectId: '15e1a905-d3ec-4d44-998d-cf3b404faeb9',
+    },
+  },
   plugins: [
     [
       'expo-splash-screen',

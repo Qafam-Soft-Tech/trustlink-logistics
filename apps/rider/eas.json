@@ -22,7 +22,7 @@
       "env": {
         "APP_VARIANT": "preview-api",
         "EXPO_PUBLIC_DATA_SOURCE": "api",
-        "EXPO_PUBLIC_API_URL": "https://api.trustlink.example/api"
+        "EXPO_PUBLIC_API_URL": "http://10.209.131.15:3000/api"
       }
     },
     "production": {

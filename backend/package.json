@@ -18,6 +18,7 @@
     "lint": "oxlint src test",
     "seed:admin": "ts-node src/scripts/seed-admin.ts",
     "seed:admin:prod": "node dist/scripts/seed-admin.js",
+    "check:paystack": "ts-node src/scripts/check-paystack.ts",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/typeorm.datasource.ts",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/typeorm.datasource.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/typeorm.datasource.ts",
